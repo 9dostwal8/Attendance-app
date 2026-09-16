@@ -132,6 +132,10 @@ class ProfileScreen extends StatelessWidget {
                         ),
                         SizedBox(height: 12),
                         _buildAccountSwitcherCard(provider, context),
+                        SizedBox(height: 24),
+
+                        // Sign Out Section
+                        _buildLogoutCard(provider, context),
                         SizedBox(height: 40),
                       ],
                     ),
@@ -756,6 +760,63 @@ class ProfileScreen extends StatelessWidget {
               }
             },
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLogoutCard(AttendanceProvider provider, BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        provider.logout();
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      },
+      child: GlassContainer(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        borderColor: Colors.red.withValues(alpha: 0.3),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.logout_rounded,
+                color: Colors.redAccent,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Sign Out',
+                    style: TextStyle(
+                      color: Colors.redAccent,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Log out of your current session',
+                    style: TextStyle(
+                      color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.5)),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right,
+              color: Colors.redAccent,
+            ),
+          ],
         ),
       ),
     );

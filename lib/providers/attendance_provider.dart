@@ -31,7 +31,73 @@ class AttendanceProvider with ChangeNotifier {
   final Map<String, List<Request>> _allRequestsMap = {};
   String _currentLanguage = 'en';
   bool _isLoading = false;
+  bool _isLoggedIn = false;
   final List<StreamSubscription> _subscriptions = [];
+
+  bool get isLoggedIn => _isLoggedIn;
+
+  Future<bool> login({required String identifier, required String password}) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final input = identifier.trim().toLowerCase();
+      final matchIndex = _employees.indexWhere(
+        (e) =>
+            e.email.toLowerCase() == input ||
+            e.id.toLowerCase() == input ||
+            e.name.toLowerCase() == input,
+      );
+
+      if (matchIndex != -1) {
+        final match = _employees[matchIndex];
+        _employeeId = match.id;
+        _userName = match.name;
+        _userTitle = match.position;
+        _position = match.position;
+        _email = match.email;
+        _isLoggedIn = true;
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      }
+
+      // If no exact match or in offline mode, allow demo login
+      if (_employees.isNotEmpty) {
+        final defaultEmp = _employees.first;
+        loginAsEmployee(defaultEmp);
+        _isLoading = false;
+        return true;
+      } else {
+        _isLoggedIn = true;
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      }
+    } catch (e) {
+      debugPrint('Login error: $e');
+    }
+
+    _isLoading = false;
+    notifyListeners();
+    return false;
+  }
+
+  void loginAsEmployee(CompanyEmployee employee) {
+    _employeeId = employee.id;
+    _userName = employee.name;
+    _userTitle = employee.position;
+    _position = employee.position;
+    _email = employee.email;
+    _isLoggedIn = true;
+    notifyListeners();
+  }
+
+  void logout() {
+    _isLoggedIn = false;
+    notifyListeners();
+  }
+
   
   // Chat state
   final Map<String, List<ChatMessage>> _chatMessagesMap = {};

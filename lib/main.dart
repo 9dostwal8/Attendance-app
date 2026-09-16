@@ -7,6 +7,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_options.dart';
 import 'providers/attendance_provider.dart';
 import 'screens/main_navigation_screen.dart';
+import 'screens/login_screen.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -124,7 +125,7 @@ class MyApp extends StatelessWidget {
               ),
               dividerColor: Colors.white.withValues(alpha: 0.1),
             ),
-            home: const MainNavigationScreen(),
+            home: provider.isLoggedIn ? const MainNavigationScreen() : const LoginScreen(),
           );
         },
       ),
