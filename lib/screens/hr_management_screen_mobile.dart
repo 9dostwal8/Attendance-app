@@ -10,6 +10,14 @@ import 'map_picker_screen.dart';
 import 'face_auth_screen.dart';
 
 import 'hr_management_screen.dart';
+import '../widgets/hr/hr_structures_tab.dart';
+import '../widgets/hr/hr_shifts_tab.dart';
+import '../widgets/hr/hr_groups_tab.dart';
+import '../widgets/hr/hr_locations_tab.dart';
+import '../widgets/hr/hr_holidays_tab.dart';
+import '../widgets/hr/hr_employees_tab.dart';
+import '../widgets/hr/hr_daily_report_tab.dart';
+
 
 class HrManagementScreenMobile extends StatefulWidget {
   final HrTab? initialTab;
@@ -458,177 +466,58 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
   Widget _buildActiveList(AttendanceProvider provider) {
     switch (_activeTab) {
       case HrTab.structures:
-        if (provider.structures.isEmpty) return _buildEmptyState('structures');
-        final filtered = _searchQuery.isEmpty
-            ? provider.structures
-            : provider.structures
-                  .where(
-                    (s) => s.name.toLowerCase().contains(
-                      _searchQuery.toLowerCase(),
-                    ),
-                  )
-                  .toList();
         return Column(
           children: [
             _buildSearchBar('Search structures...'),
             const SizedBox(height: 16),
-            if (filtered.isEmpty)
-              Expanded(child: _buildEmptyState('structures'))
-            else
-              Expanded(
-                child: _buildResponsiveList(
-                  itemCount: filtered.length,
-                  itemBuilder: (context, index) =>
-                      _buildStructureCard(filtered[index], provider),
-                ),
-              ),
+            Expanded(child: HrStructuresTab(searchQuery: _searchQuery)),
           ],
         );
       case HrTab.shifts:
-        if (provider.shifts.isEmpty) return _buildEmptyState('shifts');
-        final filtered = _searchQuery.isEmpty
-            ? provider.shifts
-            : provider.shifts
-                  .where(
-                    (s) => s.name.toLowerCase().contains(
-                      _searchQuery.toLowerCase(),
-                    ),
-                  )
-                  .toList();
         return Column(
           children: [
             _buildSearchBar('Search shifts...'),
             const SizedBox(height: 16),
-            if (filtered.isEmpty)
-              Expanded(child: _buildEmptyState('shifts'))
-            else
-              Expanded(
-                child: _buildResponsiveList(
-                  itemCount: filtered.length,
-                  itemBuilder: (context, index) =>
-                      _buildShiftCard(filtered[index], provider),
-                ),
-              ),
+            Expanded(child: HrShiftsTab(searchQuery: _searchQuery)),
           ],
         );
       case HrTab.groups:
-        if (provider.groups.isEmpty) return _buildEmptyState('groups');
-        final filtered = _searchQuery.isEmpty
-            ? provider.groups
-            : provider.groups
-                  .where(
-                    (g) => g.name.toLowerCase().contains(
-                      _searchQuery.toLowerCase(),
-                    ),
-                  )
-                  .toList();
         return Column(
           children: [
             _buildSearchBar('Search groups...'),
             const SizedBox(height: 16),
-            if (filtered.isEmpty)
-              Expanded(child: _buildEmptyState('groups'))
-            else
-              Expanded(
-                child: _buildResponsiveList(
-                  itemCount: filtered.length,
-                  itemBuilder: (context, index) =>
-                      _buildGroupCard(filtered[index], provider),
-                ),
-              ),
+            Expanded(child: HrGroupsTab(searchQuery: _searchQuery)),
           ],
         );
       case HrTab.employees:
-        if (provider.employees.isEmpty) return _buildEmptyState('employees');
-        final filtered = _searchQuery.isEmpty
-            ? provider.employees
-            : provider.employees
-                  .where(
-                    (e) =>
-                        e.name.toLowerCase().contains(
-                          _searchQuery.toLowerCase(),
-                        ) ||
-                        e.position.toLowerCase().contains(
-                          _searchQuery.toLowerCase(),
-                        ),
-                  )
-                  .toList();
         return Column(
           children: [
             _buildSearchBar('Search employees...'),
             const SizedBox(height: 16),
-            if (filtered.isEmpty)
-              Expanded(child: _buildEmptyState('employees'))
-            else
-              Expanded(
-                child: _buildResponsiveList(
-                  itemCount: filtered.length,
-                  itemBuilder: (context, index) =>
-                      _buildEmployeeCard(filtered[index], provider),
-                ),
-              ),
+            Expanded(child: HrEmployeesTab(searchQuery: _searchQuery)),
           ],
         );
       case HrTab.holidays:
-        if (provider.holidays.isEmpty) return _buildEmptyState('holidays');
-        final filtered = _searchQuery.isEmpty
-            ? provider.holidays
-            : provider.holidays
-                  .where(
-                    (h) => h.name.toLowerCase().contains(
-                      _searchQuery.toLowerCase(),
-                    ),
-                  )
-                  .toList();
         return Column(
           children: [
             _buildSearchBar('Search holidays...'),
             const SizedBox(height: 16),
-            if (filtered.isEmpty)
-              Expanded(child: _buildEmptyState('holidays'))
-            else
-              Expanded(
-                child: _buildResponsiveList(
-                  itemCount: filtered.length,
-                  itemBuilder: (context, index) =>
-                      _buildHolidayCard(filtered[index], provider),
-                ),
-              ),
+            Expanded(child: HrHolidaysTab(searchQuery: _searchQuery)),
           ],
         );
       case HrTab.locations:
-        if (provider.locations.isEmpty) return _buildEmptyState('locations');
-        final filtered = _searchQuery.isEmpty
-            ? provider.locations
-            : provider.locations
-                  .where(
-                    (l) => l.name.toLowerCase().contains(
-                      _searchQuery.toLowerCase(),
-                    ),
-                  )
-                  .toList();
         return Column(
           children: [
             _buildSearchBar('Search locations...'),
             const SizedBox(height: 16),
-            if (filtered.isEmpty)
-              Expanded(child: _buildEmptyState('locations'))
-            else
-              Expanded(
-                child: _buildResponsiveList(
-                  itemCount: filtered.length,
-                  itemBuilder: (context, index) =>
-                      _buildLocationCard(filtered[index], provider),
-                ),
-              ),
+            Expanded(child: HrLocationsTab(searchQuery: _searchQuery)),
           ],
         );
       case HrTab.payroll:
         if (provider.employees.isEmpty) return _buildEmptyState('employees');
         return _buildPayrollList(provider);
       case HrTab.dailyReport:
-        if (provider.employees.isEmpty) return _buildEmptyState('employees');
-        return _buildDailyReportList(provider);
+        return const HrDailyReportTab();
     }
   }
 

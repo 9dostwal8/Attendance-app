@@ -1,18 +1,86 @@
-rules_version='2'
+rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      // This rule allows anyone with your database reference to view, edit,
-      // and delete all data in your database. It is useful for getting
-      // started, but it is configured to expire after 30 days because it
-      // leaves your app open to attackers. At that time, all client
-      // requests to your database will be denied.
-      //
-      // Make sure to write security rules for your app before that time, or
-      // else all client requests to your database will be denied until you
-      // update your rules.
-      allow read, write: if request.time < timestamp.date(2027, 7, 4);
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/employees/$(request.auth.uid)).data;
+    }
+
+    function isHR() {
+      return isAuthenticated() && (
+        getUserData().role == 'hr' || 
+        getUserData().role == 'admin'
+      );
+    }
+
+    function isSupervisor() {
+      return isAuthenticated() && (
+        getUserData().role == 'supervisor' ||
+        isHR()
+      );
+    }
+
+    // --- Employee Profiles ---
+    match /employees/{employeeId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isHR() || isOwner(employeeId);
+      allow delete: if isHR();
+    }
+
+    // --- System Setup & Configurations ---
+    match /structures/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isHR();
+    }
+
+    match /shifts/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isHR();
+    }
+
+    match /groups/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isHR();
+    }
+
+    match /locations/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isHR();
+    }
+
+    match /holidays/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isHR();
+    }
+
+    // --- Attendance Logs ---
+    match /attendance_records/{employeeId}/user_records/{recordId} {
+      allow read: if isOwner(employeeId) || isSupervisor();
+      allow create: if isOwner(employeeId) || isHR();
+      allow update, delete: if isHR();
+    }
+
+    // --- Requests (Leave, Overtime, Adjustments) ---
+    match /requests/{employeeId}/user_requests/{requestId} {
+      allow read: if isOwner(employeeId) || isSupervisor();
+      allow create: if isOwner(employeeId);
+      allow update: if isOwner(employeeId) || isSupervisor();
+      allow delete: if isOwner(employeeId) || isHR();
+    }
+
+    // --- Chat Messages ---
+    match /chat_rooms/{roomId}/messages/{messageId} {
+      allow read, write: if isAuthenticated();
     }
   }
 }
