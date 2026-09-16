@@ -600,12 +600,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
         if (dateApprovedRequests.isNotEmpty) {
           final requestTypes = dateApprovedRequests
               .map((r) {
-                if (r.type == 'Annual Leave')
+                if (r.type == 'Annual Leave') {
                   return provider.translate('vacation_leave');
-                if (r.type == 'Sick Leave')
+                }
+                if (r.type == 'Sick Leave') {
                   return provider.translate('sick_leave');
-                if (r.type == 'Overtime Approval')
+                }
+                if (r.type == 'Overtime Approval') {
                   return provider.translate('overtime_approval');
+                }
                 if (r.type == 'Hourly Leave') {
                   final hl = provider.translate('hourly_leave');
                   return hl != 'hourly_leave' ? hl : 'Hourly Leave';
