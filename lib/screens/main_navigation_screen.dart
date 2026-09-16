@@ -241,6 +241,13 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
                     child: Text('HR ADMIN', style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white54 : Colors.black54, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
                   ),
                   _buildSideNavItem(
+                    8,
+                    Icons.manage_accounts_outlined,
+                    Icons.manage_accounts,
+                    'User Management',
+                  ),
+                  const SizedBox(height: 8),
+                  _buildSideNavItem(
                     13,
                     Icons.how_to_reg_outlined,
                     Icons.how_to_reg,
@@ -253,8 +260,6 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
                   _buildSideNavItem(6, Icons.access_time_outlined, Icons.access_time, 'Shifts'),
                   const SizedBox(height: 8),
                   _buildSideNavItem(7, Icons.people_outline, Icons.people, 'Groups'),
-                  const SizedBox(height: 8),
-                  _buildSideNavItem(8, Icons.manage_accounts_outlined, Icons.manage_accounts, 'Employees'),
                   const SizedBox(height: 8),
                   _buildSideNavItem(9, Icons.event_available_outlined, Icons.event_available, 'Holidays'),
                   const SizedBox(height: 8),
@@ -271,6 +276,13 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
                     padding: const EdgeInsets.only(left: 16, bottom: 8),
                     child: Text('SUPERVISION', style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white54 : Colors.black54, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
                   ),
+                  _buildSideNavItem(
+                    8,
+                    Icons.manage_accounts_outlined,
+                    Icons.manage_accounts,
+                    'User Management',
+                  ),
+                  const SizedBox(height: 8),
                   _buildSideNavItem(
                     13,
                     Icons.how_to_reg_outlined,
