@@ -1605,9 +1605,38 @@ class AttendanceProvider with ChangeNotifier {
   Future<void> updateGroup(dynamic group) async => await _firebaseService.saveGroup(group);
   Future<void> addGroup(dynamic group) async => await _firebaseService.saveGroup(group);
 
-  Future<void> deleteEmployee(dynamic id) async => await _firebaseService.deleteEmployee(id);
-  Future<void> updateEmployee(dynamic emp) async => await _firebaseService.saveEmployee(emp);
-  Future<void> addEmployee(dynamic emp) async => await _firebaseService.saveEmployee(emp);
+  Future<void> deleteEmployee(dynamic id) async {
+    final strId = id.toString();
+    _employees.removeWhere((e) => e.id == strId);
+    notifyListeners();
+    await _firebaseService.deleteEmployee(strId);
+  }
+
+  Future<void> updateEmployee(dynamic emp) async {
+    if (emp is CompanyEmployee) {
+      final index = _employees.indexWhere((e) => e.id == emp.id);
+      if (index != -1) {
+        _employees[index] = emp;
+      } else {
+        _employees.add(emp);
+      }
+      notifyListeners();
+      await _firebaseService.saveEmployee(emp);
+    }
+  }
+
+  Future<void> addEmployee(dynamic emp) async {
+    if (emp is CompanyEmployee) {
+      final index = _employees.indexWhere((e) => e.id == emp.id);
+      if (index != -1) {
+        _employees[index] = emp;
+      } else {
+        _employees.add(emp);
+      }
+      notifyListeners();
+      await _firebaseService.saveEmployee(emp);
+    }
+  }
 
   Future<void> deleteHoliday(dynamic id) async => await _firebaseService.deleteHoliday(id);
   Future<void> updateHoliday(dynamic holiday) async => await _firebaseService.saveHoliday(holiday);
