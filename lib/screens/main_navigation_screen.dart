@@ -7,6 +7,7 @@ import 'requests_screen.dart';
 import 'clock_screen.dart';
 import 'hr_management_screen.dart';
 import 'profile_screen.dart';
+import 'user_management_screen.dart';
 import 'dart:ui';
 import 'package:provider/provider.dart';
 import '../providers/attendance_provider.dart';
@@ -43,8 +44,9 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
       const HrManagementScreen(isEmbedded: true, initialTab: HrTab.structures),
       const HrManagementScreen(isEmbedded: true, initialTab: HrTab.shifts),
       const HrManagementScreen(isEmbedded: true, initialTab: HrTab.groups),
-      const HrManagementScreen(isEmbedded: true, initialTab: HrTab.employees),
+      const UserManagementScreen(isEmbedded: true),
       const HrManagementScreen(isEmbedded: true, initialTab: HrTab.holidays),
+
       const HrManagementScreen(isEmbedded: true, initialTab: HrTab.locations),
       const HrManagementScreen(isEmbedded: true, initialTab: HrTab.payroll),
       const HrManagementScreen(isEmbedded: true, initialTab: HrTab.dailyReport),
