@@ -5,6 +5,7 @@ import 'package:intl/intl.dart' hide TextDirection;
 import 'package:geolocator/geolocator.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/attendance_record.dart';
 import '../models/hr_models.dart';
 import '../models/request_model.dart';
@@ -36,6 +37,46 @@ class AttendanceProvider with ChangeNotifier {
 
   bool get isLoggedIn => _isLoggedIn;
 
+  Future<void> _saveAuthSession(bool loggedIn, String empId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', loggedIn);
+      if (loggedIn) {
+        await prefs.setString('loggedInEmployeeId', empId);
+      } else {
+        await prefs.remove('loggedInEmployeeId');
+      }
+    } catch (e) {
+      debugPrint('Error saving auth session: $e');
+    }
+  }
+
+  Future<void> _loadAuthSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final isLoggedInSaved = prefs.getBool('isLoggedIn') ?? false;
+      final savedEmployeeId = prefs.getString('loggedInEmployeeId');
+
+      if (isLoggedInSaved) {
+        _isLoggedIn = true;
+        if (savedEmployeeId != null && savedEmployeeId.isNotEmpty && _employees.isNotEmpty) {
+          _employeeId = savedEmployeeId;
+          final match = _employees.firstWhere(
+            (e) => e.id == savedEmployeeId,
+            orElse: () => _employees.first,
+          );
+          _userName = match.name;
+          _userTitle = match.position;
+          _position = match.position;
+          _email = match.email;
+        }
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error loading auth session: $e');
+    }
+  }
+
   Future<bool> login({required String identifier, required String password}) async {
     _isLoading = true;
     notifyListeners();
@@ -58,6 +99,7 @@ class AttendanceProvider with ChangeNotifier {
         _email = match.email;
         _isLoggedIn = true;
         _isLoading = false;
+        await _saveAuthSession(true, _employeeId);
         notifyListeners();
         return true;
       }
@@ -71,6 +113,7 @@ class AttendanceProvider with ChangeNotifier {
       } else {
         _isLoggedIn = true;
         _isLoading = false;
+        await _saveAuthSession(true, _employeeId);
         notifyListeners();
         return true;
       }
@@ -90,11 +133,13 @@ class AttendanceProvider with ChangeNotifier {
     _position = employee.position;
     _email = employee.email;
     _isLoggedIn = true;
+    _saveAuthSession(true, _employeeId);
     notifyListeners();
   }
 
   void logout() {
     _isLoggedIn = false;
+    _saveAuthSession(false, '');
     notifyListeners();
   }
 
@@ -327,6 +372,7 @@ class AttendanceProvider with ChangeNotifier {
     _initializeMockData();
     _initializeHRMockData();
     _initializeMockChats();
+    _loadAuthSession();
     _initializeFirebaseAndSync();
     recalculateAllStats();
   }
