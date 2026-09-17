@@ -37,6 +37,23 @@ class AttendanceProvider with ChangeNotifier {
 
   bool get isLoggedIn => _isLoggedIn;
 
+  void _syncCurrentEmployeeInfo() {
+    if (_employees.isNotEmpty) {
+      CompanyEmployee? match;
+      try {
+        match = _employees.firstWhere((e) => e.id == _employeeId);
+      } catch (_) {
+        match = _employees.first;
+        _employeeId = match.id;
+      }
+      _userName = match.name;
+      _userTitle = match.position;
+      _position = match.position;
+      _email = match.email;
+      _department = match.position;
+    }
+  }
+
   Future<void> _saveAuthSession(bool loggedIn, String empId) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -59,16 +76,9 @@ class AttendanceProvider with ChangeNotifier {
 
       if (isLoggedInSaved) {
         _isLoggedIn = true;
-        if (savedEmployeeId != null && savedEmployeeId.isNotEmpty && _employees.isNotEmpty) {
+        if (savedEmployeeId != null && savedEmployeeId.isNotEmpty) {
           _employeeId = savedEmployeeId;
-          final match = _employees.firstWhere(
-            (e) => e.id == savedEmployeeId,
-            orElse: () => _employees.first,
-          );
-          _userName = match.name;
-          _userTitle = match.position;
-          _position = match.position;
-          _email = match.email;
+          _syncCurrentEmployeeInfo();
         }
         notifyListeners();
       }
@@ -107,7 +117,7 @@ class AttendanceProvider with ChangeNotifier {
       // If no exact match or in offline mode, allow demo login
       if (_employees.isNotEmpty) {
         final defaultEmp = _employees.first;
-        loginAsEmployee(defaultEmp);
+        await loginAsEmployee(defaultEmp);
         _isLoading = false;
         return true;
       } else {
@@ -126,14 +136,14 @@ class AttendanceProvider with ChangeNotifier {
     return false;
   }
 
-  void loginAsEmployee(CompanyEmployee employee) {
+  Future<void> loginAsEmployee(CompanyEmployee employee) async {
     _employeeId = employee.id;
     _userName = employee.name;
     _userTitle = employee.position;
     _position = employee.position;
     _email = employee.email;
     _isLoggedIn = true;
-    _saveAuthSession(true, _employeeId);
+    await _saveAuthSession(true, _employeeId);
     notifyListeners();
   }
 
@@ -497,6 +507,7 @@ class AttendanceProvider with ChangeNotifier {
       _subscriptions.add(_firebaseService.streamEmployees().listen((data) {
         _employees.clear();
         _employees.addAll(data);
+        _syncCurrentEmployeeInfo();
         _avatarPath = currentEmployee?.avatarUrl;
         loadChatsForCurrentUser();
         notifyListeners();
