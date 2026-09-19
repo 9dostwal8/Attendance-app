@@ -109,7 +109,14 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
                         Expanded(
                           child: SafeArea(
                             bottom: false,
-                            child: IndexedStack(index: _selectedIndex, children: _pages),
+                            child: Column(
+                              children: [
+                                _buildWebHeader(provider, isDark),
+                                Expanded(
+                                  child: IndexedStack(index: _selectedIndex, children: _pages),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ],
@@ -134,6 +141,183 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
                 ],
               );
             },
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _getPageTitle(int index) {
+    switch (index) {
+      case 0: return 'Dashboard';
+      case 1: return 'Clock / Attendance';
+      case 2: return 'History';
+      case 3: return 'Payroll';
+      case 4: return 'Requests';
+      case 5: return 'Structures';
+      case 6: return 'Shifts';
+      case 7: return 'Groups';
+      case 8: return 'User Management';
+      case 9: return 'Holidays';
+      case 10: return 'Locations';
+      case 11: return 'HR Payroll';
+      case 12: return 'Daily Report';
+      case 13: return 'Approvals';
+      default: return 'Overview';
+    }
+  }
+
+  Widget _buildWebHeader(AttendanceProvider provider, bool isDark) {
+    return Container(
+      height: 70,
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF0F172A).withValues(alpha: 0.6) : Colors.white.withValues(alpha: 0.7),
+        border: Border(
+          bottom: BorderSide(
+            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+            width: 1,
+          ),
+        ),
+      ),
+      child: ClipRRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Row(
+            children: [
+              Text(
+                _getPageTitle(_selectedIndex),
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const Spacer(),
+
+              InkWell(
+                onTap: () => provider.toggleTheme(),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                    size: 20,
+                    color: isDark ? Colors.white : const Color(0xFF64748B),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              InkWell(
+                onTap: () {},
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Stack(
+                    children: [
+                      Icon(
+                        Icons.notifications_outlined,
+                        size: 20,
+                        color: isDark ? Colors.white : const Color(0xFF64748B),
+                      ),
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFEF4444),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Profile Dropdown
+              Theme(
+                data: Theme.of(context).copyWith(
+                  splashColor: Colors.transparent,
+                  highlightColor: Colors.transparent,
+                ),
+                child: PopupMenuButton<String>(
+                  offset: const Offset(0, 50),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  elevation: 8,
+                  onSelected: (value) {
+                    if (value == 'profile') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const ProfileScreen()),
+                      );
+                    } else if (value == 'logout') {
+                      provider.logout();
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'profile',
+                      child: Row(
+                        children: [
+                          Icon(Icons.person_outline, size: 20, color: isDark ? Colors.white70 : const Color(0xFF64748B)),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Profile',
+                            style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuDivider(),
+                    PopupMenuItem(
+                      value: 'logout',
+                      child: Row(
+                        children: [
+                          const Icon(Icons.logout_rounded, size: 20, color: Color(0xFFEF4444)),
+                          const SizedBox(width: 12),
+                          const Text(
+                            'Log Out',
+                            style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: CircleAvatar(
+                      radius: 18,
+                      backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+                      backgroundImage: provider.avatarPath != null ? AssetImage(provider.avatarPath!) : null,
+                      child: provider.avatarPath == null
+                          ? Icon(Icons.person, size: 20, color: isDark ? Colors.white70 : const Color(0xFF3B82F6))
+                          : null,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -289,98 +473,6 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
                     badgeCount: provider.pendingApprovalsCount,
                   ),
                 ],
-              ],
-            ),
-          ),
-        ),
-        // Bottom Profile Section
-        const SizedBox(height: 16),
-        InkWell(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const ProfileScreen()),
-            );
-          },
-          borderRadius: BorderRadius.circular(20),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: isDark 
-                    ? [Colors.white.withValues(alpha: 0.08), Colors.white.withValues(alpha: 0.03)]
-                    : [const Color(0xFF3B82F6).withValues(alpha: 0.08), Colors.transparent],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFF3B82F6).withValues(alpha: 0.15),
-                width: 1,
-              ),
-              boxShadow: [
-                if (!isDark)
-                  BoxShadow(
-                    color: const Color(0xFF3B82F6).withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
-                  child: CircleAvatar(
-                    radius: 20,
-                    backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-                    backgroundImage: provider.avatarPath != null ? AssetImage(provider.avatarPath!) : null,
-                    child: provider.avatarPath == null 
-                        ? Icon(Icons.person, color: isDark ? Colors.white70 : const Color(0xFF3B82F6)) 
-                        : null,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        provider.userName,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: isDark ? Colors.white : const Color(0xFF0F172A),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        provider.userTitle,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: isDark ? Colors.white60 : const Color(0xFF64748B),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.keyboard_arrow_right,
-                  color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
-                  size: 20,
-                ),
               ],
             ),
           ),
