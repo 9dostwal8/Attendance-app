@@ -114,19 +114,10 @@ class AttendanceProvider with ChangeNotifier {
         return true;
       }
 
-      // If no exact match or in offline mode, allow demo login
-      if (_employees.isNotEmpty) {
-        final defaultEmp = _employees.first;
-        await loginAsEmployee(defaultEmp);
-        _isLoading = false;
-        return true;
-      } else {
-        _isLoggedIn = true;
-        _isLoading = false;
-        await _saveAuthSession(true, _employeeId);
-        notifyListeners();
-        return true;
-      }
+      // If no exact match, login fails
+      _isLoading = false;
+      notifyListeners();
+      return false;
     } catch (e) {
       debugPrint('Login error: $e');
     }
