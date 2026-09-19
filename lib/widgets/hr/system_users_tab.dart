@@ -297,24 +297,57 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
 
             if (!isMobile) const Spacer() else const SizedBox(height: 12),
 
-            // Add New System User Button
-            ElevatedButton.icon(
-              onPressed: () => _showAddSystemUserDialog(context, provider),
-              icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
-              label: const Text(
-                'Add System Account',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF3B82F6),
-                foregroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                // Restore Super Admin Button
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    await provider.restoreSuperAdminUser();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Super Admin account restored successfully! (Email: admin@company.com)'),
+                          backgroundColor: Colors.purple,
+                        ),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.admin_panel_settings_rounded, size: 18, color: Color(0xFF8B5CF6)),
+                  label: const Text(
+                    'Restore Super Admin',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF8B5CF6)),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                    side: const BorderSide(color: Color(0xFF8B5CF6), width: 1.5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                 ),
-                elevation: 2,
-              ),
+
+                // Add New System User Button
+                ElevatedButton.icon(
+                  onPressed: () => _showAddSystemUserDialog(context, provider),
+                  icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
+                  label: const Text(
+                    'Add System Account',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF3B82F6),
+                    foregroundColor: Colors.white,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 2,
+                  ),
+                ),
+              ],
             ),
           ],
         );

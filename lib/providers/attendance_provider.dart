@@ -1695,6 +1695,24 @@ class AttendanceProvider with ChangeNotifier {
     }
   }
 
+  Future<void> restoreSuperAdminUser() async {
+    final superAdmin = CompanyEmployee(
+      id: 'admin_super_account',
+      name: 'Super Admin',
+      email: 'admin@company.com',
+      position: 'Super Administrator',
+      role: 'admin',
+      startDate: DateTime.now().toIso8601String().split('T')[0],
+      positionStartDate: DateTime.now().toIso8601String().split('T')[0],
+      groupStartDate: DateTime.now().toIso8601String().split('T')[0],
+      positionHistory: [],
+      groupHistory: [],
+      salaryHistory: [],
+    );
+    await addEmployee(superAdmin);
+  }
+
+
   Future<void> deleteHoliday(dynamic id) async => await _firebaseService.deleteHoliday(id);
   Future<void> updateHoliday(dynamic holiday) async => await _firebaseService.saveHoliday(holiday);
   Future<void> addHoliday(dynamic holiday) async => await _firebaseService.saveHoliday(holiday);
