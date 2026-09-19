@@ -83,28 +83,7 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
           else
             LayoutBuilder(
               builder: (context, constraints) {
-                final crossAxisCount = constraints.maxWidth > 960
-                    ? 3
-                    : constraints.maxWidth > 600
-                        ? 2
-                        : 1;
-
-                return GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  padding: const EdgeInsets.only(bottom: 24),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: crossAxisCount,
-                    childAspectRatio: 1.25,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                  ),
-                  itemCount: filteredUsers.length,
-                  itemBuilder: (context, index) {
-                    return _buildSystemUserCard(
-                        context, filteredUsers[index], provider, isDark);
-                  },
-                );
+                return _buildUsersTable(context, filteredUsers, provider, isDark);
               },
             ),
         ],
@@ -393,240 +372,216 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
     );
   }
 
-  // 3. System User Card Widget
-  Widget _buildSystemUserCard(BuildContext context, CompanyEmployee user,
-      AttendanceProvider provider, bool isDark) {
-    final isHR = user.role == 'hr' || user.role == 'admin';
-    final isSupervisor = user.role == 'supervisor';
-
-    final roleColor = isHR
-        ? const Color(0xFF8B5CF6)
-        : isSupervisor
-            ? const Color(0xFF06B6D4)
-            : const Color(0xFF64748B);
-
-    final roleLabel = isHR
-        ? 'HR Admin'
-        : isSupervisor
-            ? 'Supervisor'
-            : 'Employee';
+  // 3. System Users CRUD Table Widget
+  Widget _buildUsersTable(
+    BuildContext context,
+    List<CompanyEmployee> users,
+    AttendanceProvider provider,
+    bool isDark,
+  ) {
+    if (users.isEmpty) {
+      return _buildEmptyState(context, isDark);
+    }
 
     return GlassContainer(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Header Row: Avatar, Info, Role Pill
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Avatar
-              CircleAvatar(
-                radius: 22,
-                backgroundColor: roleColor.withValues(alpha: 0.15),
-                child: Text(
-                  user.name.isNotEmpty ? user.name[0].toUpperCase() : 'U',
-                  style: TextStyle(
-                    color: roleColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-
-              // Name & Email
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      user.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : const Color(0xFF0F172A),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      user.email,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark ? Colors.white60 : Colors.black54,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // System Role Badge
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: roleColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                      color: roleColor.withValues(alpha: 0.3), width: 1),
-                ),
-                child: Text(
-                  roleLabel,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: roleColor,
-                  ),
-                ),
-              ),
+      padding: const EdgeInsets.all(0),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                child: DataTable(
+            headingRowColor: WidgetStateProperty.all(
+              isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+            ),
+            dataRowMaxHeight: 65,
+            dataRowMinHeight: 65,
+            columnSpacing: 30,
+            horizontalMargin: 24,
+            columns: [
+              DataColumn(label: Text('User Details', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : Colors.black87))),
+              DataColumn(label: Text('Role', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : Colors.black87))),
+              DataColumn(label: Text('Access Status', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : Colors.black87))),
+              DataColumn(label: Text('Face ID', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : Colors.black87))),
+              DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : Colors.black87))),
             ],
-          ),
+            rows: users.map((user) {
+              final isHR = user.role == 'hr' || user.role == 'admin';
+              final isSupervisor = user.role == 'supervisor';
 
-          const Divider(height: 20),
+              final roleColor = isHR
+                  ? const Color(0xFF8B5CF6)
+                  : isSupervisor
+                      ? const Color(0xFF06B6D4)
+                      : const Color(0xFF64748B);
 
-          // Middle: Access Details
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Access Status
-              Row(
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: user.disabled
-                          ? const Color(0xFFEF4444)
-                          : const Color(0xFF10B981),
-                      shape: BoxShape.circle,
+              final roleLabel = isHR
+                  ? 'HR Admin'
+                  : isSupervisor
+                      ? 'Supervisor'
+                      : 'Employee';
+
+              return DataRow(
+                cells: [
+                  // User Details
+                  DataCell(
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 18,
+                          backgroundColor: roleColor.withValues(alpha: 0.15),
+                          child: Text(
+                            user.name.isNotEmpty ? user.name[0].toUpperCase() : 'U',
+                            style: TextStyle(
+                              color: roleColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              user.name,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              ),
+                            ),
+                            Text(
+                              user.email,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark ? Colors.white60 : Colors.black54,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 6),
-                  Text(
-                    user.disabled ? 'Access Disabled' : 'Active Account',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: user.disabled
-                          ? const Color(0xFFEF4444)
-                          : const Color(0xFF10B981),
+
+                  // Role
+                  DataCell(
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: roleColor.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: roleColor.withValues(alpha: 0.3), width: 1),
+                      ),
+                      child: Text(
+                        roleLabel,
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: roleColor),
+                      ),
+                    ),
+                  ),
+
+                  // Access Status
+                  DataCell(
+                    Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: user.disabled ? const Color(0xFFEF4444) : const Color(0xFF10B981),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          user.disabled ? 'Disabled' : 'Active',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: user.disabled ? const Color(0xFFEF4444) : const Color(0xFF10B981),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Face ID Status
+                  DataCell(
+                    Row(
+                      children: [
+                        Icon(
+                          user.faceEmbedding != null ? Icons.face_rounded : Icons.no_photography_outlined,
+                          size: 14,
+                          color: user.faceEmbedding != null ? const Color(0xFF3B82F6) : Colors.grey,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          user.faceEmbedding != null ? 'Enabled' : 'None',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? Colors.white54 : Colors.black54,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Actions
+                  DataCell(
+                    Row(
+                      children: [
+                        IconButton(
+                          onPressed: () => _showEditRoleDialog(context, user, provider),
+                          icon: const Icon(Icons.shield_outlined, size: 16),
+                          tooltip: 'Edit Role',
+                          color: isDark ? Colors.white70 : Colors.black87,
+                        ),
+                        IconButton(
+                          onPressed: () => _showSetPasswordDialog(context, user, provider),
+                          icon: const Icon(Icons.key_outlined, size: 16),
+                          tooltip: 'Set Password',
+                          color: isDark ? Colors.white70 : Colors.black87,
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            final newStatus = !user.disabled;
+                            final updated = user.copyWith(disabled: newStatus);
+                            provider.updateEmployee(updated);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  newStatus
+                                      ? 'Account access disabled for ${user.name}'
+                                      : 'Account access enabled for ${user.name}',
+                                ),
+                                backgroundColor: newStatus ? Colors.redAccent : Colors.green,
+                              ),
+                            );
+                          },
+                          icon: Icon(
+                            user.disabled ? Icons.lock_open_rounded : Icons.lock_person_outlined,
+                            size: 16,
+                            color: user.disabled ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                          ),
+                          tooltip: user.disabled ? 'Enable Access' : 'Disable Access',
+                        ),
+                      ],
                     ),
                   ),
                 ],
-              ),
-
-              // Face ID Status
-              Row(
-                children: [
-                  Icon(
-                    user.faceEmbedding != null
-                        ? Icons.face_rounded
-                        : Icons.no_photography_outlined,
-                    size: 14,
-                    color: user.faceEmbedding != null
-                        ? const Color(0xFF3B82F6)
-                        : Colors.grey,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    user.faceEmbedding != null ? 'Face ID Enabled' : 'No Face ID',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? Colors.white54 : Colors.black54,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          // Bottom Action Bar: Edit Role & Toggle Status
-          Row(
-            children: [
-              // Edit System Role
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => _showEditRoleDialog(context, user, provider),
-                  icon: const Icon(Icons.shield_outlined, size: 14),
-                  label: const Text('Edit Role', style: TextStyle(fontSize: 12)),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
-                    side: BorderSide(
-                      color: isDark
-                          ? Colors.white.withValues(alpha: 0.15)
-                          : Colors.black.withValues(alpha: 0.12),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              
-              // Set Password
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => _showSetPasswordDialog(context, user, provider),
-                  icon: const Icon(Icons.key_outlined, size: 14),
-                  label: const Text('Password', style: TextStyle(fontSize: 12)),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
-                    side: BorderSide(
-                      color: isDark
-                          ? Colors.white.withValues(alpha: 0.15)
-                          : Colors.black.withValues(alpha: 0.12),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-
-              // Toggle Disable / Enable Account Access
-              IconButton(
-                onPressed: () {
-                  final newStatus = !user.disabled;
-                  final updated = user.copyWith(disabled: newStatus);
-                  provider.updateEmployee(updated);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        newStatus
-                            ? 'Account access disabled for ${user.name}'
-                            : 'Account access enabled for ${user.name}',
-                      ),
-                      backgroundColor:
-                          newStatus ? Colors.redAccent : Colors.green,
-                    ),
-                  );
-                },
-                icon: Icon(
-                  user.disabled
-                      ? Icons.lock_open_rounded
-                      : Icons.lock_person_outlined,
-                  size: 18,
-                  color: user.disabled
-                      ? const Color(0xFF10B981)
-                      : const Color(0xFFEF4444),
-                ),
-                tooltip: user.disabled ? 'Enable Access' : 'Disable Access',
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
+              );
+            }).toList(),
+          ), // End DataTable
+        ), // End ConstrainedBox
+      ); // End return SingleChildScrollView
+    }, // End builder
+  ), // End LayoutBuilder
+), // End ClipRRect
+); // End GlassContainer
   }
 
   // Empty State Widget

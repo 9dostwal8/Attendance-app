@@ -10,6 +10,7 @@ import 'profile_screen.dart';
 import 'user_management_screen.dart';
 import 'dart:ui';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/attendance_provider.dart';
 
 class MainNavigationScreen extends StatefulWidget {
@@ -52,12 +53,35 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
       const HrManagementScreen(isEmbedded: true, initialTab: HrTab.dailyReport),
       const RequestsScreen(initialSubordinateTab: true), // index 13: Approvals
     ];
+    _loadSavedTab();
   }
 
-  void onTabSelected(int index) {
+  Future<void> _loadSavedTab() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedTab = prefs.getInt('main_nav_tab');
+      if (savedTab != null && savedTab >= 0 && savedTab < _pages.length) {
+        if (mounted) {
+          setState(() {
+            _selectedIndex = savedTab;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Failed to load saved tab: $e');
+    }
+  }
+
+  void onTabSelected(int index) async {
     setState(() {
       _selectedIndex = index;
     });
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('main_nav_tab', index);
+    } catch (e) {
+      debugPrint('Failed to save tab: $e');
+    }
   }
 
   @override
@@ -106,38 +130,7 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
                       child: _buildBottomNavigationBar(provider),
                     ),
 
-                  // Glassmorphic Loading Overlay (hides mock/empty state while loading from Firestore)
-                  if (provider.isLoading)
-                    Positioned.fill(
-                      child: ClipRRect(
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                          child: Container(
-                            color: Colors.black.withValues(alpha: 0.45),
-                            child: Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  CircularProgressIndicator(
-                                    color: Color(0xFF00FF87),
-                                  ),
-                                  SizedBox(height: 20),
-                                  Text(
-                                    provider.translate('syncing_db'),
-                                    style: TextStyle(
-                                      color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 0.2,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
+                  // Glassmorphic Loading Overlay removed per user request
                 ],
               );
             },
@@ -148,29 +141,32 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 
   Widget _buildSideNavigationBar(AttendanceProvider provider) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
-      width: 250,
+      width: 260,
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark 
-            ? ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.12))
-            : Colors.white, // Attendly design uses white sidebar
+        color: isDark 
+            ? const Color(0xFF0F172A).withValues(alpha: 0.65)
+            : Colors.white.withValues(alpha: 0.75),
         borderRadius: const BorderRadius.only(
           topRight: Radius.circular(32),
           bottomRight: Radius.circular(32),
         ),
-        boxShadow: Theme.of(context).brightness == Brightness.dark 
-            ? [] 
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(4, 0),
-                )
-              ],
+        boxShadow: [
+          if (!isDark)
+            BoxShadow(
+              color: const Color(0xFF3B82F6).withValues(alpha: 0.08),
+              blurRadius: 24,
+              offset: const Offset(8, 0),
+            ),
+        ],
         border: Border(
           right: BorderSide(
-            color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.05)),
-            width: 1,
+            color: isDark 
+                ? Colors.white.withValues(alpha: 0.08)
+                : Colors.black.withValues(alpha: 0.04),
+            width: 1.5,
           ),
         ),
       ),
@@ -180,9 +176,9 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
           bottomRight: Radius.circular(32),
         ),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+            padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
             child: Column(
               children: [
                 Expanded(
@@ -306,25 +302,51 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
               MaterialPageRoute(builder: (context) => const ProfileScreen()),
             );
           },
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Theme.of(context).brightness == Brightness.dark 
-                  ? Colors.white.withValues(alpha: 0.05)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(16),
-              border: Theme.of(context).brightness == Brightness.dark 
-                  ? Border.all(color: Colors.white12)
-                  : null,
+              gradient: LinearGradient(
+                colors: isDark 
+                    ? [Colors.white.withValues(alpha: 0.08), Colors.white.withValues(alpha: 0.03)]
+                    : [const Color(0xFF3B82F6).withValues(alpha: 0.08), Colors.transparent],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFF3B82F6).withValues(alpha: 0.15),
+                width: 1,
+              ),
+              boxShadow: [
+                if (!isDark)
+                  BoxShadow(
+                    color: const Color(0xFF3B82F6).withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+              ],
             ),
             child: Row(
               children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.white24 : Colors.black12,
-                  backgroundImage: provider.avatarPath != null ? AssetImage(provider.avatarPath!) : null,
-                  child: provider.avatarPath == null ? Icon(Icons.person, color: (Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)) : null,
+                Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: CircleAvatar(
+                    radius: 20,
+                    backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+                    backgroundImage: provider.avatarPath != null ? AssetImage(provider.avatarPath!) : null,
+                    child: provider.avatarPath == null 
+                        ? Icon(Icons.person, color: isDark ? Colors.white70 : const Color(0xFF3B82F6)) 
+                        : null,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -336,7 +358,7 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
-                          color: (Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black),
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -344,8 +366,9 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
                       Text(
                         provider.userTitle,
                         style: TextStyle(
-                          fontSize: 12,
-                          color: (Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.6),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: isDark ? Colors.white60 : const Color(0xFF64748B),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -355,7 +378,7 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
                 ),
                 Icon(
                   Icons.keyboard_arrow_right,
-                  color: (Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.6),
+                  color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
                   size: 20,
                 ),
               ],
@@ -378,60 +401,95 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
     int badgeCount = 0,
   }) {
     final isSelected = _selectedIndex == index;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final icon = isSelected ? filledIcon : outlineIcon;
 
-    return InkWell(
-      onTap: () => onTabSelected(index),
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected 
-              ? (Theme.of(context).brightness == Brightness.dark 
-                  ? Colors.white.withValues(alpha: 0.2)
-                  : const Color(0xFFF3E8FF)) // Light purple pill in light mode
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon, 
-              color: isSelected 
-                  ? (Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF7E22CE))
-                  : ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.6)),
-              size: 22,
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: isSelected 
-                      ? (Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF7E22CE))
-                      : ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.6)),
-                  fontSize: 15,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: InkWell(
+        onTap: () => onTabSelected(index),
+        borderRadius: BorderRadius.circular(16),
+        splashColor: const Color(0xFF3B82F6).withValues(alpha: 0.1),
+        highlightColor: Colors.transparent,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            gradient: isSelected
+                ? const LinearGradient(
+                    colors: [Color(0xFF2E65FF), Color(0xFF6366F1)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
+            color: isSelected ? null : Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF2E65FF).withValues(alpha: 0.4),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    )
+                  ]
+                : [],
+          ),
+          child: Row(
+            children: [
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
+                child: Icon(
+                  icon,
+                  key: ValueKey(isSelected),
+                  color: isSelected
+                      ? Colors.white
+                      : (isDark ? Colors.white54 : const Color(0xFF64748B)),
+                  size: 22,
                 ),
               ),
-            ),
-            if (badgeCount > 0)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEF4444),
-                  borderRadius: BorderRadius.circular(10),
+              const SizedBox(width: 16),
+              Expanded(
+                child: AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 200),
+                  style: TextStyle(
+                    color: isSelected
+                        ? Colors.white
+                        : (isDark ? Colors.white70 : const Color(0xFF334155)),
+                    fontSize: 15,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                    fontFamily: 'Inter',
+                  ),
+                  child: Text(label),
                 ),
-                child: Text(
-                  badgeCount > 9 ? '9+' : '$badgeCount',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
+              ),
+              if (badgeCount > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isSelected ? Colors.white : const Color(0xFFEF4444),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      if (!isSelected)
+                        BoxShadow(
+                          color: const Color(0xFFEF4444).withValues(alpha: 0.3),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                    ],
+                  ),
+                  child: Text(
+                    badgeCount > 9 ? '9+' : '$badgeCount',
+                    style: TextStyle(
+                      color: isSelected ? const Color(0xFF2E65FF) : Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );

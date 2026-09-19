@@ -92,27 +92,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
           else
             LayoutBuilder(
               builder: (context, constraints) {
-                final crossAxisCount = constraints.maxWidth > 960
-                    ? 3
-                    : constraints.maxWidth > 600
-                        ? 2
-                        : 1;
-
-                return GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  padding: const EdgeInsets.only(bottom: 24),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: crossAxisCount,
-                    childAspectRatio: 1.25,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                  ),
-                  itemCount: filteredEmployees.length,
-                  itemBuilder: (context, index) {
-                    return _buildEmployeeCard(context, filteredEmployees[index], provider, isDark);
-                  },
-                );
+                return _buildEmployeesTable(context, filteredEmployees, provider, isDark);
               },
             ),
         ],
@@ -395,270 +375,244 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
     );
   }
 
-  Widget _buildEmployeeCard(
+  Widget _buildEmployeesTable(
     BuildContext context,
-    CompanyEmployee employee,
+    List<CompanyEmployee> employees,
     AttendanceProvider provider,
     bool isDark,
   ) {
-    // Structure Name
-    final structure = provider.structures.firstWhere(
-      (s) => s.id == employee.structureId,
-      orElse: () => OrgStructure(id: '', name: 'Unassigned', location: '', capacity: 0),
-    );
+    if (employees.isEmpty) {
+      return _buildEmptyState(context, isDark);
+    }
 
-    final isUserDisabled = employee.disabled;
-    final roleColor = employee.role == 'hr' || employee.role == 'admin'
-        ? const Color(0xFF8B5CF6)
-        : employee.role == 'supervisor'
-            ? const Color(0xFF2E65FF)
-            : const Color(0xFF10B981);
-
-    return Opacity(
-      opacity: isUserDisabled ? 0.6 : 1.0,
-      child: GlassContainer(
-        padding: const EdgeInsets.all(16),
-        borderColor: isUserDisabled
-            ? Colors.red.withValues(alpha: 0.3)
-            : null,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // User Avatar & Main Info
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: roleColor.withValues(alpha: 0.15),
-                  child: Text(
-                    employee.name.isNotEmpty ? employee.name[0].toUpperCase() : 'U',
-                    style: TextStyle(
-                      color: roleColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                    ),
+    return GlassContainer(
+      padding: const EdgeInsets.all(0),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                child: DataTable(
+                  headingRowColor: WidgetStateProperty.all(
+                    isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              employee.name,
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? Colors.white : const Color(0xFF0F172A),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (isUserDisabled)
-                            Container(
-                              margin: const EdgeInsets.only(left: 6),
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.red.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: const Text(
-                                'SUSPENDED',
-                                style: TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.redAccent,
+                  dataRowMaxHeight: 65,
+                  dataRowMinHeight: 65,
+                  columnSpacing: 30,
+                  horizontalMargin: 24,
+                  columns: [
+                    DataColumn(label: Text('Employee', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : Colors.black87))),
+                    DataColumn(label: Text('Job Details', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : Colors.black87))),
+                    DataColumn(label: Text('Role & Access', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : Colors.black87))),
+                    DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : Colors.black87))),
+                  ],
+                  rows: employees.map((employee) {
+                    final structure = provider.structures.firstWhere(
+                      (s) => s.id == employee.structureId,
+                      orElse: () => OrgStructure(id: '', name: 'Unassigned', location: '', capacity: 0),
+                    );
+
+                    final isUserDisabled = employee.disabled;
+                    final roleColor = employee.role == 'hr' || employee.role == 'admin'
+                        ? const Color(0xFF8B5CF6)
+                        : employee.role == 'supervisor'
+                            ? const Color(0xFF2E65FF)
+                            : const Color(0xFF10B981);
+
+                    return DataRow(
+                      color: WidgetStateProperty.all(isUserDisabled ? Colors.red.withValues(alpha: 0.05) : Colors.transparent),
+                      cells: [
+                        // Employee Info
+                        DataCell(
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 18,
+                                backgroundColor: roleColor.withValues(alpha: 0.15),
+                                child: Text(
+                                  employee.name.isNotEmpty ? employee.name[0].toUpperCase() : 'U',
+                                  style: TextStyle(
+                                    color: roleColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
                                 ),
                               ),
-                            ),
-                        ],
-                      ),
-                      Text(
-                        employee.position.isNotEmpty ? employee.position : 'Team Member',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark ? Colors.white60 : Colors.black54,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Context Actions Menu
-                PopupMenuButton<String>(
-                  icon: Icon(
-                    Icons.more_vert_rounded,
-                    color: isDark ? Colors.white60 : Colors.black45,
-                    size: 20,
-                  ),
-                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                  onSelected: (action) {
-                    if (action == 'edit') {
-                      if (widget.onEdit != null) {
-                        widget.onEdit!(employee);
-                      } else {
-                        _showUserFormDialog(context: context, provider: provider, employee: employee);
-                      }
-                    } else if (action == 'toggle_status') {
-                      final updated = employee.copyWith(disabled: !employee.disabled);
-                      provider.updateEmployee(updated);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            employee.disabled
-                                ? '${employee.name}\'s account activated.'
-                                : '${employee.name}\'s account suspended.',
+                              const SizedBox(width: 12),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(
+                                        employee.name,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                        ),
+                                      ),
+                                      if (isUserDisabled)
+                                        Container(
+                                          margin: const EdgeInsets.only(left: 6),
+                                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.red.withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: const Text(
+                                            'SUSPENDED',
+                                            style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.redAccent),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                  Text(
+                                    employee.email,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: isDark ? Colors.white60 : Colors.black54,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
-                      );
-                    } else if (action == 'view_details') {
-                      _showUserDetailsDialog(context, employee, provider, isDark);
-                    } else if (action == 'delete') {
-                      if (widget.onDelete != null) {
-                        widget.onDelete!(employee.id);
-                      } else {
-                        _showDeleteConfirm(context, employee, provider);
-                      }
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'view_details',
-                      child: Row(
-                        children: [
-                          Icon(Icons.visibility_outlined, size: 18),
-                          SizedBox(width: 8),
-                          Text('View Profile'),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'edit',
-                      child: Row(
-                        children: [
-                          Icon(Icons.edit_outlined, size: 18),
-                          SizedBox(width: 8),
-                          Text('Edit User'),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem(
-                      value: 'toggle_status',
-                      child: Row(
-                        children: [
-                          Icon(
-                            employee.disabled ? Icons.check_circle_outline : Icons.block_outlined,
-                            size: 18,
-                            color: employee.disabled ? Colors.green : Colors.orange,
+
+                        // Job Details
+                        DataCell(
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                employee.position.isNotEmpty ? employee.position : 'Team Member',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                ),
+                              ),
+                              Text(
+                                'Dept: ${structure.name}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: isDark ? Colors.white60 : Colors.black54,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 8),
-                          Text(employee.disabled ? 'Activate User' : 'Suspend User'),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                          Icon(Icons.delete_outline, color: Colors.redAccent, size: 18),
-                          const SizedBox(width: 8),
-                          Text('Delete User', style: TextStyle(color: Colors.redAccent)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
+                        ),
 
-            // Email & Contact
-            Row(
-              children: [
-                Icon(Icons.email_outlined, size: 14, color: isDark ? Colors.white54 : Colors.black45),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    employee.email,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isDark ? Colors.white70 : Colors.black87,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
+                        // Role & Access
+                        DataCell(
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: roleColor.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  employee.role.toUpperCase(),
+                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: roleColor),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(
+                                    employee.faceEmbedding != null ? Icons.face_retouching_natural : Icons.face_outlined,
+                                    size: 12,
+                                    color: employee.faceEmbedding != null ? const Color(0xFF10B981) : Colors.grey,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    employee.faceEmbedding != null ? 'Face Verified' : 'No Face ID',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: employee.faceEmbedding != null ? const Color(0xFF10B981) : Colors.grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
 
-            // Structure Tag & Group Tag
-            Row(
-              children: [
-                Icon(Icons.account_tree_outlined, size: 14, color: isDark ? Colors.white54 : Colors.black45),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    'Dept: ${structure.name}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isDark ? Colors.white60 : Colors.black54,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                        // Actions
+                        DataCell(
+                          Row(
+                            children: [
+                              IconButton(
+                                onPressed: () => _showUserDetailsDialog(context, employee, provider, isDark),
+                                icon: const Icon(Icons.visibility_outlined, size: 16),
+                                tooltip: 'View Profile',
+                                color: isDark ? Colors.white70 : Colors.black87,
+                              ),
+                              IconButton(
+                                onPressed: () {
+                                  if (widget.onEdit != null) {
+                                    widget.onEdit!(employee);
+                                  } else {
+                                    _showUserFormDialog(context: context, provider: provider, employee: employee);
+                                  }
+                                },
+                                icon: const Icon(Icons.edit_outlined, size: 16),
+                                tooltip: 'Edit User',
+                                color: isDark ? Colors.white70 : Colors.black87,
+                              ),
+                              IconButton(
+                                onPressed: () {
+                                  final updated = employee.copyWith(disabled: !employee.disabled);
+                                  provider.updateEmployee(updated);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        employee.disabled
+                                            ? '${employee.name}\'s account activated.'
+                                            : '${employee.name}\'s account suspended.',
+                                      ),
+                                    ),
+                                  );
+                                },
+                                icon: Icon(
+                                  employee.disabled ? Icons.check_circle_outline : Icons.block_outlined,
+                                  size: 16,
+                                  color: employee.disabled ? Colors.green : Colors.orange,
+                                ),
+                                tooltip: employee.disabled ? 'Activate User' : 'Suspend User',
+                              ),
+                              IconButton(
+                                onPressed: () {
+                                  if (widget.onDelete != null) {
+                                    widget.onDelete!(employee.id);
+                                  } else {
+                                    _showDeleteConfirm(context, employee, provider);
+                                  }
+                                },
+                                icon: const Icon(Icons.delete_outline, size: 16),
+                                tooltip: 'Delete User',
+                                color: Colors.redAccent,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  }).toList(),
                 ),
-              ],
-            ),
-
-            const Spacer(),
-            const Divider(height: 16),
-
-            // Footer Badges: Role Pill & Face Verified Status
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: roleColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    employee.role.toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: roleColor,
-                    ),
-                  ),
-                ),
-                Row(
-                  children: [
-                    Icon(
-                      employee.faceEmbedding != null ? Icons.face_retouching_natural : Icons.face_outlined,
-                      size: 16,
-                      color: employee.faceEmbedding != null ? const Color(0xFF10B981) : Colors.grey,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      employee.faceEmbedding != null ? 'Face Verified' : 'No Face ID',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: employee.faceEmbedding != null ? const Color(0xFF10B981) : Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
+              ),
+            );
+          },
         ),
       ),
     );
