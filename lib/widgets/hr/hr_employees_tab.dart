@@ -767,6 +767,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
     final nameController = TextEditingController(text: employee?.name ?? '');
     final emailController = TextEditingController(text: employee?.email ?? '');
     final positionController = TextEditingController(text: employee?.position ?? '');
+    final passwordController = TextEditingController(text: employee?.password ?? '');
     final phoneController = TextEditingController(text: employee?.phoneNumber ?? '');
     final salaryController = TextEditingController(text: employee?.basicSalary.toString() ?? '0');
     
@@ -811,6 +812,16 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                   style: const TextStyle(color: Colors.white),
                   decoration: const InputDecoration(
                     labelText: 'Position / Job Title',
+                    labelStyle: TextStyle(color: Colors.white70),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: passwordController,
+                  style: const TextStyle(color: Colors.white),
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Login Password (optional)',
                     labelStyle: TextStyle(color: Colors.white70),
                   ),
                 ),
@@ -931,6 +942,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
               email: email,
               position: pos.isNotEmpty ? pos : 'Team Member',
               role: selectedRole,
+              password: passwordController.text.trim().isNotEmpty ? passwordController.text.trim() : null,
               structureId: selectedStructure,
               groupId: selectedGroup,
               phoneNumber: phoneController.text.trim(),

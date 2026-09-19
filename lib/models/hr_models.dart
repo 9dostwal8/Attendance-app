@@ -627,6 +627,7 @@ class CompanyEmployee {
   final List<double>? faceEmbedding;
   final String themePreference; // 'dark' or 'light'
   final String? fcmToken;
+  final String? password;
 
   CompanyEmployee({
     required this.id,
@@ -656,6 +657,7 @@ class CompanyEmployee {
     this.faceEmbedding,
     this.themePreference = 'dark',
     this.fcmToken,
+    this.password,
   });
 
   CompanyEmployee copyWith({
@@ -692,6 +694,8 @@ class CompanyEmployee {
     String? themePreference,
     String? fcmToken,
     bool overrideFcmToken = false,
+    String? password,
+    bool overridePassword = false,
   }) {
     return CompanyEmployee(
       id: id ?? this.id,
@@ -720,6 +724,7 @@ class CompanyEmployee {
       otherAllowance: otherAllowance ?? this.otherAllowance,
       faceEmbedding: overrideFaceEmbedding ? faceEmbedding : (faceEmbedding ?? this.faceEmbedding),
       themePreference: themePreference ?? this.themePreference,
+      password: overridePassword ? password : (password ?? this.password),
     );
   }
 
@@ -752,6 +757,7 @@ class CompanyEmployee {
       'faceEmbedding': faceEmbedding,
       'themePreference': themePreference,
       'fcmToken': fcmToken,
+      'password': password,
     };
   }
 
@@ -803,6 +809,7 @@ class CompanyEmployee {
           : null,
       themePreference: map['themePreference'] ?? 'dark',
       fcmToken: map['fcmToken'],
+      password: map['password'],
     );
   }
 }

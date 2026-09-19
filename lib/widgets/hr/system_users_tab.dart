@@ -570,6 +570,28 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
                 ),
               ),
               const SizedBox(width: 8),
+              
+              // Set Password
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _showSetPasswordDialog(context, user, provider),
+                  icon: const Icon(Icons.key_outlined, size: 14),
+                  label: const Text('Password', style: TextStyle(fontSize: 12)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
+                    side: BorderSide(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.15)
+                          : Colors.black.withValues(alpha: 0.12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
 
               // Toggle Disable / Enable Account Access
               IconButton(
@@ -730,12 +752,73 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
     );
   }
 
+  // Modal: Set Password
+  void _showSetPasswordDialog(
+      BuildContext context, CompanyEmployee user, AttendanceProvider provider) {
+    final passCtrl = TextEditingController(text: user.password ?? '');
+
+    showGlassDialog(
+      context: context,
+      title: 'Update Password',
+      subtitle: 'Set a new login password for ${user.name}',
+      icon: Icons.key_outlined,
+      content: StatefulBuilder(
+        builder: (context, setModalState) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: passCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'New Password',
+                  prefixIcon: Icon(Icons.lock_outline),
+                ),
+                obscureText: true,
+              ),
+            ],
+          );
+        },
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            if (passCtrl.text.trim().isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Please enter a password')),
+              );
+              return;
+            }
+            final updatedUser = user.copyWith(password: passCtrl.text.trim(), overridePassword: true);
+            provider.updateEmployee(updatedUser);
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Updated password for ${user.name}'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF3B82F6),
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Save Password'),
+        ),
+      ],
+    );
+  }
+
   // Modal: Add System Account
   void _showAddSystemUserDialog(
       BuildContext context, AttendanceProvider provider) {
     final nameCtrl = TextEditingController();
     final emailCtrl = TextEditingController();
     final posCtrl = TextEditingController(text: 'System Administrator');
+    final passCtrl = TextEditingController();
     String role = 'hr';
 
     showGlassDialog(
@@ -771,6 +854,15 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
                     labelText: 'Position Title',
                     prefixIcon: Icon(Icons.work_outline),
                   ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: passCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Login Password',
+                    prefixIcon: Icon(Icons.lock_outline),
+                  ),
+                  obscureText: true,
                 ),
                 const SizedBox(height: 14),
                 DropdownButtonFormField<String>(
@@ -824,6 +916,7 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
               email: emailCtrl.text.trim(),
               position: posCtrl.text.trim(),
               role: role,
+              password: passCtrl.text.trim().isNotEmpty ? passCtrl.text.trim() : null,
               startDate: DateTime.now().toIso8601String().split('T')[0],
               positionStartDate:
                   DateTime.now().toIso8601String().split('T')[0],

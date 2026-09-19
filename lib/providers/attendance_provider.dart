@@ -95,9 +95,10 @@ class AttendanceProvider with ChangeNotifier {
       final input = identifier.trim().toLowerCase();
       final matchIndex = _employees.indexWhere(
         (e) =>
-            e.email.toLowerCase() == input ||
+            (e.email.toLowerCase() == input ||
             e.id.toLowerCase() == input ||
-            e.name.toLowerCase() == input,
+            e.name.toLowerCase() == input) &&
+            (e.password == null || e.password == password),
       );
 
       if (matchIndex != -1) {
@@ -435,6 +436,23 @@ class AttendanceProvider with ChangeNotifier {
       ),
     ];
 
+    // Always ensure Super Admin is available in the list so the user is never locked out
+    if (!_employees.any((e) => e.email == 'admin@company.com')) {
+      _employees.add(CompanyEmployee(
+        id: 'admin_super_account',
+        name: 'Super Admin',
+        email: 'admin@company.com',
+        position: 'Super Administrator',
+        role: 'admin',
+        startDate: DateTime.now().toIso8601String().split('T')[0],
+        positionStartDate: DateTime.now().toIso8601String().split('T')[0],
+        groupStartDate: DateTime.now().toIso8601String().split('T')[0],
+        positionHistory: [],
+        groupHistory: [],
+        salaryHistory: [],
+      ));
+    }
+
     // Seed empty Firestore tables with timeout
     try {
       await _firebaseService
@@ -498,6 +516,27 @@ class AttendanceProvider with ChangeNotifier {
       _subscriptions.add(_firebaseService.streamEmployees().listen((data) {
         _employees.clear();
         _employees.addAll(data);
+        
+        // --- ENSURE SUPER ADMIN REMAINS PERMANENTLY ---
+        if (!_employees.any((e) => e.email == 'admin@company.com')) {
+          final superAdmin = CompanyEmployee(
+            id: 'admin_super_account',
+            name: 'Super Admin',
+            email: 'admin@company.com',
+            position: 'Super Administrator',
+            role: 'admin',
+            password: 'admin123',
+            startDate: DateTime.now().toIso8601String().split('T')[0],
+            positionStartDate: DateTime.now().toIso8601String().split('T')[0],
+            groupStartDate: DateTime.now().toIso8601String().split('T')[0],
+            positionHistory: [],
+            groupHistory: [],
+            salaryHistory: [],
+          );
+          _employees.add(superAdmin);
+          _firebaseService.saveEmployee(superAdmin);
+        }
+
         _syncCurrentEmployeeInfo();
         _avatarPath = currentEmployee?.avatarUrl;
         loadChatsForCurrentUser();
@@ -1693,6 +1732,7 @@ class AttendanceProvider with ChangeNotifier {
       email: 'admin@company.com',
       position: 'Super Administrator',
       role: 'admin',
+      password: 'admin123',
       startDate: DateTime.now().toIso8601String().split('T')[0],
       positionStartDate: DateTime.now().toIso8601String().split('T')[0],
       groupStartDate: DateTime.now().toIso8601String().split('T')[0],
