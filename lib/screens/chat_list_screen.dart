@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/attendance_provider.dart';
 import '../models/hr_models.dart';
-import '../widgets/glass_container.dart';
 import '../widgets/avatar_image_helper.dart';
 import 'chat_room_screen.dart';
 
@@ -28,6 +27,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<AttendanceProvider>(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final currentUser = provider.currentEmployee;
 
     // Resolve contacts based on unified provider logic
@@ -47,12 +47,15 @@ class _ChatListScreenState extends State<ChatListScreen> {
       textDirection: provider.currentLanguageDirection,
       child: Scaffold(
         body: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFF2E65FF), Color(0xFF8236FE)],
-            ),
+          decoration: BoxDecoration(
+            gradient: !isDark
+                ? const LinearGradient(
+                    colors: [Color(0xFFFCFDFD), Color(0xFFEDF2FE), Color(0xFFE0EAFF)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
+            color: isDark ? const Color(0xFF0F172A) : null,
           ),
           child: SafeArea(
             child: Column(
@@ -69,8 +72,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       _buildBackButton(context),
                       Text(
                         screenTitle,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: isDark ? Colors.white : const Color(0xFF1E293B),
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -120,7 +123,19 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
                             return Container(
                               margin: const EdgeInsets.only(bottom: 12),
-                              child: GlassContainer(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+                                  boxShadow: isDark ? [] : [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.03),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    )
+                                  ],
+                                ),
                                 padding: EdgeInsets.zero,
                                 child: ListTile(
                                   contentPadding: const EdgeInsets.symmetric(
@@ -144,8 +159,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                       Expanded(
                                         child: Text(
                                           contact.name,
-                                          style: const TextStyle(
-                                            color: Colors.white,
+                                          style: TextStyle(
+                                            color: isDark ? Colors.white : const Color(0xFF1E293B),
                                             fontSize: 15,
                                             fontWeight: FontWeight.bold,
                                           ),
@@ -156,10 +171,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                       if (lastMsg != null)
                                         Text(
                                           _formatTime(lastMsg.timestamp),
-                                          style: TextStyle(
-                                            color: Colors.white.withValues(
-                                              alpha: 0.5,
-                                            ),
+                                          style: const TextStyle(
+                                            color: Color(0xFF64748B),
                                             fontSize: 11,
                                           ),
                                         ),
@@ -178,10 +191,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                                       ? '[Request Card]'
                                                       : lastMsg.text)
                                                 : contact.position,
-                                            style: TextStyle(
-                                              color: Colors.white.withValues(
-                                                alpha: 0.6,
-                                              ),
+                                            style: const TextStyle(
+                                              color: Color(0xFF64748B),
                                               fontSize: 13,
                                             ),
                                             maxLines: 1,
@@ -226,6 +237,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   Widget _buildBackButton(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: () => Navigator.pop(context),
       child: Container(
@@ -233,13 +245,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
         height: 44,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: Colors.white.withValues(alpha: 0.08),
+          color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.04),
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.2),
+            color: isDark ? Colors.white.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.1),
             width: 1,
           ),
         ),
-        child: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+        child: Icon(Icons.arrow_back, color: isDark ? Colors.white : const Color(0xFF1E293B), size: 20),
       ),
     );
   }

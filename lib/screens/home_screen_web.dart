@@ -3,10 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../providers/attendance_provider.dart';
 import '../widgets/dashboard_widgets.dart';
-import '../widgets/company_settings_dialog.dart';
-import '../widgets/web_notifications_dialog.dart';
 import '../services/web_notification_helper.dart';
-import 'chat_list_screen.dart';
 
 
 class HomeScreenWeb extends StatefulWidget {
@@ -73,99 +70,7 @@ class _HomeScreenWebState extends State<HomeScreenWeb> {
                           ),
                         ],
                       ),
-                      // Header Actions (Search, Bell, Settings)
-                      Row(
-                        children: [
 
-                          // Chat Button
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const ChatListScreen(),
-                                ),
-                              );
-                            },
-                            child: Stack(
-                              children: [
-                                _buildHeaderIcon(context, Icons.chat_bubble_outline_rounded),
-                                if (provider.hasUnreadMessages)
-                                  Positioned(
-                                    right: 0,
-                                    top: 0,
-                                    child: Container(
-                                      width: 12,
-                                      height: 12,
-                                      decoration: const BoxDecoration(
-                                        color: Colors.red,
-                                        shape: BoxShape.circle,
-                                        border: Border.fromBorderSide(BorderSide(color: Colors.white, width: 2)),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          // Notification Bell
-                          GestureDetector(
-                            onTap: () {
-                              showWebNotificationsDialog(context);
-                            },
-                            child: Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                _buildHeaderIcon(context, Icons.notifications_none_outlined),
-                                if (provider.unreadNotificationCount > 0)
-                                  Positioned(
-                                    right: -2,
-                                    top: -2,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFEF4444),
-                                        borderRadius: BorderRadius.circular(10),
-                                        border: Border.all(
-                                          color: Theme.of(context).brightness == Brightness.dark
-                                              ? const Color(0xFF1E293B)
-                                              : Colors.white,
-                                          width: 1.5,
-                                        ),
-                                      ),
-                                      constraints: const BoxConstraints(
-                                        minWidth: 16,
-                                        minHeight: 16,
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          provider.unreadNotificationCount > 9
-                                              ? '9+'
-                                              : '${provider.unreadNotificationCount}',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.bold,
-                                            height: 1,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                            // Settings Icon
-                            if (provider.canEditCompanyInfo)
-                              GestureDetector(
-                              onTap: () {
-                                showCompanySettingsDialog(context);
-                              },
-                              child: _buildHeaderIcon(context, Icons.settings_outlined),
-                            ),
-                        ],
-                      ),
                     ],
                   ),
                 ],
@@ -187,18 +92,7 @@ class _HomeScreenWebState extends State<HomeScreenWeb> {
     );
   }
 
-  Widget _buildHeaderIcon(BuildContext context, IconData icon) {
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Theme.of(context).brightness == Brightness.dark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
-        border: Theme.of(context).brightness == Brightness.dark ? Border.all(color: Colors.white12) : Border.all(color: Colors.black.withValues(alpha: 0.05)),
-      ),
-      child: Icon(icon, color: (Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.7), size: 20),
-    );
-  }
+
 
 
 

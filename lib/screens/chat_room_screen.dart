@@ -76,27 +76,32 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       }
     });
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Directionality(
       textDirection: provider.currentLanguageDirection,
       child: Scaffold(
         body: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFF2E65FF), Color(0xFF8236FE)],
-            ),
+          decoration: BoxDecoration(
+            gradient: !isDark
+                ? const LinearGradient(
+                    colors: [Color(0xFFFCFDFD), Color(0xFFEDF2FE), Color(0xFFE0EAFF)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
+            color: isDark ? const Color(0xFF0F172A) : null,
           ),
           child: SafeArea(
             child: Column(
               children: [
                 // Custom App Bar / Header
-                _buildHeader(context, provider),
+                _buildHeader(context, provider, isDark),
 
                 // Message List
                 Expanded(
                   child: messages.isEmpty
-                      ? _buildEmptyChat(provider)
+                      ? _buildEmptyChat(provider, isDark)
                       : ListView.builder(
                           controller: _scrollController,
                           physics: const BouncingScrollPhysics(),
@@ -115,13 +120,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                               isMe,
                               provider,
                               currentUser,
+                              isDark,
                             );
                           },
                         ),
                 ),
 
-                // Input Section
-                _buildInputSection(provider),
+                // Bottom Input
+                _buildInputSection(provider, isDark),
               ],
             ),
           ),
@@ -130,9 +136,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     );
   }
 
-  Widget _buildHeader(BuildContext context, AttendanceProvider provider) {
+  Widget _buildHeader(BuildContext context, AttendanceProvider provider, bool isDark) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
       child: Row(
         children: [
           // Back Button
@@ -143,13 +149,18 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
               height: 40,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.08),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.04),
+                border: Border.all(
+                  color: isDark ? Colors.white.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.1),
+                  width: 1,
+                ),
               ),
-              child: const Icon(
-                Icons.arrow_back,
-                color: Colors.white,
-                size: 18,
+              child: Center(
+                child: Icon(
+                  Icons.arrow_back,
+                  color: isDark ? Colors.white : const Color(0xFF1E293B),
+                  size: 18,
+                ),
               ),
             ),
           ),
@@ -166,8 +177,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
               children: [
                 Text(
                   widget.contact.name,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: isDark ? Colors.white : const Color(0xFF1E293B),
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
                   ),
@@ -175,7 +186,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                 Text(
                   widget.contact.position,
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.6),
+                    color: isDark ? Colors.white.withValues(alpha: 0.6) : const Color(0xFF64748B),
                     fontSize: 11,
                   ),
                 ),
@@ -225,14 +236,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     );
   }
 
-  Widget _buildEmptyChat(AttendanceProvider provider) {
+  Widget _buildEmptyChat(AttendanceProvider provider, bool isDark) {
     return Center(
       child: Text(
         provider
             .translate('chat_with')
             .replaceAll('{name}', widget.contact.name),
         style: TextStyle(
-          color: Colors.white.withValues(alpha: 0.5),
+          color: isDark ? Colors.white.withValues(alpha: 0.5) : const Color(0xFF94A3B8),
           fontSize: 13,
         ),
       ),
@@ -245,6 +256,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     bool isMe,
     AttendanceProvider provider,
     CompanyEmployee? currentUser,
+    bool isDark,
   ) {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
@@ -254,8 +266,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
         child: message.isRequestCard
-            ? _buildRequestCard(context, message, isMe, provider, currentUser)
-            : _buildTextBubble(context, message, isMe),
+            ? _buildRequestCard(context, message, isMe, provider, currentUser, isDark)
+            : _buildTextBubble(context, message, isMe, isDark),
       ),
     );
   }
@@ -264,17 +276,19 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     BuildContext context,
     ChatMessage message,
     bool isMe,
+    bool isDark,
   ) {
     final bg = isMe
-        ? const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF2E65FF), Color(0xFF4F46E5)],
+        ? LinearGradient(
+            colors: [
+              isDark ? Colors.white.withValues(alpha: 0.12) : const Color(0xFF3B82F6).withValues(alpha: 0.15),
+              isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFF3B82F6).withValues(alpha: 0.1),
+            ],
           )
         : LinearGradient(
             colors: [
-              Colors.white.withValues(alpha: 0.12),
-              Colors.white.withValues(alpha: 0.08),
+              isDark ? Colors.white.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.05),
+              isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.02),
             ],
           );
 
@@ -289,9 +303,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           bottomRight: isMe ? Radius.zero : const Radius.circular(16),
         ),
         border: Border.all(
-          color: isMe
-              ? Colors.white.withValues(alpha: 0.1)
-              : Colors.white.withValues(alpha: 0.15),
+          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
         ),
       ),
       child: Column(
@@ -301,13 +313,16 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         children: [
           Text(
             message.text,
-            style: const TextStyle(color: Colors.white, fontSize: 14),
+            style: TextStyle(
+              color: isDark ? Colors.white : const Color(0xFF1E293B),
+              fontSize: 14,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             _formatTime(message.timestamp),
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.4),
+              color: isDark ? Colors.white.withValues(alpha: 0.5) : const Color(0xFF64748B),
               fontSize: 10,
             ),
           ),
@@ -322,6 +337,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     bool isMe,
     AttendanceProvider provider,
     CompanyEmployee? currentUser,
+    bool isDark,
   ) {
     // Resolve the active request details from provider
     // The request can be owned by sender (if employee sent it) or receiver
@@ -335,7 +351,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
     if (request == null) {
       // Fallback if request is not found
-      return _buildTextBubble(context, message, isMe);
+      return _buildTextBubble(context, message, isMe, isDark);
     }
 
     final isSupervisor =
@@ -561,7 +577,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     );
   }
 
-  Widget _buildInputSection(AttendanceProvider provider) {
+  Widget _buildInputSection(AttendanceProvider provider, bool isDark) {
     return Padding(
       padding: const EdgeInsets.all(12.0),
       child: Row(
@@ -575,20 +591,20 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.08),
+                    color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.white,
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.15),
+                      color: isDark ? Colors.white.withValues(alpha: 0.15) : Colors.black12,
                     ),
                   ),
                   child: TextField(
                     controller: _messageController,
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B), fontSize: 14),
                     cursorColor: const Color(0xFF2E65FF),
                     decoration: InputDecoration(
                       hintText: provider.translate('write_message'),
                       hintStyle: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.4),
+                        color: isDark ? Colors.white.withValues(alpha: 0.4) : const Color(0xFF94A3B8),
                       ),
                       border: InputBorder.none,
                     ),
@@ -608,14 +624,12 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
               height: 46,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [Color(0xFF2E65FF), Color(0xFF8236FE)],
-                ),
+                color: Color(0xFF3B82F6), // Solid blue instead of gradient
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black26,
-                    blurRadius: 8,
-                    offset: Offset(0, 3),
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
                   ),
                 ],
               ),

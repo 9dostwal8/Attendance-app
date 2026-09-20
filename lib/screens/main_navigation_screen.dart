@@ -12,6 +12,9 @@ import 'dart:ui';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/attendance_provider.dart';
+import 'chat_list_screen.dart';
+import '../widgets/web_notifications_dialog.dart';
+import '../widgets/company_settings_dialog.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   final int initialTab;
@@ -95,7 +98,14 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
         extendBody: true, // Allows the body to flow underneath the bottom bar
         body: Container(
           decoration: BoxDecoration(
-            color: !isDark ? const Color(0xFFF9FAFB) : const Color(0xFF0F172A),
+            gradient: !isDark
+                ? const LinearGradient(
+                    colors: [Color(0xFFFCFDFD), Color(0xFFEDF2FE), Color(0xFFE0EAFF)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
+            color: isDark ? const Color(0xFF0F172A) : null,
           ),
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -103,23 +113,16 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
               return Stack(
                 children: [
                   if (isDesktop)
-                    Row(
-                      children: [
-                        _buildSideNavigationBar(provider),
-                        Expanded(
-                          child: SafeArea(
-                            bottom: false,
-                            child: Column(
-                              children: [
-                                _buildWebHeader(provider, isDark),
-                                Expanded(
-                                  child: IndexedStack(index: _selectedIndex, children: _pages),
-                                ),
-                              ],
-                            ),
+                    SafeArea(
+                      bottom: false,
+                      child: Column(
+                        children: [
+                          _buildWebHeader(provider, isDark),
+                          Expanded(
+                            child: IndexedStack(index: _selectedIndex, children: _pages),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     )
                   else
                     // Current Screen
@@ -147,80 +150,145 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
     );
   }
 
-  String _getPageTitle(int index) {
-    switch (index) {
-      case 0: return 'Dashboard';
-      case 1: return 'Clock / Attendance';
-      case 2: return 'History';
-      case 3: return 'Payroll';
-      case 4: return 'Requests';
-      case 5: return 'Structures';
-      case 6: return 'Shifts';
-      case 7: return 'Groups';
-      case 8: return 'User Management';
-      case 9: return 'Holidays';
-      case 10: return 'Locations';
-      case 11: return 'HR Payroll';
-      case 12: return 'Daily Report';
-      case 13: return 'Approvals';
-      default: return 'Overview';
-    }
-  }
+
 
   Widget _buildWebHeader(AttendanceProvider provider, bool isDark) {
-    return Container(
-      height: 70,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0F172A).withValues(alpha: 0.6) : Colors.white.withValues(alpha: 0.7),
-        border: Border(
-          bottom: BorderSide(
-            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
-            width: 1,
-          ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      child: Container(
+        height: 70,
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B).withValues(alpha: 0.8) : Colors.white.withValues(alpha: 0.9),
+          borderRadius: BorderRadius.circular(35),
+          boxShadow: [
+            if (!isDark)
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 20,
+                offset: const Offset(0, 4),
+              ),
+          ],
         ),
-      ),
-      child: ClipRRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Row(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(35),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Row(
             children: [
-              Text(
-                _getPageTitle(_selectedIndex),
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : const Color(0xFF0F172A),
-                  letterSpacing: -0.5,
+              // Logo
+              Row(
+                children: [
+                  const Icon(Icons.hub, color: Color(0xFF8B5CF6), size: 28),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Amada',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                      color: isDark ? Colors.white : const Color(0xFF1E293B),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 32),
+              
+              // Center Navigation Links
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildTopNavItem(0, 'Home', Icons.home_filled),
+                      if (!kIsWeb) _buildTopNavItem(1, 'Clock', Icons.access_time_filled),
+                      _buildTopNavItem(2, 'History', Icons.history),
+                      _buildTopNavItem(3, 'Payroll', Icons.attach_money),
+                      _buildTopNavItem(4, 'Requests', Icons.description),
+                      
+                      // Dropdown for HR Admin if they have access
+                      if (provider.currentEmployee?.role == 'hr' || provider.currentEmployee?.role == 'admin' || provider.canEditCompanyInfo)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: Theme(
+                            data: Theme.of(context).copyWith(
+                              splashColor: Colors.transparent,
+                              highlightColor: Colors.transparent,
+                            ),
+                            child: PopupMenuButton<int>(
+                              offset: const Offset(0, 50),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                              elevation: 8,
+                              onSelected: (value) => onTabSelected(value),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                child: Text(
+                                  'HR Admin ▾',
+                                  style: TextStyle(
+                                    color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                              itemBuilder: (context) => [
+                                _buildPopupMenuItem(8, 'User Management', Icons.manage_accounts),
+                                _buildPopupMenuItem(13, 'Approvals', Icons.how_to_reg),
+                                _buildPopupMenuItem(5, 'Structures', Icons.business),
+                                _buildPopupMenuItem(6, 'Shifts', Icons.access_time),
+                                _buildPopupMenuItem(7, 'Groups', Icons.people),
+                                _buildPopupMenuItem(9, 'Holidays', Icons.event_available),
+                                _buildPopupMenuItem(10, 'Locations', Icons.location_on),
+                                _buildPopupMenuItem(11, 'HR Payroll', Icons.attach_money),
+                                _buildPopupMenuItem(12, 'Daily Report', Icons.bar_chart),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
-              const Spacer(),
 
+              const SizedBox(width: 16),
+              
+              // Chat Button
               InkWell(
-                onTap: () => provider.toggleTheme(),
-                borderRadius: BorderRadius.circular(12),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const ChatListScreen()),
+                  );
+                },
+                borderRadius: BorderRadius.circular(20),
                 child: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(12),
+                    shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                    Icons.chat_bubble_outline,
                     size: 20,
                     color: isDark ? Colors.white : const Color(0xFF64748B),
                   ),
                 ),
               ),
               const SizedBox(width: 12),
+              
+              // Notification
               InkWell(
-                onTap: () {},
-                borderRadius: BorderRadius.circular(12),
+                onTap: () {
+                  showWebNotificationsDialog(context);
+                },
+                borderRadius: BorderRadius.circular(20),
                 child: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(12),
+                    shape: BoxShape.circle,
                   ),
                   child: Stack(
                     children: [
@@ -245,75 +313,76 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
                   ),
                 ),
               ),
-              const SizedBox(width: 16),
-              // Profile Dropdown
-              Theme(
-                data: Theme.of(context).copyWith(
-                  splashColor: Colors.transparent,
-                  highlightColor: Colors.transparent,
+              const SizedBox(width: 12),
+
+              // Settings button
+              InkWell(
+                onTap: () {
+                  if (provider.canEditCompanyInfo) {
+                    showCompanySettingsDialog(context);
+                  }
+                },
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF1F5F9),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.settings_outlined,
+                    size: 20,
+                    color: isDark ? Colors.white : const Color(0xFF64748B),
+                  ),
                 ),
-                child: PopupMenuButton<String>(
-                  offset: const Offset(0, 50),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                  elevation: 8,
-                  onSelected: (value) {
-                    if (value == 'profile') {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const ProfileScreen()),
-                      );
-                    } else if (value == 'logout') {
-                      provider.logout();
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    PopupMenuItem(
-                      value: 'profile',
-                      child: Row(
-                        children: [
-                          Icon(Icons.person_outline, size: 20, color: isDark ? Colors.white70 : const Color(0xFF64748B)),
-                          const SizedBox(width: 12),
-                          Text(
-                            'Profile',
-                            style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B)),
-                          ),
-                        ],
-                      ),
+              ),
+              const SizedBox(width: 12),
+
+              // Theme toggle
+              InkWell(
+                onTap: () => provider.toggleTheme(),
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF1F5F9),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                    size: 20,
+                    color: isDark ? Colors.white : const Color(0xFF64748B),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              
+              // Profile
+              InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const ProfileScreen()),
+                  );
+                },
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    const PopupMenuDivider(),
-                    PopupMenuItem(
-                      value: 'logout',
-                      child: Row(
-                        children: [
-                          const Icon(Icons.logout_rounded, size: 20, color: Color(0xFFEF4444)),
-                          const SizedBox(width: 12),
-                          const Text(
-                            'Log Out',
-                            style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
-                    child: CircleAvatar(
-                      radius: 18,
-                      backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
-                      backgroundImage: provider.avatarPath != null ? AssetImage(provider.avatarPath!) : null,
-                      child: provider.avatarPath == null
-                          ? Icon(Icons.person, size: 20, color: isDark ? Colors.white70 : const Color(0xFF3B82F6))
-                          : null,
-                    ),
+                  ),
+                  child: CircleAvatar(
+                    radius: 18,
+                    backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+                    backgroundImage: provider.avatarPath != null ? AssetImage(provider.avatarPath!) : null,
+                    child: provider.avatarPath == null
+                        ? Icon(Icons.person, size: 20, color: isDark ? Colors.white70 : const Color(0xFF3B82F6))
+                        : null,
                   ),
                 ),
               ),
@@ -321,271 +390,77 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
           ),
         ),
       ),
+    ));
+  }
+
+  PopupMenuItem<int> _buildPopupMenuItem(int value, String text, IconData icon) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return PopupMenuItem<int>(
+      value: value,
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: isDark ? Colors.white70 : const Color(0xFF64748B)),
+          const SizedBox(width: 12),
+          Text(text, style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1E293B))),
+        ],
+      ),
     );
   }
 
-  Widget _buildSideNavigationBar(AttendanceProvider provider) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return Container(
-      width: 260,
-      decoration: BoxDecoration(
-        color: isDark 
-            ? const Color(0xFF0F172A).withValues(alpha: 0.65)
-            : Colors.white.withValues(alpha: 0.75),
-        borderRadius: const BorderRadius.only(
-          topRight: Radius.circular(32),
-          bottomRight: Radius.circular(32),
-        ),
-        boxShadow: [
-          if (!isDark)
-            BoxShadow(
-              color: const Color(0xFF3B82F6).withValues(alpha: 0.08),
-              blurRadius: 24,
-              offset: const Offset(8, 0),
-            ),
-        ],
-        border: Border(
-          right: BorderSide(
-            color: isDark 
-                ? Colors.white.withValues(alpha: 0.08)
-                : Colors.black.withValues(alpha: 0.04),
-            width: 1.5,
-          ),
-        ),
-      ),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.only(
-          topRight: Radius.circular(32),
-          bottomRight: Radius.circular(32),
-        ),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
-            child: Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                Padding(
-                  padding: const EdgeInsets.only(left: 16, bottom: 40, top: 20),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF3B82F6), // Attendly Blue
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.change_history, color: Colors.white, size: 24),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Attendly',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.5,
-                          color: (Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                _buildSideNavItem(0, Icons.dashboard_outlined, Icons.dashboard, provider.translate('home')),
-                if (!kIsWeb) ...[
-                  const SizedBox(height: 8),
-                  _buildSideNavItem(1, Icons.access_time_outlined, Icons.access_time_filled, provider.translate('clock')),
-                ],
-                const SizedBox(height: 8),
-                _buildSideNavItem(2, Icons.history_outlined, Icons.history, provider.translate('history')),
-                const SizedBox(height: 8),
-                _buildSideNavItem(3, Icons.attach_money_outlined, Icons.attach_money, provider.translate('payroll')),
-                const SizedBox(height: 8),
-                _buildSideNavItem(
-                  4,
-                  Icons.description_outlined,
-                  Icons.description,
-                  provider.translate('requests'),
-                  badgeCount: provider.pendingApprovalsCount,
-                ),
-                if (provider.currentEmployee?.role == 'hr' ||
-                    provider.currentEmployee?.role == 'admin' ||
-                    provider.canEditCompanyInfo) ...[
-                  const SizedBox(height: 16),
-                  Divider(color: Theme.of(context).brightness == Brightness.dark ? Colors.white24 : Colors.black12, endIndent: 16, indent: 16),
-                  const SizedBox(height: 16),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 16, bottom: 8),
-                    child: Text('HR ADMIN', style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white54 : Colors.black54, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-                  ),
-                  _buildSideNavItem(
-                    8,
-                    Icons.manage_accounts_outlined,
-                    Icons.manage_accounts,
-                    'User Management',
-                  ),
-                  const SizedBox(height: 8),
-                  _buildSideNavItem(
-                    13,
-                    Icons.how_to_reg_outlined,
-                    Icons.how_to_reg,
-                    'Approvals',
-                    badgeCount: provider.pendingApprovalsCount,
-                  ),
-                  const SizedBox(height: 8),
-                  _buildSideNavItem(5, Icons.business_outlined, Icons.business, 'Structures'),
-                  const SizedBox(height: 8),
-                  _buildSideNavItem(6, Icons.access_time_outlined, Icons.access_time, 'Shifts'),
-                  const SizedBox(height: 8),
-                  _buildSideNavItem(7, Icons.people_outline, Icons.people, 'Groups'),
-                  const SizedBox(height: 8),
-                  _buildSideNavItem(9, Icons.event_available_outlined, Icons.event_available, 'Holidays'),
-                  const SizedBox(height: 8),
-                  _buildSideNavItem(10, Icons.location_on_outlined, Icons.location_on, 'Locations'),
-                  const SizedBox(height: 8),
-                  _buildSideNavItem(11, Icons.attach_money_outlined, Icons.attach_money, 'HR Payroll'),
-                  const SizedBox(height: 8),
-                  _buildSideNavItem(12, Icons.bar_chart_outlined, Icons.bar_chart, 'Daily Report'),
-                ] else if (provider.currentEmployee?.role == 'supervisor') ...[
-                  const SizedBox(height: 16),
-                  Divider(color: Theme.of(context).brightness == Brightness.dark ? Colors.white24 : Colors.black12, endIndent: 16, indent: 16),
-                  const SizedBox(height: 16),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 16, bottom: 8),
-                    child: Text('SUPERVISION', style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white54 : Colors.black54, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-                  ),
-                  _buildSideNavItem(
-                    8,
-                    Icons.manage_accounts_outlined,
-                    Icons.manage_accounts,
-                    'User Management',
-                  ),
-                  const SizedBox(height: 8),
-                  _buildSideNavItem(
-                    13,
-                    Icons.how_to_reg_outlined,
-                    Icons.how_to_reg,
-                    'Approvals',
-                    badgeCount: provider.pendingApprovalsCount,
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ],
-    ),
-  ),
-),
-        ),
-      );
-  }
-
-  Widget _buildSideNavItem(
-    int index,
-    IconData outlineIcon,
-    IconData filledIcon,
-    String label, {
-    int badgeCount = 0,
-  }) {
+  Widget _buildTopNavItem(int index, String label, IconData icon) {
     final isSelected = _selectedIndex == index;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final icon = isSelected ? filledIcon : outlineIcon;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: InkWell(
-        onTap: () => onTabSelected(index),
-        borderRadius: BorderRadius.circular(16),
-        splashColor: const Color(0xFF3B82F6).withValues(alpha: 0.1),
-        highlightColor: Colors.transparent,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOutCubic,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    
+    if (isSelected) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            gradient: isSelected
-                ? const LinearGradient(
-                    colors: [Color(0xFF2E65FF), Color(0xFF6366F1)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  )
-                : null,
-            color: isSelected ? null : Colors.transparent,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: const Color(0xFF2E65FF).withValues(alpha: 0.4),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    )
-                  ]
-                : [],
+            color: isDark ? Colors.white : const Color(0xFF111827),
+            borderRadius: BorderRadius.circular(20),
           ),
           child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
-                child: Icon(
-                  icon,
-                  key: ValueKey(isSelected),
-                  color: isSelected
-                      ? Colors.white
-                      : (isDark ? Colors.white54 : const Color(0xFF64748B)),
-                  size: 22,
+              Icon(icon, size: 16, color: isDark ? const Color(0xFF111827) : Colors.white),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isDark ? const Color(0xFF111827) : Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: AnimatedDefaultTextStyle(
-                  duration: const Duration(milliseconds: 200),
-                  style: TextStyle(
-                    color: isSelected
-                        ? Colors.white
-                        : (isDark ? Colors.white70 : const Color(0xFF334155)),
-                    fontSize: 15,
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                    fontFamily: 'Inter',
-                  ),
-                  child: Text(label),
-                ),
-              ),
-              if (badgeCount > 0)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: isSelected ? Colors.white : const Color(0xFFEF4444),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      if (!isSelected)
-                        BoxShadow(
-                          color: const Color(0xFFEF4444).withValues(alpha: 0.3),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                    ],
-                  ),
-                  child: Text(
-                    badgeCount > 9 ? '9+' : '$badgeCount',
-                    style: TextStyle(
-                      color: isSelected ? const Color(0xFF2E65FF) : Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
             ],
           ),
         ),
-      ),
-    );
+      );
+    } else {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: InkWell(
+          onTap: () => onTabSelected(index),
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
   }
+
+
+
 
 
   Widget _buildBottomNavigationBar(AttendanceProvider provider) {
