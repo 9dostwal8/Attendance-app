@@ -58,14 +58,38 @@ class AttendanceRecord {
   }
 
   factory AttendanceRecord.fromMap(Map<String, dynamic> map, [String? employeeId]) {
-    DateTime parsedIn = DateTime.now();
-    if (map['checkIn'] != null && map['checkIn'].toString().isNotEmpty) {
-      parsedIn = DateTime.tryParse(map['checkIn'].toString()) ?? DateTime.now();
+    DateTime parseDate(dynamic val, DateTime fallback) {
+      if (val == null) return fallback;
+      if (val is DateTime) return val;
+      try {
+        // Handle Cloud Firestore Timestamp
+        return (val as dynamic).toDate();
+      } catch (_) {}
+      if (val is int) {
+        return DateTime.fromMillisecondsSinceEpoch(val);
+      }
+      final s = val.toString().trim();
+      if (s.isEmpty) return fallback;
+      return DateTime.tryParse(s) ?? fallback;
     }
-    DateTime? parsedOut;
-    if (map['checkOut'] != null && map['checkOut'].toString().isNotEmpty) {
-      parsedOut = DateTime.tryParse(map['checkOut'].toString());
+
+    DateTime? parseDateNullable(dynamic val) {
+      if (val == null) return null;
+      if (val is DateTime) return val;
+      try {
+        return (val as dynamic).toDate();
+      } catch (_) {}
+      if (val is int) {
+        return DateTime.fromMillisecondsSinceEpoch(val);
+      }
+      final s = val.toString().trim();
+      if (s.isEmpty || s == 'null') return null;
+      return DateTime.tryParse(s);
     }
+
+    final parsedIn = parseDate(map['checkIn'], DateTime.now());
+    final parsedOut = parseDateNullable(map['checkOut']);
+
     final empId = (map['employeeId'] != null && map['employeeId'].toString().isNotEmpty)
         ? map['employeeId'].toString()
         : employeeId;

@@ -9,6 +9,9 @@ class Request {
   final String? targetShiftId;
   final String? employeeId;
   final String? note;
+  final String? createdAt;
+  final String? actionBy;
+  final String? actionDate;
 
   Request({
     required this.id,
@@ -19,6 +22,9 @@ class Request {
     this.targetShiftId,
     this.employeeId,
     this.note,
+    this.createdAt,
+    this.actionBy,
+    this.actionDate,
   });
 
   Color get statusColor {
@@ -43,6 +49,9 @@ class Request {
       'targetShiftId': targetShiftId,
       'employeeId': employeeId,
       'note': note,
+      'createdAt': createdAt,
+      'actionBy': actionBy,
+      'actionDate': actionDate,
     };
   }
 
@@ -56,6 +65,9 @@ class Request {
       targetShiftId: map['targetShiftId'],
       employeeId: map['employeeId'],
       note: map['note'],
+      createdAt: map['createdAt'],
+      actionBy: map['actionBy'],
+      actionDate: map['actionDate'],
     );
   }
 
@@ -68,6 +80,9 @@ class Request {
     String? targetShiftId,
     String? employeeId,
     String? note,
+    String? createdAt,
+    String? actionBy,
+    String? actionDate,
     bool overrideTargetShiftId = false,
   }) {
     return Request(
@@ -76,9 +91,14 @@ class Request {
       date: date ?? this.date,
       duration: duration ?? this.duration,
       status: status ?? this.status,
-      targetShiftId: overrideTargetShiftId ? targetShiftId : (targetShiftId ?? this.targetShiftId),
+      targetShiftId: overrideTargetShiftId
+          ? targetShiftId
+          : (targetShiftId ?? this.targetShiftId),
       employeeId: employeeId ?? this.employeeId,
       note: note ?? this.note,
+      createdAt: createdAt ?? this.createdAt,
+      actionBy: actionBy ?? this.actionBy,
+      actionDate: actionDate ?? this.actionDate,
     );
   }
 }

@@ -257,9 +257,25 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
               // Chat Button
               InkWell(
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const ChatListScreen()),
+                  showDialog(
+                    context: context,
+                    builder: (context) => Dialog(
+                      backgroundColor: Colors.transparent,
+                      insetPadding: const EdgeInsets.all(24),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 450, maxHeight: 700),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
+                          child: Navigator(
+                            onGenerateRoute: (settings) {
+                              return MaterialPageRoute(
+                                builder: (context) => const ChatListScreen(),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
                   );
                 },
                 borderRadius: BorderRadius.circular(20),

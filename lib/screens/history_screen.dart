@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -7,6 +8,8 @@ import '../models/hr_models.dart';
 import '../models/attendance_record.dart';
 import '../models/request_model.dart';
 import '../widgets/glass_container.dart';
+import '../services/export_service.dart';
+import '../widgets/new_request_dialog.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -21,19 +24,47 @@ class _HistoryScreenState extends State<HistoryScreen> {
   List<Request> _subordinateRequests = [];
   bool _isLoadingSubordinate = false;
   DateTime _reportMonth = DateTime.now();
+  DateTime? _selectedDate;
+
+  final ScrollController _tableHorizontalController = ScrollController();
+  final ScrollController _tableVerticalController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    if (_selectedEmployeeId != null && _selectedEmployeeId!.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final provider = Provider.of<AttendanceProvider>(context, listen: false);
+        _loadSubordinateRecords(provider, _selectedEmployeeId!);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _tableHorizontalController.dispose();
+    _tableVerticalController.dispose();
+    super.dispose();
+  }
 
   List<CompanyEmployee> _getSubordinates(AttendanceProvider provider) {
     final currentUser = provider.currentEmployee;
     if (currentUser == null) return [];
 
-    if (currentUser.role == 'hr') {
-      // HR sees all other employees
-      return provider.employees.where((e) => e.id != currentUser.id).toList();
+    if (currentUser.role == 'hr' || currentUser.role == 'admin' || provider.canEditCompanyInfo) {
+      final list = <CompanyEmployee>[currentUser];
+      for (var e in provider.employees) {
+        if (e.id != currentUser.id) {
+          list.add(e);
+        }
+      }
+      return list;
     }
 
     if (currentUser.role == 'supervisor') {
       final Set<String> subordinateIds = {};
-      final List<CompanyEmployee> list = [];
+      final List<CompanyEmployee> list = [currentUser];
 
       // 1. Get employees in structures supervised directly by this user
       final supervisedStructures = provider.structures
@@ -71,26 +102,41 @@ class _HistoryScreenState extends State<HistoryScreen> {
       return list;
     }
 
-    return [];
+    return [currentUser];
   }
+
+  String? _currentlyLoadingId;
 
   void _loadSubordinateRecords(
     AttendanceProvider provider,
     String empId,
   ) async {
+    if (_isLoadingSubordinate && _currentlyLoadingId == empId) return;
+
     setState(() {
       _isLoadingSubordinate = true;
+      _currentlyLoadingId = empId;
       _selectedEmployeeId = empId;
     });
 
-    final records = await provider.getEmployeeRecords(empId);
-    final requests = await provider.getEmployeeRequests(empId);
+    try {
+      final records = await provider.getEmployeeRecords(empId);
+      final requests = await provider.getEmployeeRequests(empId);
 
-    setState(() {
-      _subordinateRecords = records;
-      _subordinateRequests = requests;
-      _isLoadingSubordinate = false;
-    });
+      if (mounted) {
+        setState(() {
+          _subordinateRecords = records;
+          _subordinateRequests = requests;
+          _isLoadingSubordinate = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingSubordinate = false;
+        });
+      }
+    }
   }
 
   String formatMinutes(int minutes) {
@@ -119,23 +165,24 @@ class _HistoryScreenState extends State<HistoryScreen> {
         (index) => DateTime(_reportMonth.year, _reportMonth.month, index + 1),
       );
 
-      final isCurrentUser =
-          _selectedEmployeeId == null ||
-          _selectedEmployeeId == provider.currentEmployee?.id;
-      final recordsToCompile = isCurrentUser
-          ? provider.records
-          : _subordinateRecords;
-      final requestsToCompile = isCurrentUser
-          ? provider.requests
-          : _subordinateRequests;
+      final activeEmpId = _selectedEmployeeId ?? provider.currentEmployee?.id ?? provider.employeeId;
+      final isCurrentUser = activeEmpId == provider.currentEmployee?.id;
+      final recordsToCompile = _subordinateRecords.isNotEmpty
+          ? _subordinateRecords
+          : (isCurrentUser && provider.records.isNotEmpty
+              ? provider.records
+              : _subordinateRecords);
+      final requestsToCompile = _subordinateRequests.isNotEmpty
+          ? _subordinateRequests
+          : (isCurrentUser && provider.requests.isNotEmpty
+              ? provider.requests
+              : _subordinateRequests);
 
       // Resolve Employee and Shift
-      final emp = isCurrentUser
-          ? provider.currentEmployee!
-          : provider.employees.firstWhere(
-              (e) => e.id == _selectedEmployeeId,
-              orElse: () => provider.currentEmployee!,
-            );
+      final emp = provider.employees.firstWhere(
+        (e) => e.id == activeEmpId,
+        orElse: () => provider.currentEmployee ?? CompanyEmployee(id: activeEmpId, name: 'Employee', email: '', position: ''),
+      );
 
       for (var date in datesInPeriod) {
         final activeGroupId = provider.getGroupIdForDate(emp, date);
@@ -228,10 +275,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
         bool hasRecord = dateRecords.isNotEmpty;
         List<Request> dateApprovedRequests = [];
         bool hasLeaveRequest = false;
+        List<Request> allDayRequests = [];
         for (var req in requestsToCompile) {
-          if (req.status != 'Approved') continue;
-          if (req.type == 'Missing Punch') continue; // Handled separately
-
           try {
             final dateStr = req.date;
             DateTime start;
@@ -258,9 +303,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     target.isAfter(startOnly)) &&
                 (target.isAtSameMomentAs(endOnly) ||
                     target.isBefore(endOnly))) {
-              dateApprovedRequests.add(req);
-              if (req.type.contains('Leave')) {
-                hasLeaveRequest = true;
+              allDayRequests.add(req);
+              if (req.status == 'Approved' && req.type != 'Missing Punch') {
+                dateApprovedRequests.add(req);
+                if (req.type.contains('Leave')) {
+                  hasLeaveRequest = true;
+                }
               }
             }
           } catch (e) {
@@ -699,6 +747,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           'isMissingPunch': hasApprovedMissingPunch,
           'missingPunchTimes': missingPunchTimes,
           'isWeekend': isWeekendDay,
+          'requests': allDayRequests,
         });
       }
     }
@@ -710,36 +759,80 @@ class _HistoryScreenState extends State<HistoryScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Page Header
+              // Controls (Dropdown, Month Selector, Export, Add Request)
               Padding(
                 padding: const EdgeInsets.fromLTRB(20.0, 16.0, 20.0, 8.0),
-                child: Text(
-                  provider.translate('attendance_history'),
-                  style: TextStyle(
-                    color:
-                        ((Theme.of(context).textTheme.bodyLarge?.color ??
-                        Colors.black)),
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: -0.5,
-                  ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    if (constraints.maxWidth >= 860) {
+                      return Row(
+                        children: [
+                          Expanded(
+                            child: Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: provider.currentEmployee != null
+                                  ? ConstrainedBox(
+                                      constraints: const BoxConstraints(maxWidth: 320),
+                                      child: _buildEmployeeDropdown(provider, [
+                                        provider.currentEmployee!,
+                                        ...subordinates,
+                                      ]),
+                                    )
+                                  : const SizedBox.shrink(),
+                            ),
+                          ),
+                          _buildMonthSelector(),
+                          Expanded(
+                            child: Align(
+                              alignment: AlignmentDirectional.centerEnd,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _buildDayRequestsButton(provider, compiledData),
+                                  const SizedBox(width: 10),
+                                  _buildExportButton(provider, compiledData),
+                                  const SizedBox(width: 12),
+                                  _buildAddRequestButton(provider),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    } else {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              if (provider.currentEmployee != null)
+                                Expanded(
+                                  child: _buildEmployeeDropdown(provider, [
+                                    provider.currentEmployee!,
+                                    ...subordinates,
+                                  ]),
+                                ),
+                              const SizedBox(width: 8),
+                              _buildDayRequestsButton(
+                                provider,
+                                compiledData,
+                                isCompact: true,
+                              ),
+                              const SizedBox(width: 8),
+                              _buildExportButton(provider, compiledData),
+                              const SizedBox(width: 12),
+                              _buildAddRequestButton(provider),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Center(
+                            child: _buildMonthSelector(),
+                          ),
+                        ],
+                      );
+                    }
+                  },
                 ),
-              ),
-
-              // Controls (Dropdown & Month Selector)
-              Wrap(
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  if (provider.currentEmployee != null)
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 400),
-                      child: _buildEmployeeDropdown(provider, [
-                        provider.currentEmployee!,
-                        ...subordinates,
-                      ]),
-                    ),
-                  _buildMonthSelector(),
-                ],
               ),
               const SizedBox(height: 10),
 
@@ -851,60 +944,58 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Widget _buildMonthSelector() {
     final monthStr = DateFormat('MMMM yyyy').format(_reportMonth);
-    return ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: kIsWeb ? 300 : double.infinity),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            IconButton(
-              icon: Icon(
-                Icons.chevron_left,
-                color:
-                    ((Theme.of(context).textTheme.bodyLarge?.color ??
-                    Colors.black)),
-                size: 20,
-              ),
-              onPressed: () {
-                setState(() {
-                  _reportMonth = DateTime(
-                    _reportMonth.year,
-                    _reportMonth.month - 1,
-                  );
-                });
-              },
-            ),
-            Text(
-              monthStr,
-              style: TextStyle(
-                color:
-                    ((Theme.of(context).textTheme.bodyLarge?.color ??
-                    Colors.black)),
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            IconButton(
-              icon: Icon(
-                Icons.chevron_right,
-                color:
-                    ((Theme.of(context).textTheme.bodyLarge?.color ??
-                    Colors.black)),
-                size: 20,
-              ),
-              onPressed: () {
-                setState(() {
-                  _reportMonth = DateTime(
-                    _reportMonth.year,
-                    _reportMonth.month + 1,
-                  );
-                });
-              },
-            ),
-          ],
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.chevron_left),
+          color: textColor,
+          iconSize: 22,
+          splashRadius: 20,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          onPressed: () {
+            setState(() {
+              _reportMonth = DateTime(
+                _reportMonth.year,
+                _reportMonth.month - 1,
+              );
+              _selectedDate = null;
+            });
+          },
         ),
-      ),
+        const SizedBox(width: 20),
+        Text(
+          monthStr,
+          style: TextStyle(
+            color: textColor,
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.2,
+          ),
+        ),
+        const SizedBox(width: 20),
+        IconButton(
+          icon: const Icon(Icons.chevron_right),
+          color: textColor,
+          iconSize: 22,
+          splashRadius: 20,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          onPressed: () {
+            setState(() {
+              _reportMonth = DateTime(
+                _reportMonth.year,
+                _reportMonth.month + 1,
+              );
+              _selectedDate = null;
+            });
+          },
+        ),
+      ],
     );
   }
 
@@ -949,83 +1040,100 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final String totalDeficitStr =
         '${totalDeficit ~/ 60}h ${totalDeficit % 60}m';
 
-    return Container(
-      height: 70,
-      margin: const EdgeInsets.only(top: 8),
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 20.0),
-        children: [
-          _buildMiniSummaryCard(
-            provider.translate('duty_days'),
-            '$activeDays days',
-            const Color(0xFF2E65FF),
-          ),
-          SizedBox(width: 10),
-          _buildMiniSummaryCard(
-            provider.translate('total_attendance'),
-            totalAttendanceStr,
-            const Color(0xFF2EBD96),
-          ),
-          SizedBox(width: 10),
-          _buildMiniSummaryCard(
-            provider.translate('rest_time'),
-            totalRestStr,
-            const Color(0xFF2EBD96),
-          ),
-          SizedBox(width: 10),
-          _buildMiniSummaryCard(
-            provider.translate('total_duty'),
-            totalDutyStr,
-            const Color(0xFF5B9BFF),
-          ),
-          SizedBox(width: 10),
-          _buildMiniSummaryCard(
-            provider.translate('overtime'),
-            totalOvertimeStr,
-            const Color(0xFF00FF87),
-          ),
-          SizedBox(width: 10),
-          _buildMiniSummaryCard(
-            provider.translate('delay'),
-            '${totalDelay}m',
-            const Color(0xFFFF5C5C),
-          ),
-          SizedBox(width: 10),
-          _buildMiniSummaryCard(
-            provider.translate('early_exit'),
-            '${totalEarlyExit}m',
-            const Color(0xFFFF5C5C),
-          ),
-          SizedBox(width: 10),
-          _buildMiniSummaryCard(
-            'Deficit',
-            totalDeficitStr,
-            const Color(0xFFFF5C5C),
-          ),
-          SizedBox(width: 10),
-          _buildMiniSummaryCard(
-            provider.translate('penalty'),
-            '${NumberFormat('#,##0').format(totalPenalties)} IQD',
-            const Color(0xFFFF5C5C),
-          ),
-        ],
+    final cards = [
+      _buildMiniSummaryCard(
+        provider.translate('duty_days'),
+        '$activeDays days',
+        const Color(0xFF2E65FF),
+      ),
+      _buildMiniSummaryCard(
+        provider.translate('total_attendance'),
+        totalAttendanceStr,
+        const Color(0xFF2EBD96),
+      ),
+      _buildMiniSummaryCard(
+        provider.translate('rest_time'),
+        totalRestStr,
+        const Color(0xFF2EBD96),
+      ),
+      _buildMiniSummaryCard(
+        provider.translate('total_duty'),
+        totalDutyStr,
+        const Color(0xFF5B9BFF),
+      ),
+      _buildMiniSummaryCard(
+        provider.translate('overtime'),
+        totalOvertimeStr,
+        const Color(0xFF00FF87),
+      ),
+      _buildMiniSummaryCard(
+        provider.translate('delay'),
+        '${totalDelay}m',
+        const Color(0xFFFF5C5C),
+      ),
+      _buildMiniSummaryCard(
+        provider.translate('early_exit'),
+        '${totalEarlyExit}m',
+        const Color(0xFFFF5C5C),
+      ),
+      _buildMiniSummaryCard(
+        'Deficit',
+        totalDeficitStr,
+        const Color(0xFFFF5C5C),
+      ),
+      _buildMiniSummaryCard(
+        provider.translate('penalty'),
+        '${NumberFormat('#,##0').format(totalPenalties)} IQD',
+        const Color(0xFFFF5C5C),
+      ),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth >= 900) {
+            return Row(
+              children: [
+                for (int i = 0; i < cards.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 8),
+                  Expanded(child: cards[i]),
+                ],
+              ],
+            );
+          } else {
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: Row(
+                children: [
+                  for (int i = 0; i < cards.length; i++) ...[
+                    if (i > 0) const SizedBox(width: 8),
+                    cards[i],
+                  ],
+                ],
+              ),
+            );
+          }
+        },
       ),
     );
   }
 
   Widget _buildMiniSummaryCard(String label, String value, Color accentColor) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       decoration: BoxDecoration(
-        color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)
-            .withValues(alpha: 0.05)),
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)
-              .withValues(alpha: 0.08)),
-        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1033,30 +1141,25 @@ class _HistoryScreenState extends State<HistoryScreen> {
         children: [
           Text(
             label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color:
-                  ((Theme.of(context).textTheme.bodyLarge?.color ??
-                          Colors.black)
-                      .withValues(alpha: 0.4)),
+              color: isDark ? Colors.white54 : const Color(0xFF64748B),
               fontSize: 10,
               fontWeight: FontWeight.bold,
             ),
           ),
-          SizedBox(height: 3),
-          Text(
-            value,
-            style: TextStyle(
-              color:
-                  ((Theme.of(context).textTheme.bodyLarge?.color ??
-                  Colors.black)),
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              shadows: [
-                Shadow(
-                  color: accentColor.withValues(alpha: 0.45),
-                  blurRadius: 6,
-                ),
-              ],
+          const SizedBox(height: 3),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: TextStyle(
+                color: accentColor,
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -1064,8 +1167,48 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
+  Widget _buildHeaderCell(
+    String title, {
+    Color? color,
+    TextAlign textAlign = TextAlign.start,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 12.0),
+      child: Text(
+        title,
+        textAlign: textAlign,
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 13,
+          color: color ??
+              ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
+        ),
+      ),
+    );
+  }
+
   Widget _buildReportTable(List<Map<String, dynamic>> compiledData) {
     final provider = Provider.of<AttendanceProvider>(context);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final bodyTextColor = theme.textTheme.bodyLarge?.color ?? Colors.black;
+    final dividerColor = bodyTextColor.withValues(alpha: 0.08);
+    final headerBgColor = bodyTextColor.withValues(alpha: 0.06);
+
+    const columnWidths = <int, TableColumnWidth>{
+      0: FlexColumnWidth(1.2),  // Date
+      1: FlexColumnWidth(2.2),  // Clock Time
+      2: FlexColumnWidth(1.1),  // Attendance
+      3: FlexColumnWidth(1.0),  // Rest Time
+      4: FlexColumnWidth(1.0),  // Duty
+      5: FlexColumnWidth(0.9),  // Delay
+      6: FlexColumnWidth(0.9),  // Early Exit
+      7: FlexColumnWidth(0.95), // Deficit
+      8: FlexColumnWidth(1.0),  // Extra Time
+      9: FlexColumnWidth(1.0),  // Overtime
+      10: FlexColumnWidth(1.15), // Penalty
+    };
+
     return Expanded(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -1073,348 +1216,536 @@ class _HistoryScreenState extends State<HistoryScreen> {
           padding: EdgeInsets.zero,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(16),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.vertical,
-              physics: const BouncingScrollPhysics(),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minWidth: MediaQuery.of(context).size.width - 40,
-                  ),
-                  child: Theme(
-                    data: Theme.of(context).copyWith(
-                      dividerColor:
-                          ((Theme.of(context).textTheme.bodyLarge?.color ??
-                                  Colors.black)
-                              .withValues(alpha: 0.08)),
-                    ),
-                    child: DataTable(
-                      columnSpacing: 22,
-                      headingRowColor: WidgetStateProperty.all(
-                        ((Theme.of(context).textTheme.bodyLarge?.color ??
-                                Colors.black)
-                            .withValues(alpha: 0.06)),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final tableWidth = math.max(constraints.maxWidth, 1200.0);
+
+                return Scrollbar(
+                  controller: _tableHorizontalController,
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    controller: _tableHorizontalController,
+                    scrollDirection: Axis.horizontal,
+                    physics: const ClampingScrollPhysics(),
+                    child: SizedBox(
+                      width: tableWidth,
+                      height: constraints.maxHeight,
+                      child: Column(
+                        children: [
+                          // Sticky Fixed Header
+                          Container(
+                            decoration: BoxDecoration(
+                              color: headerBgColor,
+                              border: Border(
+                                bottom: BorderSide(
+                                  color: dividerColor,
+                                  width: 1.0,
+                                ),
+                              ),
+                            ),
+                            child: Table(
+                              columnWidths: columnWidths,
+                              defaultVerticalAlignment:
+                                  TableCellVerticalAlignment.middle,
+                              children: [
+                                TableRow(
+                                  children: [
+                                    _buildHeaderCell(provider.translate('date')),
+                                    _buildHeaderCell(
+                                      provider.translate('clock_time'),
+                                      color: const Color(0xFF5B9BFF),
+                                    ),
+                                    _buildHeaderCell(
+                                      provider.translate('attendance'),
+                                    ),
+                                    _buildHeaderCell(
+                                      provider.translate('rest_time'),
+                                      color: const Color(0xFF2EBD96),
+                                    ),
+                                    _buildHeaderCell(provider.translate('duty')),
+                                    _buildHeaderCell(
+                                      provider.translate('delay'),
+                                      color: const Color(0xFFFF5C5C),
+                                    ),
+                                    _buildHeaderCell(
+                                      provider.translate('early_exit'),
+                                      color: const Color(0xFFFF5C5C),
+                                    ),
+                                    _buildHeaderCell(
+                                      'Deficit',
+                                      color: const Color(0xFFFF5C5C),
+                                    ),
+                                    _buildHeaderCell(
+                                      provider.translate('extra_time'),
+                                      color: const Color(0xFFFF9800),
+                                    ),
+                                    _buildHeaderCell(
+                                      provider.translate('overtime'),
+                                      color: const Color(0xFF00FF87),
+                                    ),
+                                    _buildHeaderCell(
+                                      provider.translate('penalty'),
+                                      color: const Color(0xFFFF5C5C),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Scrollable Body
+                          Expanded(
+                            child: Scrollbar(
+                              controller: _tableVerticalController,
+                              thumbVisibility: true,
+                              child: SingleChildScrollView(
+                                controller: _tableVerticalController,
+                                scrollDirection: Axis.vertical,
+                                physics: const BouncingScrollPhysics(),
+                                child: Table(
+                                  columnWidths: columnWidths,
+                                  defaultVerticalAlignment:
+                                      TableCellVerticalAlignment.middle,
+                                  border: TableBorder(
+                                    horizontalInside: BorderSide(
+                                      color: dividerColor,
+                                      width: 1.0,
+                                    ),
+                                    bottom: BorderSide(
+                                      color: dividerColor,
+                                      width: 1.0,
+                                    ),
+                                  ),
+                                  children: compiledData.map((row) {
+                                    final date = row['date'] as DateTime;
+                                    final isSelected = _selectedDate != null &&
+                                        DateUtils.isSameDay(_selectedDate, date);
+                                    final dayRequests =
+                                        (row['requests'] as List<Request>?) ??
+                                            [];
+                                    final hasRequests = dayRequests.isNotEmpty;
+
+                                    final dayNameEng = DateFormat(
+                                      'EEEE',
+                                    ).format(date).toLowerCase();
+                                    final translatedDay =
+                                        provider.translate(dayNameEng);
+                                    final dateStr =
+                                        '$translatedDay\n${DateFormat('dd MMM').format(date)}';
+                                    final isWeekend =
+                                        row['isWeekend'] as bool;
+
+                                    final attendanceStr = formatMinutes(
+                                      row['attendance'] as int,
+                                    );
+                                    final restStr = formatMinutes(
+                                      (row['rest'] ?? 0) as int,
+                                    );
+                                    final dutyStr =
+                                        formatMinutes(row['duty'] as int);
+                                    final delayStr =
+                                        formatMinutes(row['delay'] as int);
+                                    final earlyExitStr = formatMinutes(
+                                      row['earlyExit'] as int,
+                                    );
+                                    final extraTimeStr = formatMinutes(
+                                      row['extraTime'] as int,
+                                    );
+                                    final overtimeStr = formatMinutes(
+                                      row['overtime'] as int,
+                                    );
+                                    final penaltyVal =
+                                        row['penalty'] as double;
+                                    final penaltyStr = penaltyVal > 0
+                                        ? '${NumberFormat('#,##0').format(penaltyVal)} IQD'
+                                        : '-';
+
+                                    final rowColor = isSelected
+                                        ? (isDark
+                                            ? const Color(0xFF2E65FF)
+                                                .withValues(alpha: 0.22)
+                                            : const Color(0xFF2E65FF)
+                                                .withValues(alpha: 0.12))
+                                        : (isWeekend
+                                            ? bodyTextColor.withValues(
+                                                alpha: 0.02,
+                                              )
+                                            : Colors.transparent);
+
+                                    Widget wrapCell(Widget cell) {
+                                      return MouseRegion(
+                                        cursor: SystemMouseCursors.click,
+                                        child: GestureDetector(
+                                          behavior: HitTestBehavior.opaque,
+                                          onTap: () {
+                                            setState(() {
+                                              if (_selectedDate != null &&
+                                                  DateUtils.isSameDay(
+                                                    _selectedDate,
+                                                    date,
+                                                  )) {
+                                                _selectedDate = null;
+                                              } else {
+                                                _selectedDate = date;
+                                              }
+                                            });
+                                          },
+                                          onDoubleTap: () {
+                                            setState(() {
+                                              _selectedDate = date;
+                                            });
+                                            _showDayRequestsDialog(
+                                              context,
+                                              provider,
+                                              row,
+                                            );
+                                          },
+                                          child: cell,
+                                        ),
+                                      );
+                                    }
+
+                                    return TableRow(
+                                      decoration: BoxDecoration(
+                                        color: rowColor,
+                                      ),
+                                      children: [
+                                        // Date
+                                        wrapCell(
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10.0,
+                                              vertical: 8.0,
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.center,
+                                              children: [
+                                                if (isSelected)
+                                                  Container(
+                                                    width: 3.5,
+                                                    height: 24,
+                                                    margin:
+                                                        const EdgeInsets.only(
+                                                          right: 6,
+                                                        ),
+                                                    decoration: BoxDecoration(
+                                                      color: const Color(
+                                                        0xFF2E65FF,
+                                                      ),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            2,
+                                                          ),
+                                                    ),
+                                                  ),
+                                                Expanded(
+                                                  child: Text(
+                                                    dateStr,
+                                                    style: TextStyle(
+                                                      color: isSelected
+                                                          ? const Color(
+                                                            0xFF2E65FF,
+                                                          )
+                                                          : (isWeekend
+                                                              ? bodyTextColor
+                                                                  .withValues(
+                                                                    alpha: 0.38,
+                                                                  )
+                                                              : bodyTextColor
+                                                                  .withValues(
+                                                                    alpha: 0.7,
+                                                                  )),
+                                                      fontWeight: isSelected
+                                                          ? FontWeight.bold
+                                                          : FontWeight.w600,
+                                                      fontSize: 12,
+                                                      height: 1.2,
+                                                    ),
+                                                  ),
+                                                ),
+                                                if (hasRequests)
+                                                  Container(
+                                                    padding:
+                                                        const EdgeInsets
+                                                            .symmetric(
+                                                          horizontal: 5,
+                                                          vertical: 2,
+                                                        ),
+                                                    margin:
+                                                        const EdgeInsets.only(
+                                                          left: 4,
+                                                        ),
+                                                    decoration: BoxDecoration(
+                                                      color: const Color(
+                                                        0xFF2E65FF,
+                                                      ).withValues(alpha: 0.15),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            6,
+                                                          ),
+                                                    ),
+                                                    child: Text(
+                                                      '${dayRequests.length}',
+                                                      style: const TextStyle(
+                                                        color: Color(
+                                                          0xFF2E65FF,
+                                                        ),
+                                                        fontSize: 10,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        // Clock Time
+                                        wrapCell(
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10.0,
+                                              vertical: 8.0,
+                                            ),
+                                            child: _buildClockTimeWidget(
+                                              row['clockTime'] as String,
+                                              row['missingPunchTimes']
+                                                      as List<String>? ??
+                                                  [],
+                                              row['isLeave'] as bool? ?? false,
+                                            ),
+                                          ),
+                                        ),
+                                        // Attendance
+                                        wrapCell(
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10.0,
+                                              vertical: 8.0,
+                                            ),
+                                            child: Text(
+                                              (row['isLeave'] as bool? ??
+                                                          false) &&
+                                                      !(row['hasRecord'] as bool)
+                                                  ? '-'
+                                                  : attendanceStr,
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        // Rest Time
+                                        wrapCell(
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10.0,
+                                              vertical: 8.0,
+                                            ),
+                                            child: Text(
+                                              (row['isLeave'] as bool? ??
+                                                          false) &&
+                                                      !(row['hasRecord'] as bool)
+                                                  ? '-'
+                                                  : restStr,
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                color: Color(0xFF2EBD96),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        // Duty
+                                        wrapCell(
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10.0,
+                                              vertical: 8.0,
+                                            ),
+                                            child: Text(
+                                              (row['isLeave'] as bool? ??
+                                                          false) &&
+                                                      !(row['hasRecord'] as bool)
+                                                  ? '-'
+                                                  : dutyStr,
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        // Delay
+                                        wrapCell(
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10.0,
+                                              vertical: 8.0,
+                                            ),
+                                            child: Text(
+                                              delayStr,
+                                              style: TextStyle(
+                                                color: row['delay'] as int > 0
+                                                    ? const Color(0xFFFF5C5C)
+                                                    : (isDark
+                                                        ? Colors.white60
+                                                        : Colors.black54),
+                                                fontWeight:
+                                                    row['delay'] as int > 0
+                                                        ? FontWeight.bold
+                                                        : FontWeight.normal,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        // Early Exit
+                                        wrapCell(
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10.0,
+                                              vertical: 8.0,
+                                            ),
+                                            child: Text(
+                                              earlyExitStr,
+                                              style: TextStyle(
+                                                color:
+                                                    row['earlyExit'] as int > 0
+                                                        ? const Color(
+                                                          0xFFFF5C5C,
+                                                        )
+                                                        : (isDark
+                                                            ? Colors.white60
+                                                            : Colors.black54),
+                                                fontWeight:
+                                                    row['earlyExit'] as int > 0
+                                                        ? FontWeight.bold
+                                                        : FontWeight.normal,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        // Deficit
+                                        wrapCell(
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10.0,
+                                              vertical: 8.0,
+                                            ),
+                                            child: Text(
+                                              formatMinutes(
+                                                (row['deficit'] as int?) ?? 0,
+                                              ),
+                                              style: TextStyle(
+                                                color:
+                                                    ((row['deficit'] as int?) ??
+                                                                0) >
+                                                            0
+                                                        ? const Color(
+                                                          0xFFFF5C5C,
+                                                        )
+                                                        : (isDark
+                                                            ? Colors.white60
+                                                            : Colors.black54),
+                                                fontWeight:
+                                                    ((row['deficit'] as int?) ??
+                                                                0) >
+                                                            0
+                                                        ? FontWeight.bold
+                                                        : FontWeight.normal,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        // Extra Time
+                                        wrapCell(
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10.0,
+                                              vertical: 8.0,
+                                            ),
+                                            child: Text(
+                                              extraTimeStr,
+                                              style: TextStyle(
+                                                color:
+                                                    row['extraTime'] as int > 0
+                                                        ? const Color(
+                                                          0xFFFF9800,
+                                                        )
+                                                        : (isDark
+                                                            ? Colors.white60
+                                                            : Colors.black54),
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        // Overtime
+                                        wrapCell(
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10.0,
+                                              vertical: 8.0,
+                                            ),
+                                            child: Text(
+                                              overtimeStr,
+                                              style: TextStyle(
+                                                color:
+                                                    row['overtime'] as int > 0
+                                                        ? const Color(
+                                                          0xFF00FF87,
+                                                        )
+                                                        : (isDark
+                                                            ? Colors.white60
+                                                            : Colors.black54),
+                                                fontWeight:
+                                                    row['overtime'] as int > 0
+                                                        ? FontWeight.bold
+                                                        : FontWeight.normal,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        // Penalty
+                                        wrapCell(
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10.0,
+                                              vertical: 8.0,
+                                            ),
+                                            child: Text(
+                                              penaltyStr,
+                                              style: TextStyle(
+                                                color: penaltyVal > 0
+                                                    ? const Color(0xFFFF5C5C)
+                                                    : (isDark
+                                                        ? Colors.white60
+                                                        : Colors.black54),
+                                                fontWeight: penaltyVal > 0
+                                                    ? FontWeight.bold
+                                                    : FontWeight.normal,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      headingRowHeight: 40,
-                      dataRowMinHeight: 32,
-                      dataRowMaxHeight: 52,
-                      columns: [
-                        DataColumn(
-                          label: Text(
-                            provider.translate('date'),
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            provider.translate('clock_time'),
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                              color: Color(0xFF5B9BFF),
-                            ),
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            provider.translate('attendance'),
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            provider.translate('rest_time'),
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                              color: Color(0xFF2EBD96),
-                            ),
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            provider.translate('duty'),
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            provider.translate('delay'),
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                              color: Color(0xFFFF5C5C),
-                            ),
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            provider.translate('early_exit'),
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                              color: Color(0xFFFF5C5C),
-                            ),
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            'Deficit',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                              color: Color(0xFFFF5C5C),
-                            ),
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            provider.translate('extra_time'),
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                              color: Color(0xFFFF9800),
-                            ),
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            provider.translate('overtime'),
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                              color: Color(0xFF00FF87),
-                            ),
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            provider.translate('penalty'),
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                              color: Color(0xFFFF5C5C),
-                            ),
-                          ),
-                        ),
-                      ],
-                      rows: compiledData.map((row) {
-                        final date = row['date'] as DateTime;
-                        final dayNameEng = DateFormat(
-                          'EEEE',
-                        ).format(date).toLowerCase();
-                        final translatedDay = provider.translate(dayNameEng);
-                        final dateStr =
-                            '$translatedDay\n${DateFormat('dd MMM').format(date)}';
-                        final isWeekend = row['isWeekend'] as bool;
-
-                        final attendanceStr = formatMinutes(
-                          row['attendance'] as int,
-                        );
-                        final restStr = formatMinutes(
-                          (row['rest'] ?? 0) as int,
-                        );
-                        final dutyStr = formatMinutes(row['duty'] as int);
-                        final delayStr = formatMinutes(row['delay'] as int);
-                        final earlyExitStr = formatMinutes(
-                          row['earlyExit'] as int,
-                        );
-                        final extraTimeStr = formatMinutes(
-                          row['extraTime'] as int,
-                        );
-                        final overtimeStr = formatMinutes(
-                          row['overtime'] as int,
-                        );
-                        final penaltyVal = row['penalty'] as double;
-                        final penaltyStr = penaltyVal > 0
-                            ? '${NumberFormat('#,##0').format(penaltyVal)} IQD'
-                            : '-';
-
-                        final rowColor = isWeekend
-                            ? ((Theme.of(context).textTheme.bodyLarge?.color ??
-                                      Colors.black)
-                                  .withValues(alpha: 0.02))
-                            : Colors.transparent;
-
-                        return DataRow(
-                          color: WidgetStateProperty.all(rowColor),
-                          cells: [
-                            DataCell(
-                              Text(
-                                dateStr,
-                                style: TextStyle(
-                                  color: isWeekend
-                                      ? (Theme.of(
-                                                  context,
-                                                ).textTheme.bodyLarge?.color ??
-                                                Colors.black)
-                                            .withValues(alpha: 0.38)
-                                      : (Theme.of(
-                                                  context,
-                                                ).textTheme.bodyLarge?.color ??
-                                                Colors.black)
-                                            .withValues(alpha: 0.7),
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 12,
-                                  height: 1.2,
-                                ),
-                              ),
-                            ),
-                            DataCell(
-                              _buildClockTimeWidget(
-                                row['clockTime'] as String,
-                                row['missingPunchTimes'] as List<String>? ?? [],
-                                row['isLeave'] as bool? ?? false,
-                              ),
-                            ),
-                            DataCell(
-                              Text(
-                                (row['isLeave'] as bool? ?? false) &&
-                                        !(row['hasRecord'] as bool)
-                                    ? '-'
-                                    : attendanceStr,
-                                style: TextStyle(fontSize: 12),
-                              ),
-                            ),
-                            DataCell(
-                              Text(
-                                (row['isLeave'] as bool? ?? false) &&
-                                        !(row['hasRecord'] as bool)
-                                    ? '-'
-                                    : restStr,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Color(0xFF2EBD96),
-                                ),
-                              ),
-                            ),
-                            DataCell(
-                              Text(
-                                (row['isLeave'] as bool? ?? false) &&
-                                        !(row['hasRecord'] as bool)
-                                    ? '-'
-                                    : dutyStr,
-                                style: TextStyle(fontSize: 12),
-                              ),
-                            ),
-                            DataCell(
-                              Text(
-                                delayStr,
-                                style: TextStyle(
-                                  color: row['delay'] as int > 0
-                                      ? const Color(0xFFFF5C5C)
-                                      : (Theme.of(context).brightness ==
-                                                Brightness.dark
-                                            ? Colors.white60
-                                            : Colors.black54),
-                                  fontWeight: row['delay'] as int > 0
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                            DataCell(
-                              Text(
-                                earlyExitStr,
-                                style: TextStyle(
-                                  color: row['earlyExit'] as int > 0
-                                      ? const Color(0xFFFF5C5C)
-                                      : (Theme.of(context).brightness ==
-                                                Brightness.dark
-                                            ? Colors.white60
-                                            : Colors.black54),
-                                  fontWeight: row['earlyExit'] as int > 0
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                            DataCell(
-                              Text(
-                                formatMinutes((row['deficit'] as int?) ?? 0),
-                                style: TextStyle(
-                                  color: ((row['deficit'] as int?) ?? 0) > 0
-                                      ? const Color(0xFFFF5C5C)
-                                      : (Theme.of(context).brightness ==
-                                                Brightness.dark
-                                            ? Colors.white60
-                                            : Colors.black54),
-                                  fontWeight:
-                                      ((row['deficit'] as int?) ?? 0) > 0
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                            DataCell(
-                              Text(
-                                extraTimeStr,
-                                style: TextStyle(
-                                  color: row['extraTime'] as int > 0
-                                      ? const Color(0xFFFF9800)
-                                      : (Theme.of(context).brightness ==
-                                                Brightness.dark
-                                            ? Colors.white60
-                                            : Colors.black54),
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                            DataCell(
-                              Text(
-                                overtimeStr,
-                                style: TextStyle(
-                                  color: row['overtime'] as int > 0
-                                      ? const Color(0xFF00FF87)
-                                      : (Theme.of(context).brightness ==
-                                                Brightness.dark
-                                            ? Colors.white60
-                                            : Colors.black54),
-                                  fontWeight: row['overtime'] as int > 0
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                            DataCell(
-                              Text(
-                                penaltyStr,
-                                style: TextStyle(
-                                  color: penaltyVal > 0
-                                      ? const Color(0xFFFF5C5C)
-                                      : (Theme.of(context).brightness ==
-                                                Brightness.dark
-                                            ? Colors.white60
-                                            : Colors.black54),
-                                  fontWeight: penaltyVal > 0
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          ],
-                        );
-                      }).toList(),
                     ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
           ),
         ),
@@ -1426,70 +1757,857 @@ class _HistoryScreenState extends State<HistoryScreen> {
     AttendanceProvider provider,
     List<CompanyEmployee> subordinates,
   ) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0),
-      child: GlassContainer(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-        child: Theme(
-          data: ThemeData.dark().copyWith(canvasColor: const Color(0xFF1E293B)),
-          child: DropdownMenu<String>(
-            initialSelection:
-                _selectedEmployeeId ?? provider.currentEmployee?.id,
-            enableFilter: true,
-            enableSearch: true,
-            expandedInsets: EdgeInsets.zero,
-            menuStyle: MenuStyle(
-              backgroundColor: WidgetStateProperty.all(
-                (Theme.of(context).brightness == Brightness.dark
-                    ? const Color(0xFF1E293B).withValues(alpha: 0.98)
-                    : Colors.white.withValues(alpha: 0.98)),
-              ),
-              elevation: WidgetStateProperty.all(8),
-              shape: WidgetStateProperty.all(
-                RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(
-                    color:
-                        (Theme.of(context).textTheme.bodyLarge?.color ??
-                                Colors.black)
-                            .withValues(alpha: 0.1),
-                  ),
+    return GlassContainer(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+      child: Theme(
+        data: ThemeData.dark().copyWith(canvasColor: const Color(0xFF1E293B)),
+        child: DropdownMenu<String>(
+          initialSelection:
+              _selectedEmployeeId ?? provider.currentEmployee?.id,
+          enableFilter: true,
+          enableSearch: true,
+          expandedInsets: EdgeInsets.zero,
+          menuStyle: MenuStyle(
+            backgroundColor: WidgetStateProperty.all(
+              (Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF1E293B).withValues(alpha: 0.98)
+                  : Colors.white.withValues(alpha: 0.98)),
+            ),
+            elevation: WidgetStateProperty.all(8),
+            shape: WidgetStateProperty.all(
+              RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(
+                  color:
+                      (Theme.of(context).textTheme.bodyLarge?.color ??
+                              Colors.black)
+                          .withValues(alpha: 0.1),
                 ),
               ),
             ),
-            inputDecorationTheme: const InputDecorationTheme(
-              border: InputBorder.none,
-              isDense: true,
-              contentPadding: EdgeInsets.zero,
-            ),
-            textStyle: TextStyle(
-              color:
-                  ((Theme.of(context).textTheme.bodyLarge?.color ??
-                  Colors.black)),
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-            dropdownMenuEntries: subordinates.map((emp) {
-              return DropdownMenuEntry<String>(
-                value: emp.id,
-                label: '${emp.name} (${emp.position})',
-              );
-            }).toList(),
-            onSelected: (val) {
-              if (val != null) {
-                if (val == provider.currentEmployee?.id) {
-                  setState(() {
-                    _selectedEmployeeId = val;
-                    _isLoadingSubordinate = false;
-                  });
-                } else {
-                  _loadSubordinateRecords(provider, val);
-                }
-              }
-            },
+          ),
+          inputDecorationTheme: const InputDecorationTheme(
+            border: InputBorder.none,
+            isDense: true,
+            contentPadding: EdgeInsets.zero,
+          ),
+          textStyle: TextStyle(
+            color:
+                ((Theme.of(context).textTheme.bodyLarge?.color ??
+                Colors.black)),
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+          dropdownMenuEntries: subordinates.map((emp) {
+            return DropdownMenuEntry<String>(
+              value: emp.id,
+              label: '${emp.name} (${emp.position})',
+            );
+          }).toList(),
+          onSelected: (val) {
+            if (val != null) {
+              setState(() {
+                _selectedEmployeeId = val;
+                _selectedDate = null;
+              });
+              _loadSubordinateRecords(provider, val);
+            }
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddRequestButton(AttendanceProvider provider) {
+    return ElevatedButton.icon(
+      onPressed: () {
+        showNewRequestDialog(
+          context: context,
+          provider: provider,
+        );
+      },
+      icon: const Icon(Icons.add, size: 20, color: Colors.white),
+      label: Text(
+        provider.translate('new_request'),
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -0.2,
+        ),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFFFF5C38),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
+        shape: const StadiumBorder(),
+      ),
+    );
+  }
+
+  Widget _buildExportButton(
+    AttendanceProvider provider,
+    List<Map<String, dynamic>> records,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: () async {
+            final employee = _selectedEmployeeId != null
+                ? provider.employees.firstWhere(
+                    (e) => e.id == _selectedEmployeeId,
+                    orElse: () => provider.currentEmployee!,
+                  )
+                : provider.currentEmployee!;
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Exporting attendance history...')),
+            );
+
+            await ExportService.exportHistoryToPdf(
+              records: records,
+              employee: employee,
+              month: _reportMonth,
+              profile: provider.companyProfile,
+            );
+          },
+          child: Icon(
+            Icons.file_download_outlined,
+            color: isDark ? Colors.white70 : const Color(0xFF64748B),
+            size: 20,
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildDayRequestsButton(
+    AttendanceProvider provider,
+    List<Map<String, dynamic>> compiledData, {
+    bool isCompact = false,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isSelected = _selectedDate != null;
+
+    final selectedRow = isSelected
+        ? compiledData.cast<Map<String, dynamic>?>().firstWhere(
+            (r) =>
+                r != null &&
+                DateUtils.isSameDay(r['date'] as DateTime, _selectedDate),
+            orElse: () => null,
+          )
+        : null;
+
+    final List<Request> requests = selectedRow != null
+        ? ((selectedRow['requests'] as List<Request>?) ?? [])
+        : [];
+
+    final count = requests.length;
+
+    if (isCompact) {
+      return Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: isSelected
+              ? const Color(0xFF2E65FF)
+              : (isDark ? const Color(0xFF1E293B) : Colors.white),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: isSelected
+                  ? const Color(0xFF2E65FF).withValues(alpha: 0.35)
+                  : Colors.black.withValues(alpha: isDark ? 0.25 : 0.06),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: () {
+              if (isSelected && selectedRow != null) {
+                _showDayRequestsDialog(context, provider, selectedRow);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Click on any day row in the table first.'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              }
+            },
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Icon(
+                  Icons.assignment_outlined,
+                  color: isSelected
+                      ? Colors.white
+                      : (isDark
+                          ? Colors.white38
+                          : const Color(0xFF64748B).withValues(alpha: 0.4)),
+                  size: 20,
+                ),
+                if (isSelected && count > 0)
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFF5C38),
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 14,
+                        minHeight: 14,
+                      ),
+                      child: Text(
+                        '$count',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (!isSelected) {
+      return Tooltip(
+        message: 'Click on any day row in the table to view its requests',
+        child: OutlinedButton.icon(
+          onPressed: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Click on any day row in the table first.'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          },
+          icon: Icon(
+            Icons.assignment_outlined,
+            size: 18,
+            color: isDark
+                ? Colors.white38
+                : const Color(0xFF64748B).withValues(alpha: 0.5),
+          ),
+          label: Text(
+            provider.translate('requests'),
+            style: TextStyle(
+              color: isDark
+                  ? Colors.white38
+                  : const Color(0xFF64748B).withValues(alpha: 0.5),
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          style: OutlinedButton.styleFrom(
+            side: BorderSide(
+              color: (Theme.of(context).textTheme.bodyLarge?.color ??
+                      Colors.black)
+                  .withValues(alpha: 0.12),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+            shape: const StadiumBorder(),
+          ),
+        ),
+      );
+    }
+
+    return ElevatedButton.icon(
+      onPressed: () {
+        if (selectedRow != null) {
+          _showDayRequestsDialog(context, provider, selectedRow);
+        }
+      },
+      icon: const Icon(Icons.assignment_outlined, size: 18, color: Colors.white),
+      label: Text(
+        count > 0
+            ? '${provider.translate('requests')} ($count)'
+            : provider.translate('requests'),
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -0.2,
+        ),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF2E65FF),
+        foregroundColor: Colors.white,
+        elevation: 2,
+        shadowColor: const Color(0xFF2E65FF).withValues(alpha: 0.4),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+        shape: const StadiumBorder(),
+      ),
+    );
+  }
+
+  void _showDayRequestsDialog(
+    BuildContext context,
+    AttendanceProvider provider,
+    Map<String, dynamic> rowData,
+  ) {
+    final date = rowData['date'] as DateTime;
+    final dayNameEng = DateFormat('EEEE').format(date).toLowerCase();
+    final translatedDay = provider.translate(dayNameEng);
+    final formattedDateStr =
+        '$translatedDay, ${DateFormat('d MMMM yyyy').format(date)}';
+    final requests = (rowData['requests'] as List<Request>?) ?? [];
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor =
+        Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black;
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 580, maxHeight: 680),
+            child: Container(
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.12),
+                    blurRadius: 24,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Dialog Header
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 20, 20, 16),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color:
+                                const Color(0xFF2E65FF).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(
+                            Icons.assignment_outlined,
+                            color: Color(0xFF2E65FF),
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                provider.translate('requests'),
+                                style: TextStyle(
+                                  color: textColor,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                formattedDateStr,
+                                style: TextStyle(
+                                  color: textColor.withValues(alpha: 0.6),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          icon: const Icon(Icons.close),
+                          splashRadius: 20,
+                          color: textColor.withValues(alpha: 0.5),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const Divider(height: 1, thickness: 1),
+
+                  // Day Summary Strip (Attendance Context)
+                  Container(
+                    color: textColor.withValues(alpha: isDark ? 0.04 : 0.02),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildDialogDayStat(
+                          label: provider.translate('attendance'),
+                          value: (rowData['isLeave'] as bool? ?? false) &&
+                                  !(rowData['hasRecord'] as bool)
+                              ? '-'
+                              : formatMinutes(rowData['attendance'] as int),
+                          color: const Color(0xFF2E65FF),
+                        ),
+                        _buildDialogDayStat(
+                          label: provider.translate('clock_time'),
+                          value: (rowData['clockTime'] as String).replaceAll(
+                            '\n',
+                            ', ',
+                          ),
+                          color: const Color(0xFF5B9BFF),
+                        ),
+                        _buildDialogDayStat(
+                          label: provider.translate('duty'),
+                          value: formatMinutes(rowData['duty'] as int),
+                          color: textColor.withValues(alpha: 0.7),
+                        ),
+                        _buildDialogDayStat(
+                          label: provider.translate('delay'),
+                          value: '${rowData['delay']}m',
+                          color: (rowData['delay'] as int) > 0
+                              ? const Color(0xFFFF5C5C)
+                              : textColor.withValues(alpha: 0.7),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const Divider(height: 1, thickness: 1),
+
+                  // Requests Content
+                  Flexible(
+                    child: requests.isEmpty
+                        ? Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 40,
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 64,
+                                  height: 64,
+                                  decoration: BoxDecoration(
+                                    color: textColor.withValues(alpha: 0.05),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.article_outlined,
+                                    size: 32,
+                                    color: textColor.withValues(alpha: 0.35),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  provider.translate('no_requests'),
+                                  style: TextStyle(
+                                    color: textColor,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'No leave, shift change, or punch correction requests were submitted for this date.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: textColor.withValues(alpha: 0.5),
+                                    fontSize: 13,
+                                    height: 1.4,
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                ElevatedButton.icon(
+                                  onPressed: () {
+                                    Navigator.of(ctx).pop();
+                                    showNewRequestDialog(
+                                      context: context,
+                                      provider: provider,
+                                    );
+                                  },
+                                  icon: const Icon(Icons.add, size: 18),
+                                  label: Text(
+                                    provider.translate('new_request'),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFFF5C38),
+                                    foregroundColor: Colors.white,
+                                    shape: const StadiumBorder(),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 10,
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.all(20),
+                            itemCount: requests.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
+                              final req = requests[index];
+                              return _buildRequestDetailCard(
+                                req,
+                                provider,
+                                isDark,
+                                textColor,
+                              );
+                            },
+                          ),
+                  ),
+
+                  // Footer
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 10,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: Text(
+                            provider.translate('close') != 'close'
+                                ? provider.translate('close')
+                                : 'Close',
+                            style: TextStyle(
+                              color: textColor.withValues(alpha: 0.8),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRequestDetailCard(
+    Request req,
+    AttendanceProvider provider,
+    bool isDark,
+    Color textColor,
+  ) {
+    final statusColor = req.statusColor;
+    final statusLabel = _translateRequestStatus(req.status, provider);
+    final typeLabel = _translateRequestType(req.type, provider);
+
+    IconData typeIcon = Icons.assignment_outlined;
+    if (req.type.contains('Leave')) {
+      typeIcon = Icons.beach_access_rounded;
+    } else if (req.type == 'Change Shift') {
+      typeIcon = Icons.swap_horiz_rounded;
+    } else if (req.type == 'Missing Punch' ||
+        req.type == 'Forgot to Clock Out') {
+      typeIcon = Icons.fingerprint;
+    } else if (req.type.contains('Overtime')) {
+      typeIcon = Icons.more_time_rounded;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: textColor.withValues(alpha: isDark ? 0.12 : 0.08),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Type and Status
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(typeIcon, size: 18, color: statusColor),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      typeLabel,
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      req.date,
+                      style: TextStyle(
+                        color: textColor.withValues(alpha: 0.5),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: statusColor.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  statusLabel,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          // Duration or Shift details
+          if (req.type == 'Change Shift' && req.targetShiftId != null) ...[
+            _buildDetailRow(
+              icon: Icons.schedule,
+              label: provider.translate('target_shift') != 'target_shift'
+                  ? provider.translate('target_shift')
+                  : 'Target Shift',
+              value: provider.shifts
+                  .firstWhere(
+                    (s) => s.id == req.targetShiftId,
+                    orElse: () => WorkShift(
+                      id: '',
+                      name: 'Unknown',
+                      startTime: '',
+                      endTime: '',
+                    ),
+                  )
+                  .name,
+              textColor: textColor,
+            ),
+          ] else if (req.duration.isNotEmpty) ...[
+            _buildDetailRow(
+              icon: Icons.timer_outlined,
+              label: provider.translate('duration'),
+              value: req.duration
+                  .replaceAll('Clock In:', provider.translate('clock_in_colon'))
+                  .replaceAll('Clock Out:', provider.translate('clock_out_colon')),
+              textColor: textColor,
+            ),
+          ],
+
+          // Note
+          if (req.note != null && req.note!.trim().isNotEmpty) ...[
+            const SizedBox(height: 6),
+            _buildDetailRow(
+              icon: Icons.notes_rounded,
+              label: provider.translate('note') != 'note'
+                  ? provider.translate('note')
+                  : 'Note',
+              value: req.note!,
+              textColor: textColor,
+            ),
+          ],
+
+          // Submitter / registered timestamp
+          if (req.createdAt != null) ...[
+            const SizedBox(height: 6),
+            _buildDetailRow(
+              icon: Icons.history_rounded,
+              label: 'Submitted',
+              value: DateFormat('MMM d, yyyy HH:mm').format(
+                DateTime.tryParse(req.createdAt!) ?? DateTime.now(),
+              ),
+              textColor: textColor.withValues(alpha: 0.55),
+            ),
+          ],
+
+          // Action details (Approver)
+          if (req.actionBy != null && req.actionDate != null) ...[
+            const SizedBox(height: 6),
+            _buildDetailRow(
+              icon: Icons.verified_user_outlined,
+              label: statusLabel,
+              value:
+                  'By ${provider.employees.firstWhere((e) => e.id == req.actionBy, orElse: () => CompanyEmployee(id: '', name: 'Supervisor', email: '', position: '')).name} (${DateFormat('MMM d, yyyy HH:mm').format(DateTime.tryParse(req.actionDate!) ?? DateTime.now())})',
+              textColor: statusColor,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color textColor,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 14, color: textColor.withValues(alpha: 0.5)),
+        const SizedBox(width: 6),
+        Text(
+          '$label: ',
+          style: TextStyle(
+            color: textColor.withValues(alpha: 0.55),
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDialogDayStat({
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: color.withValues(alpha: 0.8),
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: TextStyle(
+            color: color,
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _translateRequestType(String rawType, AttendanceProvider provider) {
+    switch (rawType) {
+      case 'Annual Leave':
+        return provider.translate('vacation_leave');
+      case 'Sick Leave':
+        return provider.translate('sick_leave');
+      case 'Overtime Approval':
+        return provider.translate('overtime_approval');
+      case 'Forgot to Clock Out':
+        return provider.translate('forgot_to_clock_out');
+      case 'Hourly Leave':
+        return provider.translate('hourly_leave') != 'hourly_leave'
+            ? provider.translate('hourly_leave')
+            : 'Hourly Leave';
+      case 'Change Shift':
+        return provider.translate('change_shift') != 'change_shift'
+            ? provider.translate('change_shift')
+            : 'Change Shift';
+      case 'Missing Punch':
+        return provider.translate('missing_punch');
+      default:
+        return rawType;
+    }
+  }
+
+  String _translateRequestStatus(
+    String rawStatus,
+    AttendanceProvider provider,
+  ) {
+    switch (rawStatus) {
+      case 'Approved':
+        return provider.translate('status_approved');
+      case 'Pending':
+        return provider.translate('status_pending');
+      case 'Rejected':
+        return provider.translate('status_rejected');
+      default:
+        return rawStatus;
+    }
   }
 }

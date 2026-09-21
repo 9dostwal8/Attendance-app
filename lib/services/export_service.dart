@@ -9,7 +9,11 @@ import '../providers/attendance_provider.dart';
 import '../models/hr_models.dart';
 
 class ExportService {
-  static Future<void> exportPayrollToExcel(List<PayrollReport> reports, DateTime month, CompanyProfile? profile) async {
+  static Future<void> exportPayrollToExcel(
+    List<PayrollReport> reports,
+    DateTime month,
+    CompanyProfile? profile,
+  ) async {
     final xlsio.Workbook workbook = xlsio.Workbook();
     final xlsio.Worksheet sheet = workbook.worksheets[0];
     sheet.name = 'Payroll ${DateFormat('MMM_yyyy').format(month)}';
@@ -34,31 +38,44 @@ class ExportService {
       sheet.getRangeByIndex(rowOffset, 1).cellStyle.bold = true;
       sheet.getRangeByIndex(rowOffset, 1).cellStyle.fontSize = 14;
       rowOffset++;
-      
+
       if (profile.address.isNotEmpty) {
         sheet.getRangeByIndex(rowOffset, 1).setText(profile.address);
         rowOffset++;
       }
-      
+
       if (profile.email != null && profile.email!.isNotEmpty) {
         sheet.getRangeByIndex(rowOffset, 1).setText('Email: ${profile.email}');
         rowOffset++;
       }
-      
+
       if (profile.phone != null && profile.phone!.isNotEmpty) {
         sheet.getRangeByIndex(rowOffset, 1).setText('Phone: ${profile.phone}');
         rowOffset++;
       }
-      
+
       rowOffset++; // empty row
     }
 
     // Headers
     final headers = [
-      'Employee', 'Basic Salary', 'Salary by Day', 'Days Worked', 'Working Hrs', 
-      'Overtime (Hrs)', 'Overtime (Val)', 'Deficit (Hrs)', 'Deficit (Val)', 
-      'Food Allow.', 'Trans. Allow.', 'Other Allow.', 'Penalties', 
-      'Gross Salary', 'Deductions', 'Net Earnings', 'Currency'
+      'Employee',
+      'Basic Salary',
+      'Salary by Day',
+      'Days Worked',
+      'Working Hrs',
+      'Overtime (Hrs)',
+      'Overtime (Val)',
+      'Deficit (Hrs)',
+      'Deficit (Val)',
+      'Food Allow.',
+      'Trans. Allow.',
+      'Other Allow.',
+      'Penalties',
+      'Gross Salary',
+      'Deductions',
+      'Net Earnings',
+      'Currency',
     ];
 
     for (int col = 0; col < headers.length; col++) {
@@ -101,14 +118,31 @@ class ExportService {
     );
   }
 
-  static Future<void> exportPayrollToPdf(List<PayrollReport> reports, DateTime month, CompanyProfile? profile) async {
+  static Future<void> exportPayrollToPdf(
+    List<PayrollReport> reports,
+    DateTime month,
+    CompanyProfile? profile,
+  ) async {
     final pdf = pw.Document();
 
     final headers = [
-      'Emp', 'Basic', 'Sal/Day', 'Days', 'Hrs', 
-      'OT Hrs', 'OT Val', 'Def Hrs', 'Def Val', 
-      'Food', 'Trans.', 'Other', 'Penal.', 
-      'Gross', 'Ded.', 'Net', 'Cur.'
+      'Emp',
+      'Basic',
+      'Sal/Day',
+      'Days',
+      'Hrs',
+      'OT Hrs',
+      'OT Val',
+      'Def Hrs',
+      'Def Val',
+      'Food',
+      'Trans.',
+      'Other',
+      'Penal.',
+      'Gross',
+      'Ded.',
+      'Net',
+      'Cur.',
     ];
 
     pdf.addPage(
@@ -145,59 +179,294 @@ class ExportService {
                     pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text(profile.name, style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+                        pw.Text(
+                          profile.name,
+                          style: pw.TextStyle(
+                            fontSize: 18,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
                         if (profile.address.isNotEmpty)
-                          pw.Text(profile.address, style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                          pw.Text(
+                            profile.address,
+                            style: const pw.TextStyle(
+                              fontSize: 10,
+                              color: PdfColors.grey700,
+                            ),
+                          ),
                         if (profile.email != null && profile.email!.isNotEmpty)
-                          pw.Text('Email: ${profile.email}', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                          pw.Text(
+                            'Email: ${profile.email}',
+                            style: const pw.TextStyle(
+                              fontSize: 10,
+                              color: PdfColors.grey700,
+                            ),
+                          ),
                         if (profile.phone != null && profile.phone!.isNotEmpty)
-                          pw.Text('Phone: ${profile.phone}', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                          pw.Text(
+                            'Phone: ${profile.phone}',
+                            style: const pw.TextStyle(
+                              fontSize: 10,
+                              color: PdfColors.grey700,
+                            ),
+                          ),
                       ],
                     ),
                   ],
                 ),
               ),
 
-            pw.Header(level: 0, child: pw.Text('Payroll Report - ${DateFormat('MMMM yyyy').format(month)}')),
+            pw.Header(
+              level: 0,
+              child: pw.Text(
+                'Payroll Report - ${DateFormat('MMMM yyyy').format(month)}',
+              ),
+            ),
             pw.TableHelper.fromTextArray(
               headers: headers,
-              data: reports.map((r) => [
-                r.employee.name,
-                r.basicSalary.toStringAsFixed(0),
-                r.salaryCalcByDay.toStringAsFixed(0),
-                r.daysWorked.toString(),
-                r.workingHours.toStringAsFixed(1),
-                r.overtimeHours.toStringAsFixed(1),
-                r.overtimeValue.toStringAsFixed(0),
-                r.attendanceDeficitHours.toStringAsFixed(1),
-                r.attendanceDeficit.toStringAsFixed(0),
-                r.foodAllowance.toStringAsFixed(0),
-                r.transportationAllowance.toStringAsFixed(0),
-                r.otherAllowance.toStringAsFixed(0),
-                r.monthlyPenalties.toStringAsFixed(0),
-                r.incrementalSalary.toStringAsFixed(0),
-                r.decrementalSalary.toStringAsFixed(0),
-                r.netEarnings.toStringAsFixed(0),
-                r.currency,
-              ]).toList(),
-              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8),
+              data: reports
+                  .map(
+                    (r) => [
+                      r.employee.name,
+                      r.basicSalary.toStringAsFixed(0),
+                      r.salaryCalcByDay.toStringAsFixed(0),
+                      r.daysWorked.toString(),
+                      r.workingHours.toStringAsFixed(1),
+                      r.overtimeHours.toStringAsFixed(1),
+                      r.overtimeValue.toStringAsFixed(0),
+                      r.attendanceDeficitHours.toStringAsFixed(1),
+                      r.attendanceDeficit.toStringAsFixed(0),
+                      r.foodAllowance.toStringAsFixed(0),
+                      r.transportationAllowance.toStringAsFixed(0),
+                      r.otherAllowance.toStringAsFixed(0),
+                      r.monthlyPenalties.toStringAsFixed(0),
+                      r.incrementalSalary.toStringAsFixed(0),
+                      r.decrementalSalary.toStringAsFixed(0),
+                      r.netEarnings.toStringAsFixed(0),
+                      r.currency,
+                    ],
+                  )
+                  .toList(),
+              headerStyle: pw.TextStyle(
+                fontWeight: pw.FontWeight.bold,
+                fontSize: 8,
+              ),
               cellStyle: const pw.TextStyle(fontSize: 8),
-              headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
               cellAlignment: pw.Alignment.center,
-              cellPadding: const pw.EdgeInsets.all(3),
             ),
           ];
         },
       ),
     );
 
-    final Uint8List bytes = await pdf.save();
-    final fileName = 'Payroll_${DateFormat('MMM_yyyy').format(month)}';
-    await FileSaver.instance.saveFile(
-      name: fileName,
-      bytes: bytes,
-      fileExtension: 'pdf',
-      mimeType: MimeType.pdf,
+    final bytes = await pdf.save();
+    final fileName = 'Payroll_${DateFormat('MM_yyyy').format(month)}.pdf';
+
+    if (kIsWeb) {
+      await FileSaver.instance.saveFile(
+        name: fileName,
+        bytes: bytes,
+        fileExtension: 'pdf',
+        mimeType: MimeType.pdf,
+      );
+    } else {
+      await FileSaver.instance.saveFile(
+        name: fileName,
+        bytes: bytes,
+        fileExtension: 'pdf',
+        mimeType: MimeType.pdf,
+      );
+    }
+  }
+
+  static Future<void> exportHistoryToPdf({
+    required List<Map<String, dynamic>> records,
+    required CompanyEmployee employee,
+    required DateTime month,
+    required CompanyProfile? profile,
+  }) async {
+    final pdf = pw.Document();
+
+    final headers = [
+      'Date',
+      'Clock Time',
+      'Attendance',
+      'Duty',
+      'Delay',
+      'Early Exit',
+      'Deficit',
+      'Extra Time',
+      'Overtime',
+      'Penalty',
+    ];
+
+    String formatMins(int mins) {
+      if (mins == 0) return '0m';
+      final h = mins ~/ 60;
+      final m = mins % 60;
+      return h > 0 ? '${h}h ${m}m' : '${m}m';
+    }
+
+    pdf.addPage(
+      pw.MultiPage(
+        maxPages: 1,
+        pageFormat: PdfPageFormat.a4.copyWith(
+          marginLeft: 16,
+          marginRight: 16,
+          marginTop: 14,
+          marginBottom: 14,
+        ),
+        build: (pw.Context context) {
+          pw.Widget? logoWidget;
+          if (profile?.logoBase64 != null && profile!.logoBase64!.isNotEmpty) {
+            try {
+              final image = pw.MemoryImage(base64Decode(profile.logoBase64!));
+              logoWidget = pw.Image(image, width: 42, height: 42);
+            } catch (e) {
+              debugPrint('Could not decode pdf logo: $e');
+            }
+          }
+
+          return [
+            // Top Header: Company Info (Left) & Report/Employee Info (Right)
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                // Left: Company Info
+                pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
+                  children: [
+                    if (logoWidget != null) ...[
+                      logoWidget,
+                      pw.SizedBox(width: 10),
+                    ],
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          profile?.name ?? 'Company',
+                          style: pw.TextStyle(
+                            fontSize: 16,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                        if (profile != null && profile.address.isNotEmpty) ...[
+                          pw.SizedBox(height: 2),
+                          pw.Text(
+                            profile.address,
+                            style: const pw.TextStyle(
+                              fontSize: 9,
+                              color: PdfColors.grey700,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+
+                // Right: Attendance History Report Details
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    pw.Text(
+                      'Attendance History Report',
+                      style: pw.TextStyle(
+                        fontSize: 13,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.black,
+                      ),
+                    ),
+                    pw.SizedBox(height: 2),
+                    pw.Text(
+                      'Employee: ${employee.name}${employee.position.isNotEmpty ? " (${employee.position})" : ""}',
+                      style: const pw.TextStyle(fontSize: 9.5),
+                    ),
+                    pw.SizedBox(height: 1),
+                    pw.Text(
+                      'Month: ${DateFormat('MMMM yyyy').format(month)}',
+                      style: const pw.TextStyle(fontSize: 9.5),
+                    ),
+                    pw.SizedBox(height: 1),
+                    pw.Text(
+                      'Export Date: ${DateFormat('MMMM d, yyyy - h:mm a').format(DateTime.now())}',
+                      style: const pw.TextStyle(
+                        fontSize: 8,
+                        color: PdfColors.grey600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 6),
+            pw.Divider(thickness: 0.8, color: PdfColors.grey400),
+            pw.SizedBox(height: 6),
+
+            pw.TableHelper.fromTextArray(
+              headers: headers,
+              data: records.map((r) {
+                final date = r['date'] as DateTime;
+                return [
+                  DateFormat('dd MMM').format(date),
+                  r['clockTime'].toString().replaceAll('\n', ' / '),
+                  formatMins(r['attendance'] as int),
+                  formatMins(r['duty'] as int),
+                  formatMins(r['delay'] as int),
+                  formatMins(r['earlyExit'] as int),
+                  formatMins((r['deficit'] ?? 0) as int),
+                  formatMins(r['extraTime'] as int),
+                  formatMins(r['overtime'] as int),
+                  (r['penalty'] as double) > 0
+                      ? '${NumberFormat('#,##0').format(r['penalty'] as double)} IQD'
+                      : '-',
+                ];
+              }).toList(),
+              headerStyle: pw.TextStyle(
+                fontWeight: pw.FontWeight.bold,
+                fontSize: 8.5,
+              ),
+              cellStyle: const pw.TextStyle(fontSize: 8),
+              headerDecoration: const pw.BoxDecoration(color: PdfColors.grey100),
+              cellPadding: const pw.EdgeInsets.symmetric(horizontal: 2.5, vertical: 2.8),
+              cellAlignment: pw.Alignment.center,
+              columnWidths: {
+                0: const pw.FlexColumnWidth(1.2), // Date
+                1: const pw.FlexColumnWidth(1.5), // Clock Time
+                2: const pw.FlexColumnWidth(1.1), // Attendance
+                3: const pw.FlexColumnWidth(1.0), // Duty
+                4: const pw.FlexColumnWidth(0.9), // Delay
+                5: const pw.FlexColumnWidth(1.0), // Early Exit
+                6: const pw.FlexColumnWidth(1.0), // Deficit
+                7: const pw.FlexColumnWidth(1.1), // Extra Time
+                8: const pw.FlexColumnWidth(1.1), // Overtime
+                9: const pw.FlexColumnWidth(1.2), // Penalty
+              },
+            ),
+          ];
+        },
+      ),
     );
+
+    final bytes = await pdf.save();
+    final fileName =
+        'Attendance_${employee.name.replaceAll(" ", "_")}_${DateFormat('MM_yyyy').format(month)}.pdf';
+
+    if (kIsWeb) {
+      await FileSaver.instance.saveFile(
+        name: fileName,
+        bytes: bytes,
+        fileExtension: 'pdf',
+        mimeType: MimeType.pdf,
+      );
+    } else {
+      await FileSaver.instance.saveFile(
+        name: fileName,
+        bytes: bytes,
+        fileExtension: 'pdf',
+        mimeType: MimeType.pdf,
+      );
+    }
   }
 }

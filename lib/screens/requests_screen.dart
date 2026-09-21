@@ -11,7 +11,12 @@ import 'package:intl/intl.dart';
 
 class RequestsScreen extends StatefulWidget {
   final bool initialSubordinateTab;
-  const RequestsScreen({super.key, this.initialSubordinateTab = false});
+  final bool showAddDialog;
+  const RequestsScreen({
+    super.key,
+    this.initialSubordinateTab = false,
+    this.showAddDialog = false,
+  });
 
   @override
   State<RequestsScreen> createState() => _RequestsScreenState();
@@ -27,6 +32,15 @@ class _RequestsScreenState extends State<RequestsScreen> {
   void initState() {
     super.initState();
     _showSubordinateRequests = widget.initialSubordinateTab;
+    if (widget.showAddDialog) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _showNewRequestDialog(
+            Provider.of<AttendanceProvider>(context, listen: false),
+          );
+        }
+      });
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = Provider.of<AttendanceProvider>(context, listen: false);
       final isSuperOrHR =
@@ -72,11 +86,15 @@ class _RequestsScreenState extends State<RequestsScreen> {
         int count = 0;
         final targetReqs = (emp != null)
             ? (emp.id == provider.employeeId
-                ? provider.requests
-                : (_subordinateRequests
-                    .where((item) => (item['employee'] as CompanyEmployee?)?.id == emp.id)
-                    .map((item) => item['request'] as Request)
-                    .toList()))
+                  ? provider.requests
+                  : (_subordinateRequests
+                        .where(
+                          (item) =>
+                              (item['employee'] as CompanyEmployee?)?.id ==
+                              emp.id,
+                        )
+                        .map((item) => item['request'] as Request)
+                        .toList()))
             : provider.requests;
 
         for (var req in targetReqs) {
@@ -196,7 +214,8 @@ class _RequestsScreenState extends State<RequestsScreen> {
 
   List<CompanyEmployee> _getSubordinates(AttendanceProvider provider) {
     final currentUser = provider.currentEmployee;
-    final isHR = currentUser?.role == 'hr' ||
+    final isHR =
+        currentUser?.role == 'hr' ||
         currentUser?.role == 'admin' ||
         provider.canEditCompanyInfo ||
         provider.employeeId == 'emp_2';
@@ -252,12 +271,15 @@ class _RequestsScreenState extends State<RequestsScreen> {
     return [];
   }
 
-  List<Map<String, dynamic>> _getSubordinateRequests(AttendanceProvider provider) {
+  List<Map<String, dynamic>> _getSubordinateRequests(
+    AttendanceProvider provider,
+  ) {
     final subordinates = _getSubordinates(provider);
     final List<Map<String, dynamic>> combined = [];
 
     final currentUser = provider.currentEmployee;
-    final isHR = currentUser?.role == 'hr' ||
+    final isHR =
+        currentUser?.role == 'hr' ||
         currentUser?.role == 'admin' ||
         provider.canEditCompanyInfo ||
         provider.employeeId == 'emp_2';
@@ -322,7 +344,8 @@ class _RequestsScreenState extends State<RequestsScreen> {
 
     // 1. Gather all requests from company stream (for HR or supervisors)
     final currentUser = provider.currentEmployee;
-    final isHR = currentUser?.role == 'hr' ||
+    final isHR =
+        currentUser?.role == 'hr' ||
         currentUser?.role == 'admin' ||
         provider.canEditCompanyInfo ||
         provider.employeeId == 'emp_2';
@@ -447,157 +470,182 @@ class _RequestsScreenState extends State<RequestsScreen> {
         child: Align(
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: kIsWeb ? 1200 : double.infinity),
+            constraints: BoxConstraints(
+              maxWidth: kIsWeb ? 1200 : double.infinity,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Page Header with action
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20.0,
-                vertical: 16.0,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    provider.translate('requests'),
-                    style: TextStyle(
-                      color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: -0.5,
-                    ),
+              children: [
+                // Page Header with action
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20.0,
+                    vertical: 16.0,
                   ),
-                  _buildAddButton(provider),
-                ],
-              ),
-            ),
-
-            // Custom Tab Switcher for Supervisors / HR Managers
-            if (showTabs) ...[
-              Center(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: kIsWeb ? 400 : double.infinity),
-                  child: Container(
-                    height: 48,
-                margin: const EdgeInsets.symmetric(
-                  horizontal: 20.0,
-                  vertical: 8.0,
-                ),
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.08)),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.12)),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _showSubordinateRequests = false;
-                          });
-                        },
-                        child: Container(
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: !_showSubordinateRequests
-                                ? const Color(0xFF2E65FF)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            provider.translate('my_requests'),
-                            style: TextStyle(
-                              color:
-                                  ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
-                              fontWeight: !_showSubordinateRequests
-                                  ? FontWeight.bold
-                                  : FontWeight.w500,
-                              fontSize: 13,
-                            ),
-                          ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        provider.translate('requests'),
+                        style: TextStyle(
+                          color:
+                              ((Theme.of(context).textTheme.bodyLarge?.color ??
+                              Colors.black)),
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -0.5,
                         ),
                       ),
-                    ),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _showSubordinateRequests = true;
-                          });
-                          _loadAllSubordinateRequests(provider);
-                        },
-                        child: Container(
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: _showSubordinateRequests
-                                ? const Color(0xFF2E65FF)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(10),
+                      _buildAddButton(provider),
+                    ],
+                  ),
+                ),
+
+                // Custom Tab Switcher for Supervisors / HR Managers
+                if (showTabs) ...[
+                  Center(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: kIsWeb ? 400 : double.infinity,
+                      ),
+                      child: Container(
+                        height: 48,
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 20.0,
+                          vertical: 8.0,
+                        ),
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color:
+                              ((Theme.of(context).textTheme.bodyLarge?.color ??
+                                      Colors.black)
+                                  .withValues(alpha: 0.08)),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color:
+                                ((Theme.of(
+                                          context,
+                                        ).textTheme.bodyLarge?.color ??
+                                        Colors.black)
+                                    .withValues(alpha: 0.12)),
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                provider.translate('subordinate_requests'),
-                                style: TextStyle(
-                                  color:
-                                      ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
-                                  fontWeight: _showSubordinateRequests
-                                      ? FontWeight.bold
-                                      : FontWeight.w500,
-                                  fontSize: 13,
-                                ),
-                              ),
-                              if (provider.pendingApprovalsCount > 0) ...[
-                                const SizedBox(width: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 1,
-                                  ),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _showSubordinateRequests = false;
+                                  });
+                                },
+                                child: Container(
+                                  alignment: Alignment.center,
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFEF4444),
+                                    color: !_showSubordinateRequests
+                                        ? const Color(0xFF2E65FF)
+                                        : Colors.transparent,
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Text(
-                                    '${provider.pendingApprovalsCount}',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
+                                    provider.translate('my_requests'),
+                                    style: TextStyle(
+                                      color:
+                                          ((Theme.of(
+                                            context,
+                                          ).textTheme.bodyLarge?.color ??
+                                          Colors.black)),
+                                      fontWeight: !_showSubordinateRequests
+                                          ? FontWeight.bold
+                                          : FontWeight.w500,
+                                      fontSize: 13,
                                     ),
                                   ),
                                 ),
-                              ],
-                            ],
-                          ),
+                              ),
+                            ),
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _showSubordinateRequests = true;
+                                  });
+                                  _loadAllSubordinateRequests(provider);
+                                },
+                                child: Container(
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    color: _showSubordinateRequests
+                                        ? const Color(0xFF2E65FF)
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        provider.translate(
+                                          'subordinate_requests',
+                                        ),
+                                        style: TextStyle(
+                                          color:
+                                              ((Theme.of(
+                                                context,
+                                              ).textTheme.bodyLarge?.color ??
+                                              Colors.black)),
+                                          fontWeight: _showSubordinateRequests
+                                              ? FontWeight.bold
+                                              : FontWeight.w500,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                      if (provider.pendingApprovalsCount >
+                                          0) ...[
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 1,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFEF4444),
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            '${provider.pendingApprovalsCount}',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  ],
-                ),
                   ),
+                  SizedBox(height: 8),
+                ],
+
+                // Requests List
+                Expanded(
+                  child: _showSubordinateRequests
+                      ? _buildSubordinateRequestsList(provider)
+                      : _buildMyRequestsList(provider),
                 ),
-              ),
-              SizedBox(height: 8),
-            ],
 
-            // Requests List
-            Expanded(
-              child: _showSubordinateRequests
-                  ? _buildSubordinateRequestsList(provider)
-                  : _buildMyRequestsList(provider),
-            ),
-
-            // Spacer for bottom nav bar
-            if (!kIsWeb) SizedBox(height: 80),
-          ],
+                // Spacer for bottom nav bar
+                if (!kIsWeb) SizedBox(height: 80),
+              ],
             ),
           ),
         ),
@@ -613,7 +661,9 @@ class _RequestsScreenState extends State<RequestsScreen> {
         child: Text(
           provider.translate('no_requests'),
           style: TextStyle(
-            color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.6)),
+            color:
+                ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)
+                    .withValues(alpha: 0.6)),
             fontSize: 14,
           ),
         ),
@@ -639,7 +689,9 @@ class _RequestsScreenState extends State<RequestsScreen> {
                     Text(
                       _translateRequestType(request.type, provider),
                       style: TextStyle(
-                        color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
+                        color:
+                            ((Theme.of(context).textTheme.bodyLarge?.color ??
+                            Colors.black)),
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
                       ),
@@ -648,7 +700,10 @@ class _RequestsScreenState extends State<RequestsScreen> {
                     Text(
                       request.date,
                       style: TextStyle(
-                        color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.5)),
+                        color:
+                            ((Theme.of(context).textTheme.bodyLarge?.color ??
+                                    Colors.black)
+                                .withValues(alpha: 0.5)),
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),
@@ -663,11 +718,44 @@ class _RequestsScreenState extends State<RequestsScreen> {
                             ).name}'
                           : '${provider.translate('duration')}: ${request.duration.replaceAll('Clock In:', provider.translate('clock_in_colon')).replaceAll('Clock Out:', provider.translate('clock_out_colon'))}',
                       style: TextStyle(
-                        color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.7)),
+                        color:
+                            ((Theme.of(context).textTheme.bodyLarge?.color ??
+                                    Colors.black)
+                                .withValues(alpha: 0.7)),
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
+                    if (request.createdAt != null) ...[
+                      SizedBox(height: 4),
+                      Text(
+                        'Registered: ${DateFormat('MMM d, yyyy HH:mm').format(DateTime.parse(request.createdAt!))}',
+                        style: TextStyle(
+                          color:
+                              ((Theme.of(context).textTheme.bodyLarge?.color ??
+                                      Colors.black)
+                                  .withValues(alpha: 0.5)),
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                    if (request.actionBy != null &&
+                        request.actionDate != null) ...[
+                      SizedBox(height: 2),
+                      Text(
+                        '${request.status} by: ${provider.employees.firstWhere(
+                          (e) => e.id == request.actionBy,
+                          orElse: () => CompanyEmployee(id: '', name: 'Unknown', email: '', position: ''),
+                        ).name} on ${DateFormat('MMM d, yyyy HH:mm').format(DateTime.parse(request.actionDate!))}',
+                        style: TextStyle(
+                          color:
+                              ((Theme.of(context).textTheme.bodyLarge?.color ??
+                                      Colors.black)
+                                  .withValues(alpha: 0.5)),
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
 
@@ -747,7 +835,8 @@ class _RequestsScreenState extends State<RequestsScreen> {
     if (_isLoadingSubordinates && subordinateRequests.isEmpty) {
       return Center(
         child: CircularProgressIndicator(
-          color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
+          color:
+              ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
         ),
       );
     }
@@ -757,7 +846,9 @@ class _RequestsScreenState extends State<RequestsScreen> {
         child: Text(
           provider.translate('no_requests'),
           style: TextStyle(
-            color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.6)),
+            color:
+                ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)
+                    .withValues(alpha: 0.6)),
             fontSize: 14,
           ),
         ),
@@ -795,7 +886,10 @@ class _RequestsScreenState extends State<RequestsScreen> {
                                   : 'E',
                               style: TextStyle(
                                 color:
-                                    ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
+                                    ((Theme.of(
+                                      context,
+                                    ).textTheme.bodyLarge?.color ??
+                                    Colors.black)),
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -810,7 +904,10 @@ class _RequestsScreenState extends State<RequestsScreen> {
                             employee.name,
                             style: TextStyle(
                               color:
-                                  ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
+                                  ((Theme.of(
+                                    context,
+                                  ).textTheme.bodyLarge?.color ??
+                                  Colors.black)),
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
                             ),
@@ -819,7 +916,11 @@ class _RequestsScreenState extends State<RequestsScreen> {
                             employee.position,
                             style: TextStyle(
                               color:
-                                  ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.6)),
+                                  ((Theme.of(
+                                            context,
+                                          ).textTheme.bodyLarge?.color ??
+                                          Colors.black)
+                                      .withValues(alpha: 0.6)),
                               fontSize: 11,
                             ),
                           ),
@@ -909,7 +1010,10 @@ class _RequestsScreenState extends State<RequestsScreen> {
                           _translateRequestType(request.type, provider),
                           style: TextStyle(
                             color:
-                                ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
+                                ((Theme.of(
+                                  context,
+                                ).textTheme.bodyLarge?.color ??
+                                Colors.black)),
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
@@ -919,7 +1023,11 @@ class _RequestsScreenState extends State<RequestsScreen> {
                           request.date,
                           style: TextStyle(
                             color:
-                                ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.5)),
+                                ((Theme.of(
+                                          context,
+                                        ).textTheme.bodyLarge?.color ??
+                                        Colors.black)
+                                    .withValues(alpha: 0.5)),
                             fontSize: 11,
                           ),
                         ),
@@ -934,10 +1042,48 @@ class _RequestsScreenState extends State<RequestsScreen> {
                               : '${provider.translate('duration')}: ${request.duration.replaceAll('Clock In:', provider.translate('clock_in_colon')).replaceAll('Clock Out:', provider.translate('clock_out_colon'))}',
                           style: TextStyle(
                             color:
-                                ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.7)),
+                                ((Theme.of(
+                                          context,
+                                        ).textTheme.bodyLarge?.color ??
+                                        Colors.black)
+                                    .withValues(alpha: 0.7)),
                             fontSize: 11,
                           ),
                         ),
+                        if (request.createdAt != null) ...[
+                          SizedBox(height: 4),
+                          Text(
+                            'Registered: ${DateFormat('MMM d, yyyy HH:mm').format(DateTime.parse(request.createdAt!))}',
+                            style: TextStyle(
+                              color:
+                                  ((Theme.of(
+                                            context,
+                                          ).textTheme.bodyLarge?.color ??
+                                          Colors.black)
+                                      .withValues(alpha: 0.5)),
+                              fontSize: 10,
+                            ),
+                          ),
+                        ],
+                        if (request.actionBy != null &&
+                            request.actionDate != null) ...[
+                          SizedBox(height: 2),
+                          Text(
+                            '${request.status} by: ${provider.employees.firstWhere(
+                              (e) => e.id == request.actionBy,
+                              orElse: () => CompanyEmployee(id: '', name: 'Unknown', email: '', position: ''),
+                            ).name} on ${DateFormat('MMM d, yyyy HH:mm').format(DateTime.parse(request.actionDate!))}',
+                            style: TextStyle(
+                              color:
+                                  ((Theme.of(
+                                            context,
+                                          ).textTheme.bodyLarge?.color ??
+                                          Colors.black)
+                                      .withValues(alpha: 0.5)),
+                              fontSize: 10,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ],
@@ -1078,7 +1224,8 @@ class _RequestsScreenState extends State<RequestsScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.12)),
+          color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)
+              .withValues(alpha: 0.12)),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.white24),
         ),
@@ -1086,14 +1233,18 @@ class _RequestsScreenState extends State<RequestsScreen> {
           children: [
             Icon(
               Icons.add,
-              color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
+              color:
+                  ((Theme.of(context).textTheme.bodyLarge?.color ??
+                  Colors.black)),
               size: 16,
             ),
             SizedBox(width: 4),
             Text(
               provider.translate('new_request'),
               style: TextStyle(
-                color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
+                color:
+                    ((Theme.of(context).textTheme.bodyLarge?.color ??
+                    Colors.black)),
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
               ),
@@ -1105,7 +1256,8 @@ class _RequestsScreenState extends State<RequestsScreen> {
   }
 
   void _showNewRequestDialog(AttendanceProvider provider) {
-    final currentUser = provider.currentEmployee ??
+    final currentUser =
+        provider.currentEmployee ??
         provider.employees.firstWhere(
           (e) => e.email == provider.email || e.name == provider.userName,
           orElse: () => CompanyEmployee(
@@ -1143,12 +1295,8 @@ class _RequestsScreenState extends State<RequestsScreen> {
     final timeController = TextEditingController(
       text: DateFormat('HH:mm').format(DateTime.now()),
     );
-    final fromTimeController = TextEditingController(
-      text: '17:00',
-    );
-    final toTimeController = TextEditingController(
-      text: '19:00',
-    );
+    final fromTimeController = TextEditingController(text: '17:00');
+    final toTimeController = TextEditingController(text: '19:00');
     final noteController = TextEditingController();
 
     showGlassDialog(
@@ -1227,8 +1375,13 @@ class _RequestsScreenState extends State<RequestsScreen> {
                         style: TextStyle(
                           color: isSelf
                               ? const Color(0xFF2EBD96)
-                              : ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
-                          fontWeight: isSelf ? FontWeight.bold : FontWeight.normal,
+                              : ((Theme.of(
+                                      context,
+                                    ).textTheme.bodyLarge?.color ??
+                                    Colors.black)),
+                          fontWeight: isSelf
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                         ),
                       ),
                     );
@@ -1308,7 +1461,9 @@ class _RequestsScreenState extends State<RequestsScreen> {
                         dateController.text = 'June 3, 2026';
                         durController.text = '2 Hours';
                       } else if (selectedType == 'Overtime Approval') {
-                        dateController.text = DateFormat('MMMM d, yyyy').format(DateTime.now());
+                        dateController.text = DateFormat(
+                          'MMMM d, yyyy',
+                        ).format(DateTime.now());
                         fromTimeController.text = '17:00';
                         toTimeController.text = '19:00';
                         durController.text = '120';
@@ -1361,10 +1516,16 @@ class _RequestsScreenState extends State<RequestsScreen> {
                           colorScheme: ColorScheme.dark(
                             primary: Color(0xFF2E65FF),
                             onPrimary:
-                                ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
+                                ((Theme.of(
+                                  context,
+                                ).textTheme.bodyLarge?.color ??
+                                Colors.black)),
                             surface: Color(0xFF1E293B),
                             onSurface:
-                                ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
+                                ((Theme.of(
+                                  context,
+                                ).textTheme.bodyLarge?.color ??
+                                Colors.black)),
                           ),
                         ),
                         child: child!,
@@ -1396,7 +1557,10 @@ class _RequestsScreenState extends State<RequestsScreen> {
                     Text(
                       'Punch Type:',
                       style: TextStyle(
-                        color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.6)),
+                        color:
+                            ((Theme.of(context).textTheme.bodyLarge?.color ??
+                                    Colors.black)
+                                .withValues(alpha: 0.6)),
                         fontSize: 13,
                       ),
                     ),
@@ -1410,7 +1574,8 @@ class _RequestsScreenState extends State<RequestsScreen> {
                       },
                       borderRadius: BorderRadius.circular(8),
                       selectedColor:
-                          ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
+                          ((Theme.of(context).textTheme.bodyLarge?.color ??
+                          Colors.black)),
                       fillColor: const Color(0xFF2E65FF).withValues(alpha: 0.8),
                       color: Colors.white70,
                       constraints: const BoxConstraints(minHeight: 36),
@@ -1442,10 +1607,16 @@ class _RequestsScreenState extends State<RequestsScreen> {
                             colorScheme: ColorScheme.dark(
                               primary: Color(0xFF2E65FF),
                               onPrimary:
-                                  ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
+                                  ((Theme.of(
+                                    context,
+                                  ).textTheme.bodyLarge?.color ??
+                                  Colors.black)),
                               surface: Color(0xFF1E293B),
                               onSurface:
-                                  ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
+                                  ((Theme.of(
+                                    context,
+                                  ).textTheme.bodyLarge?.color ??
+                                  Colors.black)),
                             ),
                           ),
                           child: child!,
@@ -1472,24 +1643,42 @@ class _RequestsScreenState extends State<RequestsScreen> {
                   children: [
                     Expanded(
                       child: _buildDialogField(
-                        provider.translate('from_hour') != 'from_hour' ? provider.translate('from_hour') : 'From Hour',
+                        provider.translate('from_hour') != 'from_hour'
+                            ? provider.translate('from_hour')
+                            : 'From Hour',
                         fromTimeController,
                         readOnly: true,
                         onTap: () async {
                           final TimeOfDay? picked = await showTimePicker(
                             context: context,
                             initialTime: TimeOfDay(
-                              hour: int.tryParse(fromTimeController.text.split(':')[0]) ?? 17,
-                              minute: int.tryParse(fromTimeController.text.split(':')[1]) ?? 0,
+                              hour:
+                                  int.tryParse(
+                                    fromTimeController.text.split(':')[0],
+                                  ) ??
+                                  17,
+                              minute:
+                                  int.tryParse(
+                                    fromTimeController.text.split(':')[1],
+                                  ) ??
+                                  0,
                             ),
                             builder: (context, child) {
                               return Theme(
                                 data: ThemeData.dark().copyWith(
                                   colorScheme: ColorScheme.dark(
                                     primary: Color(0xFF2E65FF),
-                                    onPrimary: (Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black),
+                                    onPrimary:
+                                        (Theme.of(
+                                          context,
+                                        ).textTheme.bodyLarge?.color ??
+                                        Colors.black),
                                     surface: Color(0xFF1E293B),
-                                    onSurface: (Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black),
+                                    onSurface:
+                                        (Theme.of(
+                                          context,
+                                        ).textTheme.bodyLarge?.color ??
+                                        Colors.black),
                                   ),
                                 ),
                                 child: child!,
@@ -1499,15 +1688,29 @@ class _RequestsScreenState extends State<RequestsScreen> {
                           if (picked != null) {
                             setDialogState(() {
                               final now = DateTime.now();
-                              final dt = DateTime(now.year, now.month, now.day, picked.hour, picked.minute);
-                              fromTimeController.text = DateFormat('HH:mm').format(dt);
-                              
+                              final dt = DateTime(
+                                now.year,
+                                now.month,
+                                now.day,
+                                picked.hour,
+                                picked.minute,
+                              );
+                              fromTimeController.text = DateFormat(
+                                'HH:mm',
+                              ).format(dt);
+
                               // Auto calculate duration
                               try {
-                                final fParts = fromTimeController.text.split(':');
+                                final fParts = fromTimeController.text.split(
+                                  ':',
+                                );
                                 final tParts = toTimeController.text.split(':');
-                                final fMins = int.parse(fParts[0]) * 60 + int.parse(fParts[1]);
-                                final tMins = int.parse(tParts[0]) * 60 + int.parse(tParts[1]);
+                                final fMins =
+                                    int.parse(fParts[0]) * 60 +
+                                    int.parse(fParts[1]);
+                                final tMins =
+                                    int.parse(tParts[0]) * 60 +
+                                    int.parse(tParts[1]);
                                 int diff = tMins - fMins;
                                 if (diff < 0) diff += 24 * 60;
                                 durController.text = diff.toString();
@@ -1520,24 +1723,42 @@ class _RequestsScreenState extends State<RequestsScreen> {
                     SizedBox(width: 16),
                     Expanded(
                       child: _buildDialogField(
-                        provider.translate('to_hour') != 'to_hour' ? provider.translate('to_hour') : 'To Hour',
+                        provider.translate('to_hour') != 'to_hour'
+                            ? provider.translate('to_hour')
+                            : 'To Hour',
                         toTimeController,
                         readOnly: true,
                         onTap: () async {
                           final TimeOfDay? picked = await showTimePicker(
                             context: context,
                             initialTime: TimeOfDay(
-                              hour: int.tryParse(toTimeController.text.split(':')[0]) ?? 19,
-                              minute: int.tryParse(toTimeController.text.split(':')[1]) ?? 0,
+                              hour:
+                                  int.tryParse(
+                                    toTimeController.text.split(':')[0],
+                                  ) ??
+                                  19,
+                              minute:
+                                  int.tryParse(
+                                    toTimeController.text.split(':')[1],
+                                  ) ??
+                                  0,
                             ),
                             builder: (context, child) {
                               return Theme(
                                 data: ThemeData.dark().copyWith(
                                   colorScheme: ColorScheme.dark(
                                     primary: Color(0xFF2E65FF),
-                                    onPrimary: (Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black),
+                                    onPrimary:
+                                        (Theme.of(
+                                          context,
+                                        ).textTheme.bodyLarge?.color ??
+                                        Colors.black),
                                     surface: Color(0xFF1E293B),
-                                    onSurface: (Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black),
+                                    onSurface:
+                                        (Theme.of(
+                                          context,
+                                        ).textTheme.bodyLarge?.color ??
+                                        Colors.black),
                                   ),
                                 ),
                                 child: child!,
@@ -1547,15 +1768,29 @@ class _RequestsScreenState extends State<RequestsScreen> {
                           if (picked != null) {
                             setDialogState(() {
                               final now = DateTime.now();
-                              final dt = DateTime(now.year, now.month, now.day, picked.hour, picked.minute);
-                              toTimeController.text = DateFormat('HH:mm').format(dt);
-                              
+                              final dt = DateTime(
+                                now.year,
+                                now.month,
+                                now.day,
+                                picked.hour,
+                                picked.minute,
+                              );
+                              toTimeController.text = DateFormat(
+                                'HH:mm',
+                              ).format(dt);
+
                               // Auto calculate duration
                               try {
-                                final fParts = fromTimeController.text.split(':');
+                                final fParts = fromTimeController.text.split(
+                                  ':',
+                                );
                                 final tParts = toTimeController.text.split(':');
-                                final fMins = int.parse(fParts[0]) * 60 + int.parse(fParts[1]);
-                                final tMins = int.parse(tParts[0]) * 60 + int.parse(tParts[1]);
+                                final fMins =
+                                    int.parse(fParts[0]) * 60 +
+                                    int.parse(fParts[1]);
+                                final tMins =
+                                    int.parse(tParts[0]) * 60 +
+                                    int.parse(tParts[1]);
                                 int diff = tMins - fMins;
                                 if (diff < 0) diff += 24 * 60;
                                 durController.text = diff.toString();
@@ -1569,7 +1804,10 @@ class _RequestsScreenState extends State<RequestsScreen> {
                 ),
                 SizedBox(height: 12),
                 _buildDialogField(
-                  provider.translate('calculated_duration') != 'calculated_duration' ? provider.translate('calculated_duration') : 'Calculated Duration (Minutes)',
+                  provider.translate('calculated_duration') !=
+                          'calculated_duration'
+                      ? provider.translate('calculated_duration')
+                      : 'Calculated Duration (Minutes)',
                   durController,
                   readOnly: true,
                 ),
@@ -1793,83 +2031,141 @@ class _RequestsScreenState extends State<RequestsScreen> {
                           final fParts = fromTimeController.text.split(':');
                           final tParts = toTimeController.text.split(':');
                           if (fParts.length < 2 || tParts.length < 2) {
-                            setDialogState(() => errorMessage = 'Invalid time format.');
+                            setDialogState(
+                              () => errorMessage = 'Invalid time format.',
+                            );
                             return;
                           }
-                          int reqStartMins = int.parse(fParts[0]) * 60 + int.parse(fParts[1]);
-                          int reqEndMins = int.parse(tParts[0]) * 60 + int.parse(tParts[1]);
-                          if (reqEndMins < reqStartMins) reqEndMins += 24 * 60; // handle overnight
+                          int reqStartMins =
+                              int.parse(fParts[0]) * 60 + int.parse(fParts[1]);
+                          int reqEndMins =
+                              int.parse(tParts[0]) * 60 + int.parse(tParts[1]);
+                          if (reqEndMins < reqStartMins) {
+                            reqEndMins += 24 * 60; // handle overnight
+                          }
 
                           DateTime reqDate = DateTime.now();
                           try {
                             reqDate = DateFormat('MMMM d, yyyy').parse(dateVal);
                           } catch (_) {}
 
-                          final records = await provider.firebaseService.getUserRecords(selectedEmployee.id);
-                          final dayRecords = records.where((r) => r.checkIn.year == reqDate.year && r.checkIn.month == reqDate.month && r.checkIn.day == reqDate.day).toList();
-                          
+                          final records = await provider.firebaseService
+                              .getUserRecords(selectedEmployee.id);
+                          final dayRecords = records
+                              .where(
+                                (r) =>
+                                    r.checkIn.year == reqDate.year &&
+                                    r.checkIn.month == reqDate.month &&
+                                    r.checkIn.day == reqDate.day,
+                              )
+                              .toList();
+
                           if (dayRecords.isEmpty) {
-                            setDialogState(() => errorMessage = 'No attendance records found for this date. Cannot request overtime.');
+                            setDialogState(
+                              () => errorMessage =
+                                  'No attendance records found for this date. Cannot request overtime.',
+                            );
                             return;
                           }
-                          
-                          final activeGroupId = provider.getGroupIdForDate(selectedEmployee, reqDate);
-                          final activeGroup = provider.groups.firstWhere((g) => g.id == activeGroupId, orElse: () => group);
-                          final activeShift = provider.shifts.firstWhere((s) => s.id == activeGroup.shiftId, orElse: () => WorkShift(id: '', name: '', startTime: '09:00', endTime: '17:00'));
-                          
-                          final sParts = activeShift.getStartTimeForDate(reqDate).split(':');
-                          final eParts = activeShift.getEndTimeForDate(reqDate).split(':');
-                          final shiftStartMins = sParts.length >= 2 ? int.parse(sParts[0]) * 60 + int.parse(sParts[1]) : 540;
-                          final shiftEndMins = eParts.length >= 2 ? int.parse(eParts[0]) * 60 + int.parse(eParts[1]) : 1020;
-                          
+
+                          final activeGroupId = provider.getGroupIdForDate(
+                            selectedEmployee,
+                            reqDate,
+                          );
+                          final activeGroup = provider.groups.firstWhere(
+                            (g) => g.id == activeGroupId,
+                            orElse: () => group,
+                          );
+                          final activeShift = provider.shifts.firstWhere(
+                            (s) => s.id == activeGroup.shiftId,
+                            orElse: () => WorkShift(
+                              id: '',
+                              name: '',
+                              startTime: '09:00',
+                              endTime: '17:00',
+                            ),
+                          );
+
+                          final sParts = activeShift
+                              .getStartTimeForDate(reqDate)
+                              .split(':');
+                          final eParts = activeShift
+                              .getEndTimeForDate(reqDate)
+                              .split(':');
+                          final shiftStartMins = sParts.length >= 2
+                              ? int.parse(sParts[0]) * 60 + int.parse(sParts[1])
+                              : 540;
+                          final shiftEndMins = eParts.length >= 2
+                              ? int.parse(eParts[0]) * 60 + int.parse(eParts[1])
+                              : 1020;
+
                           bool validOvertime = false;
-                          
+
                           for (var rec in dayRecords) {
-                            int cInMins = rec.checkIn.hour * 60 + rec.checkIn.minute;
-                            int cOutMins = rec.checkOut != null ? rec.checkOut!.hour * 60 + rec.checkOut!.minute : cInMins;
+                            int cInMins =
+                                rec.checkIn.hour * 60 + rec.checkIn.minute;
+                            int cOutMins = rec.checkOut != null
+                                ? rec.checkOut!.hour * 60 + rec.checkOut!.minute
+                                : cInMins;
                             if (cOutMins < cInMins) cOutMins += 24 * 60;
-                            
+
                             if (activeShift.isWorkingDay(reqDate)) {
                               if (cInMins < shiftStartMins) {
-                                 int eBeforeEnd = cOutMins < shiftStartMins ? cOutMins : shiftStartMins;
-                                 if (reqStartMins >= cInMins && reqEndMins <= eBeforeEnd) {
-                                     validOvertime = true;
-                                     break;
-                                 }
-                              }
-                              if (cOutMins > shiftEndMins) {
-                                 int sAfterStart = cInMins > shiftEndMins ? cInMins : shiftEndMins;
-                                 if (reqStartMins >= sAfterStart && reqEndMins <= cOutMins) {
-                                     validOvertime = true;
-                                     break;
-                                 }
-                              }
-                            } else {
-                              if (reqStartMins >= cInMins && reqEndMins <= cOutMins) {
+                                int eBeforeEnd = cOutMins < shiftStartMins
+                                    ? cOutMins
+                                    : shiftStartMins;
+                                if (reqStartMins >= cInMins &&
+                                    reqEndMins <= eBeforeEnd) {
                                   validOvertime = true;
                                   break;
+                                }
+                              }
+                              if (cOutMins > shiftEndMins) {
+                                int sAfterStart = cInMins > shiftEndMins
+                                    ? cInMins
+                                    : shiftEndMins;
+                                if (reqStartMins >= sAfterStart &&
+                                    reqEndMins <= cOutMins) {
+                                  validOvertime = true;
+                                  break;
+                                }
+                              }
+                            } else {
+                              if (reqStartMins >= cInMins &&
+                                  reqEndMins <= cOutMins) {
+                                validOvertime = true;
+                                break;
                               }
                             }
                           }
 
                           if (!validOvertime) {
-                             setDialogState(() => errorMessage = 'Requested time does not fall within actual extra time worked.');
-                             return;
+                            setDialogState(
+                              () => errorMessage =
+                                  'Requested time does not fall within actual extra time worked.',
+                            );
+                            return;
                           }
                         } catch (e) {
-                          setDialogState(() => errorMessage = 'Error validating overtime: $e');
+                          setDialogState(
+                            () =>
+                                errorMessage = 'Error validating overtime: $e',
+                          );
                           return;
                         }
 
                         final double hoursVal = minutes / 60;
-                        final durationFormatted = 'From ${fromTimeController.text} to ${toTimeController.text} (${hoursVal.toStringAsFixed(1).replaceAll('.0', '')} Hours)';
+                        final durationFormatted =
+                            'From ${fromTimeController.text} to ${toTimeController.text} (${hoursVal.toStringAsFixed(1).replaceAll('.0', '')} Hours)';
 
                         _addNewRequest(
                           type,
                           dateVal,
                           durationFormatted,
                           targetEmployee: selectedEmployee,
-                          note: noteController.text.trim().isNotEmpty ? noteController.text.trim() : null,
+                          note: noteController.text.trim().isNotEmpty
+                              ? noteController.text.trim()
+                              : null,
                         );
                       } else if (type == 'Change Shift') {
                         _addNewRequest(
@@ -1878,7 +2174,9 @@ class _RequestsScreenState extends State<RequestsScreen> {
                           durVal,
                           targetShiftId: selectedShiftId,
                           targetEmployee: selectedEmployee,
-                          note: noteController.text.trim().isNotEmpty ? noteController.text.trim() : null,
+                          note: noteController.text.trim().isNotEmpty
+                              ? noteController.text.trim()
+                              : null,
                         );
                       } else {
                         _addNewRequest(
@@ -1886,7 +2184,9 @@ class _RequestsScreenState extends State<RequestsScreen> {
                           dateVal,
                           durVal,
                           targetEmployee: selectedEmployee,
-                          note: noteController.text.trim().isNotEmpty ? noteController.text.trim() : null,
+                          note: noteController.text.trim().isNotEmpty
+                              ? noteController.text.trim()
+                              : null,
                         );
                       }
 
@@ -1934,7 +2234,9 @@ class _RequestsScreenState extends State<RequestsScreen> {
         Text(
           label,
           style: TextStyle(
-            color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.6)),
+            color:
+                ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)
+                    .withValues(alpha: 0.6)),
             fontSize: 12,
             fontWeight: FontWeight.w500,
           ),
@@ -1950,7 +2252,9 @@ class _RequestsScreenState extends State<RequestsScreen> {
             isExpanded: true,
             underline: Container(height: 1, color: Colors.white24),
             style: TextStyle(
-              color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
+              color:
+                  ((Theme.of(context).textTheme.bodyLarge?.color ??
+                  Colors.black)),
               fontSize: 15,
             ),
           ),
@@ -1972,7 +2276,9 @@ class _RequestsScreenState extends State<RequestsScreen> {
         Text(
           label,
           style: TextStyle(
-            color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.6)),
+            color:
+                ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)
+                    .withValues(alpha: 0.6)),
             fontSize: 12,
           ),
         ),
@@ -1982,7 +2288,9 @@ class _RequestsScreenState extends State<RequestsScreen> {
           readOnly: readOnly,
           onTap: onTap,
           style: TextStyle(
-            color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
+            color:
+                ((Theme.of(context).textTheme.bodyLarge?.color ??
+                Colors.black)),
             fontSize: 14,
           ),
           decoration: const InputDecoration(

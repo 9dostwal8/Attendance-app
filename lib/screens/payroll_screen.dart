@@ -50,6 +50,7 @@ class PayrollScreen extends StatelessWidget {
     }
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: SafeArea(
           child: Column(

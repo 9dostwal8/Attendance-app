@@ -34,15 +34,18 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
     // Filter users for system accounts
     final filteredUsers = allUsers.where((user) {
       final query = widget.searchQuery.trim().toLowerCase();
-      final matchesQuery = query.isEmpty ||
+      final matchesQuery =
+          query.isEmpty ||
           user.name.toLowerCase().contains(query) ||
           user.email.toLowerCase().contains(query) ||
           user.role.toLowerCase().contains(query);
 
-      final matchesRole = _selectedRoleFilter == 'all' ||
+      final matchesRole =
+          _selectedRoleFilter == 'all' ||
           user.role.toLowerCase() == _selectedRoleFilter.toLowerCase();
 
-      final matchesStatus = _selectedStatusFilter == 'all' ||
+      final matchesStatus =
+          _selectedStatusFilter == 'all' ||
           (_selectedStatusFilter == 'active' && !user.disabled) ||
           (_selectedStatusFilter == 'disabled' && user.disabled);
 
@@ -51,8 +54,12 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
 
     // System account stats
     final totalUsers = allUsers.length;
-    final hrAdminCount = allUsers.where((u) => u.role == 'hr' || u.role == 'admin').length;
-    final supervisorCount = allUsers.where((u) => u.role == 'supervisor').length;
+    final hrAdminCount = allUsers
+        .where((u) => u.role == 'hr' || u.role == 'admin')
+        .length;
+    final supervisorCount = allUsers
+        .where((u) => u.role == 'supervisor')
+        .length;
     final activeCount = allUsers.where((u) => !u.disabled).length;
     final disabledCount = allUsers.where((u) => u.disabled).length;
 
@@ -83,7 +90,12 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
           else
             LayoutBuilder(
               builder: (context, constraints) {
-                return _buildUsersTable(context, filteredUsers, provider, isDark);
+                return _buildUsersTable(
+                  context,
+                  filteredUsers,
+                  provider,
+                  isDark,
+                );
               },
             ),
         ],
@@ -226,7 +238,10 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
 
   // 2. Filter Toolbar
   Widget _buildFilterToolbar(
-      BuildContext context, AttendanceProvider provider, bool isDark) {
+    BuildContext context,
+    AttendanceProvider provider,
+    bool isDark,
+  ) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < 650;
@@ -247,10 +262,22 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
                   isDark: isDark,
                   value: _selectedRoleFilter,
                   items: const [
-                    DropdownMenuItem(value: 'all', child: Text('All System Roles')),
-                    DropdownMenuItem(value: 'hr', child: Text('HR Admin / Manager')),
-                    DropdownMenuItem(value: 'supervisor', child: Text('Supervisor')),
-                    DropdownMenuItem(value: 'employee', child: Text('Employee User')),
+                    DropdownMenuItem(
+                      value: 'all',
+                      child: Text('All System Roles'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'hr',
+                      child: Text('HR Admin / Manager'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'supervisor',
+                      child: Text('Supervisor'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'employee',
+                      child: Text('Employee User'),
+                    ),
                   ],
                   onChanged: (val) {
                     if (val != null) setState(() => _selectedRoleFilter = val);
@@ -263,12 +290,22 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
                   isDark: isDark,
                   value: _selectedStatusFilter,
                   items: const [
-                    DropdownMenuItem(value: 'all', child: Text('All Access Statuses')),
-                    DropdownMenuItem(value: 'active', child: Text('Active Access')),
-                    DropdownMenuItem(value: 'disabled', child: Text('Disabled / Revoked')),
+                    DropdownMenuItem(
+                      value: 'all',
+                      child: Text('All Access Statuses'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'active',
+                      child: Text('Active Access'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'disabled',
+                      child: Text('Disabled / Revoked'),
+                    ),
                   ],
                   onChanged: (val) {
-                    if (val != null) setState(() => _selectedStatusFilter = val);
+                    if (val != null)
+                      setState(() => _selectedStatusFilter = val);
                   },
                 ),
               ],
@@ -287,20 +324,36 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Super Admin account restored successfully! (Email: admin@company.com)'),
+                          content: Text(
+                            'Super Admin account restored successfully! (Email: admin@company.com)',
+                          ),
                           backgroundColor: Colors.purple,
                         ),
                       );
                     }
                   },
-                  icon: const Icon(Icons.admin_panel_settings_rounded, size: 18, color: Color(0xFF8B5CF6)),
+                  icon: const Icon(
+                    Icons.admin_panel_settings_rounded,
+                    size: 18,
+                    color: Color(0xFF8B5CF6),
+                  ),
                   label: const Text(
                     'Restore Super Admin',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF8B5CF6)),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                      color: Color(0xFF8B5CF6),
+                    ),
                   ),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                    side: const BorderSide(color: Color(0xFF8B5CF6), width: 1.5),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 14,
+                    ),
+                    side: const BorderSide(
+                      color: Color(0xFF8B5CF6),
+                      width: 1.5,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -318,8 +371,10 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF3B82F6),
                     foregroundColor: Colors.white,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 14,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -394,194 +449,285 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
               child: ConstrainedBox(
                 constraints: BoxConstraints(minWidth: constraints.maxWidth),
                 child: DataTable(
-            headingRowColor: WidgetStateProperty.all(
-              isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
-            ),
-            dataRowMaxHeight: 65,
-            dataRowMinHeight: 65,
-            columnSpacing: 30,
-            horizontalMargin: 24,
-            columns: [
-              DataColumn(label: Text('User Details', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : Colors.black87))),
-              DataColumn(label: Text('Role', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : Colors.black87))),
-              DataColumn(label: Text('Access Status', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : Colors.black87))),
-              DataColumn(label: Text('Face ID', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : Colors.black87))),
-              DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : Colors.black87))),
-            ],
-            rows: users.map((user) {
-              final isHR = user.role == 'hr' || user.role == 'admin';
-              final isSupervisor = user.role == 'supervisor';
+                  headingRowColor: WidgetStateProperty.all(
+                    isDark
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : Colors.black.withValues(alpha: 0.05),
+                  ),
+                  dataRowMaxHeight: 65,
+                  dataRowMinHeight: 65,
+                  columnSpacing: 30,
+                  horizontalMargin: 24,
+                  columns: [
+                    DataColumn(
+                      label: Text(
+                        'User Details',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white70 : Colors.black87,
+                        ),
+                      ),
+                    ),
+                    DataColumn(
+                      label: Text(
+                        'Role',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white70 : Colors.black87,
+                        ),
+                      ),
+                    ),
+                    DataColumn(
+                      label: Text(
+                        'Access Status',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white70 : Colors.black87,
+                        ),
+                      ),
+                    ),
+                    DataColumn(
+                      label: Text(
+                        'Face ID',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white70 : Colors.black87,
+                        ),
+                      ),
+                    ),
+                    DataColumn(
+                      label: Text(
+                        'Actions',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white70 : Colors.black87,
+                        ),
+                      ),
+                    ),
+                  ],
+                  rows: users.map((user) {
+                    final isHR = user.role == 'hr' || user.role == 'admin';
+                    final isSupervisor = user.role == 'supervisor';
 
-              final roleColor = isHR
-                  ? const Color(0xFF8B5CF6)
-                  : isSupervisor
-                      ? const Color(0xFF06B6D4)
-                      : const Color(0xFF64748B);
+                    final roleColor = isHR
+                        ? const Color(0xFF8B5CF6)
+                        : isSupervisor
+                        ? const Color(0xFF06B6D4)
+                        : const Color(0xFF64748B);
 
-              final roleLabel = isHR
-                  ? 'HR Admin'
-                  : isSupervisor
-                      ? 'Supervisor'
-                      : 'Employee';
+                    final roleLabel = isHR
+                        ? 'HR Admin'
+                        : isSupervisor
+                        ? 'Supervisor'
+                        : 'Employee';
 
-              return DataRow(
-                cells: [
-                  // User Details
-                  DataCell(
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 18,
-                          backgroundColor: roleColor.withValues(alpha: 0.15),
-                          child: Text(
-                            user.name.isNotEmpty ? user.name[0].toUpperCase() : 'U',
-                            style: TextStyle(
-                              color: roleColor,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
+                    return DataRow(
+                      cells: [
+                        // User Details
+                        DataCell(
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 18,
+                                backgroundColor: roleColor.withValues(
+                                  alpha: 0.15,
+                                ),
+                                child: Text(
+                                  user.name.isNotEmpty
+                                      ? user.name[0].toUpperCase()
+                                      : 'U',
+                                  style: TextStyle(
+                                    color: roleColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    user.name,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark
+                                          ? Colors.white
+                                          : const Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                  Text(
+                                    user.email,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: isDark
+                                          ? Colors.white60
+                                          : Colors.black54,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              user.name,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+
+                        // Role
+                        DataCell(
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: roleColor.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: roleColor.withValues(alpha: 0.3),
+                                width: 1,
                               ),
                             ),
-                            Text(
-                              user.email,
+                            child: Text(
+                              roleLabel,
                               style: TextStyle(
                                 fontSize: 11,
-                                color: isDark ? Colors.white60 : Colors.black54,
+                                fontWeight: FontWeight.bold,
+                                color: roleColor,
                               ),
                             ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Role
-                  DataCell(
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: roleColor.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: roleColor.withValues(alpha: 0.3), width: 1),
-                      ),
-                      child: Text(
-                        roleLabel,
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: roleColor),
-                      ),
-                    ),
-                  ),
-
-                  // Access Status
-                  DataCell(
-                    Row(
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: user.disabled ? const Color(0xFFEF4444) : const Color(0xFF10B981),
-                            shape: BoxShape.circle,
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          user.disabled ? 'Disabled' : 'Active',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: user.disabled ? const Color(0xFFEF4444) : const Color(0xFF10B981),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
 
-                  // Face ID Status
-                  DataCell(
-                    Row(
-                      children: [
-                        Icon(
-                          user.faceEmbedding != null ? Icons.face_rounded : Icons.no_photography_outlined,
-                          size: 14,
-                          color: user.faceEmbedding != null ? const Color(0xFF3B82F6) : Colors.grey,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          user.faceEmbedding != null ? 'Enabled' : 'None',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark ? Colors.white54 : Colors.black54,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Actions
-                  DataCell(
-                    Row(
-                      children: [
-                        IconButton(
-                          onPressed: () => _showEditRoleDialog(context, user, provider),
-                          icon: const Icon(Icons.shield_outlined, size: 16),
-                          tooltip: 'Edit Role',
-                          color: isDark ? Colors.white70 : Colors.black87,
-                        ),
-                        IconButton(
-                          onPressed: () => _showSetPasswordDialog(context, user, provider),
-                          icon: const Icon(Icons.key_outlined, size: 16),
-                          tooltip: 'Set Password',
-                          color: isDark ? Colors.white70 : Colors.black87,
-                        ),
-                        IconButton(
-                          onPressed: () {
-                            final newStatus = !user.disabled;
-                            final updated = user.copyWith(disabled: newStatus);
-                            provider.updateEmployee(updated);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  newStatus
-                                      ? 'Account access disabled for ${user.name}'
-                                      : 'Account access enabled for ${user.name}',
+                        // Access Status
+                        DataCell(
+                          Row(
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: user.disabled
+                                      ? const Color(0xFFEF4444)
+                                      : const Color(0xFF10B981),
+                                  shape: BoxShape.circle,
                                 ),
-                                backgroundColor: newStatus ? Colors.redAccent : Colors.green,
                               ),
-                            );
-                          },
-                          icon: Icon(
-                            user.disabled ? Icons.lock_open_rounded : Icons.lock_person_outlined,
-                            size: 16,
-                            color: user.disabled ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                              const SizedBox(width: 6),
+                              Text(
+                                user.disabled ? 'Disabled' : 'Active',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: user.disabled
+                                      ? const Color(0xFFEF4444)
+                                      : const Color(0xFF10B981),
+                                ),
+                              ),
+                            ],
                           ),
-                          tooltip: user.disabled ? 'Enable Access' : 'Disable Access',
+                        ),
+
+                        // Face ID Status
+                        DataCell(
+                          Row(
+                            children: [
+                              Icon(
+                                user.faceEmbedding != null
+                                    ? Icons.face_rounded
+                                    : Icons.no_photography_outlined,
+                                size: 14,
+                                color: user.faceEmbedding != null
+                                    ? const Color(0xFF3B82F6)
+                                    : Colors.grey,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                user.faceEmbedding != null ? 'Enabled' : 'None',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark
+                                      ? Colors.white54
+                                      : Colors.black54,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Actions
+                        DataCell(
+                          Row(
+                            children: [
+                              IconButton(
+                                onPressed: () => _showEditRoleDialog(
+                                  context,
+                                  user,
+                                  provider,
+                                ),
+                                icon: const Icon(
+                                  Icons.shield_outlined,
+                                  size: 16,
+                                ),
+                                tooltip: 'Edit Role',
+                                color: isDark ? Colors.white70 : Colors.black87,
+                              ),
+                              IconButton(
+                                onPressed: () => _showSetPasswordDialog(
+                                  context,
+                                  user,
+                                  provider,
+                                ),
+                                icon: const Icon(Icons.key_outlined, size: 16),
+                                tooltip: 'Set Password',
+                                color: isDark ? Colors.white70 : Colors.black87,
+                              ),
+                              IconButton(
+                                onPressed: () {
+                                  final newStatus = !user.disabled;
+                                  final updated = user.copyWith(
+                                    disabled: newStatus,
+                                  );
+                                  provider.updateEmployee(updated);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        newStatus
+                                            ? 'Account access disabled for ${user.name}'
+                                            : 'Account access enabled for ${user.name}',
+                                      ),
+                                      backgroundColor: newStatus
+                                          ? Colors.redAccent
+                                          : Colors.green,
+                                    ),
+                                  );
+                                },
+                                icon: Icon(
+                                  user.disabled
+                                      ? Icons.lock_open_rounded
+                                      : Icons.lock_person_outlined,
+                                  size: 16,
+                                  color: user.disabled
+                                      ? const Color(0xFF10B981)
+                                      : const Color(0xFFEF4444),
+                                ),
+                                tooltip: user.disabled
+                                    ? 'Enable Access'
+                                    : 'Disable Access',
+                              ),
+                            ],
+                          ),
                         ),
                       ],
-                    ),
-                  ),
-                ],
-              );
-            }).toList(),
-          ), // End DataTable
-        ), // End ConstrainedBox
-      ); // End return SingleChildScrollView
-    }, // End builder
-  ), // End LayoutBuilder
-), // End ClipRRect
-); // End GlassContainer
+                    );
+                  }).toList(),
+                ), // End DataTable
+              ), // End ConstrainedBox
+            ); // End return SingleChildScrollView
+          }, // End builder
+        ), // End LayoutBuilder
+      ), // End ClipRRect
+    ); // End GlassContainer
   }
 
   // Empty State Widget
@@ -621,7 +767,10 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
 
   // Modal: Edit System Role
   void _showEditRoleDialog(
-      BuildContext context, CompanyEmployee user, AttendanceProvider provider) {
+    BuildContext context,
+    CompanyEmployee user,
+    AttendanceProvider provider,
+  ) {
     String selectedRole = user.role;
 
     showGlassDialog(
@@ -642,10 +791,14 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
               const SizedBox(height: 16),
               ListTile(
                 title: const Text('HR Admin / System Manager'),
-                subtitle: const Text('Full system access, user management & settings'),
+                subtitle: const Text(
+                  'Full system access, user management & settings',
+                ),
                 leading: Radio<String>(
                   value: 'hr',
+                  // ignore: deprecated_member_use
                   groupValue: selectedRole,
+                  // ignore: deprecated_member_use
                   onChanged: (val) {
                     if (val != null) setModalState(() => selectedRole = val);
                   },
@@ -654,10 +807,14 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
               ),
               ListTile(
                 title: const Text('Supervisor'),
-                subtitle: const Text('Approval management, team shift supervision'),
+                subtitle: const Text(
+                  'Approval management, team shift supervision',
+                ),
                 leading: Radio<String>(
                   value: 'supervisor',
+                  // ignore: deprecated_member_use
                   groupValue: selectedRole,
+                  // ignore: deprecated_member_use
                   onChanged: (val) {
                     if (val != null) setModalState(() => selectedRole = val);
                   },
@@ -666,10 +823,14 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
               ),
               ListTile(
                 title: const Text('Employee User'),
-                subtitle: const Text('Standard clocking and request submission'),
+                subtitle: const Text(
+                  'Standard clocking and request submission',
+                ),
                 leading: Radio<String>(
                   value: 'employee',
+                  // ignore: deprecated_member_use
                   groupValue: selectedRole,
+                  // ignore: deprecated_member_use
                   onChanged: (val) {
                     if (val != null) setModalState(() => selectedRole = val);
                   },
@@ -692,7 +853,9 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
             Navigator.pop(context);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Updated system role for ${user.name} to $selectedRole'),
+                content: Text(
+                  'Updated system role for ${user.name} to $selectedRole',
+                ),
                 backgroundColor: Colors.blueAccent,
               ),
             );
@@ -709,7 +872,10 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
 
   // Modal: Set Password
   void _showSetPasswordDialog(
-      BuildContext context, CompanyEmployee user, AttendanceProvider provider) {
+    BuildContext context,
+    CompanyEmployee user,
+    AttendanceProvider provider,
+  ) {
     final passCtrl = TextEditingController(text: user.password ?? '');
 
     showGlassDialog(
@@ -747,7 +913,10 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
               );
               return;
             }
-            final updatedUser = user.copyWith(password: passCtrl.text.trim(), overridePassword: true);
+            final updatedUser = user.copyWith(
+              password: passCtrl.text.trim(),
+              overridePassword: true,
+            );
             provider.updateEmployee(updatedUser);
             Navigator.pop(context);
             ScaffoldMessenger.of(context).showSnackBar(
@@ -769,7 +938,9 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
 
   // Modal: Add System Account
   void _showAddSystemUserDialog(
-      BuildContext context, AttendanceProvider provider) {
+    BuildContext context,
+    AttendanceProvider provider,
+  ) {
     final nameCtrl = TextEditingController();
     final emailCtrl = TextEditingController();
     final posCtrl = TextEditingController(text: 'System Administrator');
@@ -856,11 +1027,11 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
         ),
         ElevatedButton(
           onPressed: () {
-            if (nameCtrl.text.trim().isEmpty ||
-                emailCtrl.text.trim().isEmpty) {
+            if (nameCtrl.text.trim().isEmpty || emailCtrl.text.trim().isEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                    content: Text('Please enter full name and email')),
+                  content: Text('Please enter full name and email'),
+                ),
               );
               return;
             }
@@ -871,12 +1042,12 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
               email: emailCtrl.text.trim(),
               position: posCtrl.text.trim(),
               role: role,
-              password: passCtrl.text.trim().isNotEmpty ? passCtrl.text.trim() : null,
+              password: passCtrl.text.trim().isNotEmpty
+                  ? passCtrl.text.trim()
+                  : null,
               startDate: DateTime.now().toIso8601String().split('T')[0],
-              positionStartDate:
-                  DateTime.now().toIso8601String().split('T')[0],
-              groupStartDate:
-                  DateTime.now().toIso8601String().split('T')[0],
+              positionStartDate: DateTime.now().toIso8601String().split('T')[0],
+              groupStartDate: DateTime.now().toIso8601String().split('T')[0],
               positionHistory: [],
               groupHistory: [],
               salaryHistory: [],
@@ -887,7 +1058,8 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                    'System user ${newEmp.name} created successfully!'),
+                  'System user ${newEmp.name} created successfully!',
+                ),
                 backgroundColor: Colors.green,
               ),
             );

@@ -346,20 +346,41 @@ class FirebaseService {
   Future<List<AttendanceRecord>> getUserRecords(String employeeId) async {
     if (!isAvailable) return [];
     try {
-      final snapshot = await _firestore
-          .collection('attendance_records')
-          .doc(employeeId)
-          .collection('user_records')
-          .orderBy('checkIn', descending: true)
-          .get();
+      final trimmedId = employeeId.trim();
+      QuerySnapshot<Map<String, dynamic>> snapshot;
+      try {
+        snapshot = await _firestore
+            .collection('attendance_records')
+            .doc(trimmedId)
+            .collection('user_records')
+            .get();
+      } catch (e) {
+        debugPrint('Error getting user_records for $trimmedId: $e');
+        return [];
+      }
+
+      // If direct doc lookup is empty, try case-insensitive doc match in attendance_records
+      if (snapshot.docs.isEmpty) {
+        try {
+          final parentSnap = await _firestore.collection('attendance_records').get();
+          for (var pDoc in parentSnap.docs) {
+            if (pDoc.id.toLowerCase() == trimmedId.toLowerCase()) {
+              snapshot = await pDoc.reference.collection('user_records').get();
+              if (snapshot.docs.isNotEmpty) break;
+            }
+          }
+        } catch (_) {}
+      }
+
       final list = <AttendanceRecord>[];
       for (var doc in snapshot.docs) {
         try {
-          list.add(AttendanceRecord.fromMap(doc.data(), employeeId));
+          list.add(AttendanceRecord.fromMap(doc.data(), trimmedId));
         } catch (e) {
           debugPrint('Error parsing AttendanceRecord ${doc.id}: $e');
         }
       }
+      list.sort((a, b) => b.checkIn.compareTo(a.checkIn));
       return list;
     } catch (e) {
       debugPrint('Error getting user records: $e');
@@ -369,39 +390,53 @@ class FirebaseService {
 
   Stream<List<AttendanceRecord>> streamUserRecords(String employeeId) {
     if (!isAvailable) return Stream.value([]);
+    final trimmedId = employeeId.trim();
     return _firestore
         .collection('attendance_records')
-        .doc(employeeId)
+        .doc(trimmedId)
         .collection('user_records')
-        .orderBy('checkIn', descending: true)
         .snapshots()
         .map((snapshot) {
       final list = <AttendanceRecord>[];
       for (var doc in snapshot.docs) {
         try {
-          list.add(AttendanceRecord.fromMap(doc.data(), employeeId));
+          list.add(AttendanceRecord.fromMap(doc.data(), trimmedId));
         } catch (e) {
           debugPrint('Error parsing AttendanceRecord ${doc.id}: $e');
         }
       }
+      list.sort((a, b) => b.checkIn.compareTo(a.checkIn));
       return list;
+    }).handleError((e) {
+      debugPrint('Error in streamUserRecords for $trimmedId: $e');
+      return <AttendanceRecord>[];
     });
   }
 
   Stream<List<AttendanceRecord>> streamAllRecords() {
     if (!isAvailable) return Stream.value([]);
-    return _firestore.collectionGroup('user_records').snapshots().map((snapshot) {
-      final list = <AttendanceRecord>[];
-      for (var doc in snapshot.docs) {
-        try {
-          final empId = doc.reference.parent.parent?.id;
-          list.add(AttendanceRecord.fromMap(doc.data(), empId));
-        } catch (e) {
-          debugPrint('Error parsing collectionGroup AttendanceRecord ${doc.id}: $e');
+    try {
+      return _firestore.collectionGroup('user_records').snapshots().map((snapshot) {
+        final list = <AttendanceRecord>[];
+        for (var doc in snapshot.docs) {
+          try {
+            final empId = doc.data()['employeeId']?.toString() ??
+                doc.reference.parent.parent?.id;
+            list.add(AttendanceRecord.fromMap(doc.data(), empId));
+          } catch (e) {
+            debugPrint('Error parsing collectionGroup AttendanceRecord ${doc.id}: $e');
+          }
         }
-      }
-      return list;
-    });
+        list.sort((a, b) => b.checkIn.compareTo(a.checkIn));
+        return list;
+      }).handleError((e) {
+        debugPrint('collectionGroup user_records stream error (likely missing index): $e');
+        return <AttendanceRecord>[];
+      });
+    } catch (e) {
+      debugPrint('Error starting streamAllRecords: $e');
+      return Stream.value([]);
+    }
   }
 
   Future<void> saveRecord(String employeeId, AttendanceRecord record) async {
@@ -442,16 +477,36 @@ class FirebaseService {
   Future<List<Request>> getUserRequests(String employeeId) async {
     if (!isAvailable) return [];
     try {
-      final snapshot = await _firestore
-          .collection('requests')
-          .doc(employeeId)
-          .collection('user_requests')
-          .get();
+      final trimmedId = employeeId.trim();
+      QuerySnapshot<Map<String, dynamic>> snapshot;
+      try {
+        snapshot = await _firestore
+            .collection('requests')
+            .doc(trimmedId)
+            .collection('user_requests')
+            .get();
+      } catch (e) {
+        debugPrint('Error getting user_requests for $trimmedId: $e');
+        return [];
+      }
+
+      if (snapshot.docs.isEmpty) {
+        try {
+          final parentSnap = await _firestore.collection('requests').get();
+          for (var pDoc in parentSnap.docs) {
+            if (pDoc.id.toLowerCase() == trimmedId.toLowerCase()) {
+              snapshot = await pDoc.reference.collection('user_requests').get();
+              if (snapshot.docs.isNotEmpty) break;
+            }
+          }
+        } catch (_) {}
+      }
+
       return snapshot.docs.map((doc) {
         final data = doc.data();
         final req = Request.fromMap(data, doc.id);
         return req.copyWith(
-          employeeId: req.employeeId ?? employeeId,
+          employeeId: req.employeeId ?? trimmedId,
           overrideTargetShiftId: false,
         );
       }).toList();

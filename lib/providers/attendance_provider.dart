@@ -22,7 +22,8 @@ class AttendanceProvider with ChangeNotifier {
   // User Profile Data
   String _userName = 'Jane Smith';
   String _userTitle = 'HR Manager';
-  String _employeeId = 'emp_2'; // Aligned to emp_2 (HR Manager) to match Firestore seed
+  String _employeeId =
+      'emp_2'; // Aligned to emp_2 (HR Manager) to match Firestore seed
   String _email = 'jane.smith@company.com';
   String _department = 'Human Resources';
   String _position = 'HR Manager';
@@ -87,7 +88,10 @@ class AttendanceProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> login({required String identifier, required String password}) async {
+  Future<bool> login({
+    required String identifier,
+    required String password,
+  }) async {
     _isLoading = true;
     notifyListeners();
 
@@ -96,8 +100,8 @@ class AttendanceProvider with ChangeNotifier {
       final matchIndex = _employees.indexWhere(
         (e) =>
             (e.email.toLowerCase() == input ||
-            e.id.toLowerCase() == input ||
-            e.name.toLowerCase() == input) &&
+                e.id.toLowerCase() == input ||
+                e.name.toLowerCase() == input) &&
             (e.password == null || e.password == password),
       );
 
@@ -111,6 +115,10 @@ class AttendanceProvider with ChangeNotifier {
         _isLoggedIn = true;
         _isLoading = false;
         await _saveAuthSession(true, _employeeId);
+
+        _records.clear();
+        await _setupFirestoreListeners();
+        recalculateAllStats();
         notifyListeners();
         return true;
       }
@@ -136,6 +144,10 @@ class AttendanceProvider with ChangeNotifier {
     _email = employee.email;
     _isLoggedIn = true;
     await _saveAuthSession(true, _employeeId);
+
+    _records.clear();
+    await _setupFirestoreListeners();
+    recalculateAllStats();
     notifyListeners();
   }
 
@@ -145,7 +157,6 @@ class AttendanceProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  
   // Chat state
   final Map<String, List<ChatMessage>> _chatMessagesMap = {};
   final Map<String, StreamSubscription> _chatSubscriptionsMap = {};
@@ -195,7 +206,7 @@ class AttendanceProvider with ChangeNotifier {
   bool _isClockedIn = false;
   AttendanceRecord? _activeRecord;
   final List<AttendanceRecord> _records = [];
-  
+
   final List<AttendanceRecord> _allCompanyRecords = [];
   final List<Request> _allCompanyRequests = [];
 
@@ -215,7 +226,7 @@ class AttendanceProvider with ChangeNotifier {
   double _attendanceDeficit = 0.0;
   double _attendanceDeficitHours = 0.0;
   double _hourlyRate = 0.0;
-  
+
   double _foodAllowance = 0.0;
   double _transportationAllowance = 0.0;
   double _otherAllowance = 0.0;
@@ -256,7 +267,7 @@ class AttendanceProvider with ChangeNotifier {
   int get daysWorked => _daysWorked;
   double get overtimeHours => _overtimeHours;
   double get monthlyPenalties => _monthlyPenalties;
-  
+
   double get incrementalSalary => _incrementalSalary;
   double get decrementalSalary => _decrementalSalary;
   double get salaryCalcByDay => _salaryCalcByDay;
@@ -290,7 +301,7 @@ class AttendanceProvider with ChangeNotifier {
   List<CompanyEmployee> getSubordinates(CompanyEmployee supervisor) {
     List<CompanyEmployee> subordinates = [];
     final Set<String> subordinateIds = {};
-    
+
     // Direct supervised structures
     final supervisedStructures = _structures
         .where((s) => s.supervisorId == supervisor.id)
@@ -298,24 +309,31 @@ class AttendanceProvider with ChangeNotifier {
         .toList();
 
     for (var structId in supervisedStructures) {
-      final emps = _employees.where((e) => e.id != supervisor.id && e.structureId == structId);
+      final emps = _employees.where(
+        (e) => e.id != supervisor.id && e.structureId == structId,
+      );
       for (var e in emps) {
         if (subordinateIds.add(e.id)) {
           subordinates.add(e);
         }
       }
     }
-    
+
     // Co-workers in same structure if supervisor is just regular employee (wait, only supervisors)
     if (supervisor.structureId != null && supervisor.structureId!.isNotEmpty) {
-      final emps = _employees.where((e) => e.id != supervisor.id && e.structureId == supervisor.structureId && e.role == 'employee');
+      final emps = _employees.where(
+        (e) =>
+            e.id != supervisor.id &&
+            e.structureId == supervisor.structureId &&
+            e.role == 'employee',
+      );
       for (var e in emps) {
         if (subordinateIds.add(e.id)) {
           subordinates.add(e);
         }
       }
     }
-    
+
     return subordinates;
   }
 
@@ -323,7 +341,7 @@ class AttendanceProvider with ChangeNotifier {
     final emp = currentEmployee;
     if (emp == null) return false;
     if (emp.role == 'hr' || emp.role == 'admin') return true;
-    
+
     // Check group permission
     final groupId = getGroupIdForDate(emp, DateTime.now());
     final group = _groups.firstWhere(
@@ -356,15 +374,15 @@ class AttendanceProvider with ChangeNotifier {
   Future<void> toggleTheme() async {
     final emp = currentEmployee;
     if (emp == null) return;
-    
+
     final newPreference = isDarkMode ? 'light' : 'dark';
     final updatedEmp = emp.copyWith(themePreference: newPreference);
-    
+
     final index = _employees.indexWhere((e) => e.id == emp.id);
     if (index != -1) {
       _employees[index] = updatedEmp;
     }
-    
+
     await _firebaseService.saveEmployee(updatedEmp);
     notifyListeners();
   }
@@ -393,6 +411,7 @@ class AttendanceProvider with ChangeNotifier {
   }
 
   Future<void> _initializeFirebaseAndSync() async {
+    await _loadAuthSession();
     if (!_firebaseService.isAvailable) {
       debugPrint('Firebase is not available. Using local mock data fallback.');
       _initializeMockRequests();
@@ -438,19 +457,21 @@ class AttendanceProvider with ChangeNotifier {
 
     // Always ensure Super Admin is available in the list so the user is never locked out
     if (!_employees.any((e) => e.email == 'admin@company.com')) {
-      _employees.add(CompanyEmployee(
-        id: 'admin_super_account',
-        name: 'Super Admin',
-        email: 'admin@company.com',
-        position: 'Super Administrator',
-        role: 'admin',
-        startDate: DateTime.now().toIso8601String().split('T')[0],
-        positionStartDate: DateTime.now().toIso8601String().split('T')[0],
-        groupStartDate: DateTime.now().toIso8601String().split('T')[0],
-        positionHistory: [],
-        groupHistory: [],
-        salaryHistory: [],
-      ));
+      _employees.add(
+        CompanyEmployee(
+          id: 'admin_super_account',
+          name: 'Super Admin',
+          email: 'admin@company.com',
+          position: 'Super Administrator',
+          role: 'admin',
+          startDate: DateTime.now().toIso8601String().split('T')[0],
+          positionStartDate: DateTime.now().toIso8601String().split('T')[0],
+          groupStartDate: DateTime.now().toIso8601String().split('T')[0],
+          positionHistory: [],
+          groupHistory: [],
+          salaryHistory: [],
+        ),
+      );
     }
 
     // Seed empty Firestore tables with timeout
@@ -489,90 +510,110 @@ class AttendanceProvider with ChangeNotifier {
     _subscriptions.clear();
 
     try {
-      _subscriptions.add(_firebaseService.streamCompanyProfile().listen((data) {
-        _companyProfile = data;
-        notifyListeners();
-      }));
+      _subscriptions.add(
+        _firebaseService.streamCompanyProfile().listen((data) {
+          _companyProfile = data;
+          notifyListeners();
+        }),
+      );
 
-      _subscriptions.add(_firebaseService.streamStructures().listen((data) {
-        _structures.clear();
-        _structures.addAll(data);
-        loadChatsForCurrentUser();
-        notifyListeners();
-      }));
+      _subscriptions.add(
+        _firebaseService.streamStructures().listen((data) {
+          _structures.clear();
+          _structures.addAll(data);
+          loadChatsForCurrentUser();
+          notifyListeners();
+        }),
+      );
 
-      _subscriptions.add(_firebaseService.streamShifts().listen((data) {
-        _shifts.clear();
-        _shifts.addAll(data);
-        notifyListeners();
-      }));
+      _subscriptions.add(
+        _firebaseService.streamShifts().listen((data) {
+          _shifts.clear();
+          _shifts.addAll(data);
+          notifyListeners();
+        }),
+      );
 
-      _subscriptions.add(_firebaseService.streamGroups().listen((data) {
-        _groups.clear();
-        _groups.addAll(data);
-        notifyListeners();
-      }));
+      _subscriptions.add(
+        _firebaseService.streamGroups().listen((data) {
+          _groups.clear();
+          _groups.addAll(data);
+          notifyListeners();
+        }),
+      );
 
-      _subscriptions.add(_firebaseService.streamEmployees().listen((data) {
-        _employees.clear();
-        _employees.addAll(data);
-        
-        // --- ENSURE SUPER ADMIN REMAINS PERMANENTLY ---
-        if (!_employees.any((e) => e.email == 'admin@company.com')) {
-          final superAdmin = CompanyEmployee(
-            id: 'admin_super_account',
-            name: 'Super Admin',
-            email: 'admin@company.com',
-            position: 'Super Administrator',
-            role: 'admin',
-            password: 'admin123',
-            startDate: DateTime.now().toIso8601String().split('T')[0],
-            positionStartDate: DateTime.now().toIso8601String().split('T')[0],
-            groupStartDate: DateTime.now().toIso8601String().split('T')[0],
-            positionHistory: [],
-            groupHistory: [],
-            salaryHistory: [],
-          );
-          _employees.add(superAdmin);
-          _firebaseService.saveEmployee(superAdmin);
-        }
+      _subscriptions.add(
+        _firebaseService.streamEmployees().listen((data) {
+          _employees.clear();
+          _employees.addAll(data);
 
-        _syncCurrentEmployeeInfo();
-        _avatarPath = currentEmployee?.avatarUrl;
-        loadChatsForCurrentUser();
-        notifyListeners();
-      }));
+          // --- ENSURE SUPER ADMIN REMAINS PERMANENTLY ---
+          if (!_employees.any((e) => e.email == 'admin@company.com')) {
+            final superAdmin = CompanyEmployee(
+              id: 'admin_super_account',
+              name: 'Super Admin',
+              email: 'admin@company.com',
+              position: 'Super Administrator',
+              role: 'admin',
+              password: 'admin123',
+              startDate: DateTime.now().toIso8601String().split('T')[0],
+              positionStartDate: DateTime.now().toIso8601String().split('T')[0],
+              groupStartDate: DateTime.now().toIso8601String().split('T')[0],
+              positionHistory: [],
+              groupHistory: [],
+              salaryHistory: [],
+            );
+            _employees.add(superAdmin);
+            _firebaseService.saveEmployee(superAdmin);
+          }
 
-      _subscriptions.add(_firebaseService.streamHolidays().listen((data) {
-        _holidays.clear();
-        _holidays.addAll(data);
-        notifyListeners();
-      }));
+          _syncCurrentEmployeeInfo();
+          _avatarPath = currentEmployee?.avatarUrl;
+          loadChatsForCurrentUser();
+          notifyListeners();
+        }),
+      );
 
-      _subscriptions.add(_firebaseService.streamLocations().listen((data) {
-        _locations.clear();
-        _locations.addAll(data);
-        notifyListeners();
-      }));
+      _subscriptions.add(
+        _firebaseService.streamHolidays().listen((data) {
+          _holidays.clear();
+          _holidays.addAll(data);
+          notifyListeners();
+        }),
+      );
 
-      _subscriptions.add(_firebaseService.streamUserRecords(_employeeId).listen((data) {
-        _records.clear();
-        _records.addAll(data);
-        _restoreActiveRecordFromRecords();
-        recalculateAllStats();
-        notifyListeners();
-      }));
+      _subscriptions.add(
+        _firebaseService.streamLocations().listen((data) {
+          _locations.clear();
+          _locations.addAll(data);
+          notifyListeners();
+        }),
+      );
 
-      _subscriptions.add(_firebaseService.streamUserRequests(_employeeId).listen((data) {
-        _allRequestsMap[_employeeId] = data;
-        notifyListeners();
-      }));
+      _subscriptions.add(
+        _firebaseService.streamUserRecords(_employeeId).listen((data) {
+          _records.clear();
+          _records.addAll(data);
+          _restoreActiveRecordFromRecords();
+          recalculateAllStats();
+          notifyListeners();
+        }),
+      );
 
-      _subscriptions.add(_firebaseService.streamAllRecords().listen((data) {
-        _allCompanyRecords.clear();
-        _allCompanyRecords.addAll(data);
-        notifyListeners();
-      }));
+      _subscriptions.add(
+        _firebaseService.streamUserRequests(_employeeId).listen((data) {
+          _allRequestsMap[_employeeId] = data;
+          notifyListeners();
+        }),
+      );
+
+      _subscriptions.add(
+        _firebaseService.streamAllRecords().listen((data) {
+          _allCompanyRecords.clear();
+          _allCompanyRecords.addAll(data);
+          notifyListeners();
+        }),
+      );
 
       try {
         final initialRequests = await _firebaseService.getAllRequests();
@@ -582,8 +623,9 @@ class AttendanceProvider with ChangeNotifier {
           for (var req in initialRequests) {
             if (req.employeeId != null) {
               _allRequestsMap[req.employeeId!] ??= [];
-              final existingIdx =
-                  _allRequestsMap[req.employeeId!]!.indexWhere((r) => r.id == req.id);
+              final existingIdx = _allRequestsMap[req.employeeId!]!.indexWhere(
+                (r) => r.id == req.id,
+              );
               if (existingIdx != -1) {
                 _allRequestsMap[req.employeeId!]![existingIdx] = req;
               } else {
@@ -597,23 +639,26 @@ class AttendanceProvider with ChangeNotifier {
         debugPrint('Error getting initial requests: $e');
       }
 
-      _subscriptions.add(_firebaseService.streamAllRequests().listen((data) {
-        _allCompanyRequests.clear();
-        _allCompanyRequests.addAll(data);
-        for (var req in data) {
-          if (req.employeeId != null) {
-            _allRequestsMap[req.employeeId!] ??= [];
-            final existingIdx =
-                _allRequestsMap[req.employeeId!]!.indexWhere((r) => r.id == req.id);
-            if (existingIdx != -1) {
-              _allRequestsMap[req.employeeId!]![existingIdx] = req;
-            } else {
-              _allRequestsMap[req.employeeId!]!.add(req);
+      _subscriptions.add(
+        _firebaseService.streamAllRequests().listen((data) {
+          _allCompanyRequests.clear();
+          _allCompanyRequests.addAll(data);
+          for (var req in data) {
+            if (req.employeeId != null) {
+              _allRequestsMap[req.employeeId!] ??= [];
+              final existingIdx = _allRequestsMap[req.employeeId!]!.indexWhere(
+                (r) => r.id == req.id,
+              );
+              if (existingIdx != -1) {
+                _allRequestsMap[req.employeeId!]![existingIdx] = req;
+              } else {
+                _allRequestsMap[req.employeeId!]!.add(req);
+              }
             }
           }
-        }
-        notifyListeners();
-      }));
+          notifyListeners();
+        }),
+      );
 
       await loadChatsForCurrentUser();
       if (!kIsWeb) {
@@ -625,62 +670,75 @@ class AttendanceProvider with ChangeNotifier {
     }
   }
 
-  final FlutterLocalNotificationsPlugin _localNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _localNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
 
   Future<void> _setupPushNotifications() async {
     if (kIsWeb) return;
     try {
       final messaging = FirebaseMessaging.instance;
-      
+
       // Request permission
-      await messaging.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
-      
+      await messaging.requestPermission(alert: true, badge: true, sound: true);
+
       // Initialize local notifications for foreground
-      const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
-      const DarwinInitializationSettings initializationSettingsIOS = DarwinInitializationSettings();
-      const InitializationSettings initializationSettings = InitializationSettings(
-        android: initializationSettingsAndroid,
-        iOS: initializationSettingsIOS,
-      );
+      const AndroidInitializationSettings initializationSettingsAndroid =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
+      const DarwinInitializationSettings initializationSettingsIOS =
+          DarwinInitializationSettings();
+      const InitializationSettings initializationSettings =
+          InitializationSettings(
+            android: initializationSettingsAndroid,
+            iOS: initializationSettingsIOS,
+          );
       await _localNotificationsPlugin.initialize(
         settings: initializationSettings,
       );
-      
+
       // Get token
       String? token = await messaging.getToken();
-      if (token != null && currentEmployee != null && currentEmployee!.fcmToken != token) {
-        final updatedEmp = currentEmployee!.copyWith(fcmToken: token, overrideFcmToken: true);
+      if (token != null &&
+          currentEmployee != null &&
+          currentEmployee!.fcmToken != token) {
+        final updatedEmp = currentEmployee!.copyWith(
+          fcmToken: token,
+          overrideFcmToken: true,
+        );
         await updateEmployee(updatedEmp);
       }
-      
+
       // Listen to token refresh
       messaging.onTokenRefresh.listen((newToken) async {
         if (currentEmployee != null && currentEmployee!.fcmToken != newToken) {
-          final updatedEmp = currentEmployee!.copyWith(fcmToken: newToken, overrideFcmToken: true);
+          final updatedEmp = currentEmployee!.copyWith(
+            fcmToken: newToken,
+            overrideFcmToken: true,
+          );
           await updateEmployee(updatedEmp);
         }
       });
-      
+
       // Setup foreground notification display
       FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
         debugPrint('Got a message whilst in the foreground!');
         debugPrint('Message data: ${message.data}');
-        
+
         if (message.notification != null) {
-          debugPrint('Message also contained a notification: ${message.notification}');
-          
-          const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-            'chat_channel_id',
-            'Chat Messages',
-            importance: Importance.max,
-            priority: Priority.high,
+          debugPrint(
+            'Message also contained a notification: ${message.notification}',
           );
-          const NotificationDetails platformDetails = NotificationDetails(android: androidDetails);
-          
+
+          const AndroidNotificationDetails androidDetails =
+              AndroidNotificationDetails(
+                'chat_channel_id',
+                'Chat Messages',
+                importance: Importance.max,
+                priority: Priority.high,
+              );
+          const NotificationDetails platformDetails = NotificationDetails(
+            android: androidDetails,
+          );
+
           await _localNotificationsPlugin.show(
             id: DateTime.now().millisecond,
             title: message.notification!.title,
@@ -723,8 +781,9 @@ class AttendanceProvider with ChangeNotifier {
         senderId: senderId,
         onReply: () {
           if (senderId != null) {
-            final contact =
-                _employees.where((e) => e.id == senderId).firstOrNull;
+            final contact = _employees
+                .where((e) => e.id == senderId)
+                .firstOrNull;
             if (contact != null && rootNavigatorKey.currentState != null) {
               rootNavigatorKey.currentState!.push(
                 MaterialPageRoute(
@@ -743,13 +802,14 @@ class AttendanceProvider with ChangeNotifier {
     try {
       const AndroidNotificationDetails androidDetails =
           AndroidNotificationDetails(
-        'chat_channel_id',
-        'Chat Messages',
-        importance: Importance.max,
-        priority: Priority.high,
+            'chat_channel_id',
+            'Chat Messages',
+            importance: Importance.max,
+            priority: Priority.high,
+          );
+      const NotificationDetails platformDetails = NotificationDetails(
+        android: androidDetails,
       );
-      const NotificationDetails platformDetails =
-          NotificationDetails(android: androidDetails);
 
       await _localNotificationsPlugin.show(
         id: DateTime.now().millisecond,
@@ -803,7 +863,9 @@ class AttendanceProvider with ChangeNotifier {
 
     for (var entry in sortedHistory) {
       DateTime start = DateTime.parse(entry.startDate);
-      DateTime? end = entry.endDate != null ? DateTime.parse(entry.endDate!) : null;
+      DateTime? end = entry.endDate != null
+          ? DateTime.parse(entry.endDate!)
+          : null;
 
       if (date.isAtSameMomentAs(start) || date.isAfter(start)) {
         if (end == null || date.isBefore(end) || date.isAtSameMomentAs(end)) {
@@ -835,29 +897,41 @@ class AttendanceProvider with ChangeNotifier {
       otherAllowance: emp.otherAllowance,
     );
   }
-  PayrollReport generatePayrollReport(CompanyEmployee emp, DateTime targetMonth, {List<AttendanceRecord>? customRecords}) {
+
+  PayrollReport generatePayrollReport(
+    CompanyEmployee emp,
+    DateTime targetMonth, {
+    List<AttendanceRecord>? customRecords,
+  }) {
     final config = getActiveSalaryConfig(emp, targetMonth);
     final basicSalary = config.basicSalary;
-    final configWorkingHours = config.workingHours > 0 ? config.workingHours : 160.0;
-    final hourlyRate = configWorkingHours > 0 ? (basicSalary / configWorkingHours) : 0.0;
+    final configWorkingHours = config.workingHours > 0
+        ? config.workingHours
+        : 160.0;
+    final hourlyRate = configWorkingHours > 0
+        ? (basicSalary / configWorkingHours)
+        : 0.0;
     final currency = config.currency;
 
     final foodAllowance = config.foodAllowance;
     final transportationAllowance = config.transportationAllowance;
     final otherAllowance = config.otherAllowance;
-    final totalAllowances = foodAllowance + transportationAllowance + otherAllowance;
+    final totalAllowances =
+        foodAllowance + transportationAllowance + otherAllowance;
 
     // We will look up the group & shift per-day inside the loop.
 
-
     // Records for this employee
-    final employeeRecords = customRecords ?? ((emp.id == _employeeId)
-        ? _records
-        : <AttendanceRecord>[]);
+    final employeeRecords =
+        customRecords ??
+        ((emp.id == _employeeId) ? _records : <AttendanceRecord>[]);
     final employeeRequests = _allRequestsMap[emp.id] ?? [];
 
-    final daysInMonth = DateUtils.getDaysInMonth(targetMonth.year, targetMonth.month);
-    
+    final daysInMonth = DateUtils.getDaysInMonth(
+      targetMonth.year,
+      targetMonth.month,
+    );
+
     int totalDutyMinutes = 0;
     int totalOvertimeMinutes = 0;
     int totalDeficitMinutes = 0;
@@ -891,39 +965,60 @@ class AttendanceProvider with ChangeNotifier {
       final isWorkingDay = shift.isWorkingDay(date);
 
       // Get records on this day
-      final dayRecords = employeeRecords.where((r) =>
-        r.checkIn.year == date.year &&
-        r.checkIn.month == date.month &&
-        r.checkIn.day == date.day
-      ).toList();
+      final dayRecords = employeeRecords
+          .where(
+            (r) =>
+                r.checkIn.year == date.year &&
+                r.checkIn.month == date.month &&
+                r.checkIn.day == date.day,
+          )
+          .toList();
 
       final hasRecord = dayRecords.isNotEmpty;
 
       // Approved requests on this day
       final dateStr = DateFormat('MMMM d, yyyy').format(date);
-      final dayApprovedRequests = employeeRequests.where((req) =>
-        req.status == 'Approved' &&
-        (req.date == dateStr || req.date.contains(DateFormat('MMMM d').format(date)))
-      ).toList();
+      final dayApprovedRequests = employeeRequests
+          .where(
+            (req) =>
+                req.status == 'Approved' &&
+                (req.date == dateStr ||
+                    req.date.contains(DateFormat('MMMM d').format(date))),
+          )
+          .toList();
 
-      final hasLeave = dayApprovedRequests.any((r) =>
-        r.type == 'Annual Leave' || r.type == 'Sick Leave' || r.type == 'Hourly Leave'
+      final hasLeave = dayApprovedRequests.any(
+        (r) =>
+            r.type == 'Annual Leave' ||
+            r.type == 'Sick Leave' ||
+            r.type == 'Hourly Leave',
       );
-      final hasApprovedOt = dayApprovedRequests.any((r) => r.type == 'Overtime Approval');
+      final hasApprovedOt = dayApprovedRequests.any(
+        (r) => r.type == 'Overtime Approval',
+      );
 
       final holiday = _holidays.firstWhere(
         (h) {
-          final isForGroup = h.groupIds.isEmpty || (emp.groupId != null && h.groupIds.contains(emp.groupId));
+          final isForGroup =
+              h.groupIds.isEmpty ||
+              (emp.groupId != null && h.groupIds.contains(emp.groupId));
           if (!isForGroup) return false;
           try {
-            final from = DateTime.parse(h.fromDate).subtract(const Duration(days: 1));
+            final from = DateTime.parse(
+              h.fromDate,
+            ).subtract(const Duration(days: 1));
             final to = DateTime.parse(h.toDate).add(const Duration(days: 1));
             return date.isAfter(from) && date.isBefore(to);
           } catch (_) {
             return false;
           }
         },
-        orElse: () => Holiday(id: '', name: '', fromDate: '2099-01-01', toDate: '2099-01-01'),
+        orElse: () => Holiday(
+          id: '',
+          name: '',
+          fromDate: '2099-01-01',
+          toDate: '2099-01-01',
+        ),
       );
       final isHoliday = holiday.id.isNotEmpty;
 
@@ -936,17 +1031,45 @@ class AttendanceProvider with ChangeNotifier {
         final endTimeStr = shift.getEndTimeForDate(date);
         final sParts = startTimeStr.split(':');
         final eParts = endTimeStr.split(':');
-        final shiftStartMins = sParts.length >= 2 ? int.parse(sParts[0]) * 60 + int.parse(sParts[1]) : 540;
-        final shiftEndMins = eParts.length >= 2 ? int.parse(eParts[0]) * 60 + int.parse(eParts[1]) : 1020;
+        final shiftStartMins = sParts.length >= 2
+            ? int.parse(sParts[0]) * 60 + int.parse(sParts[1])
+            : 540;
+        final shiftEndMins = eParts.length >= 2
+            ? int.parse(eParts[0]) * 60 + int.parse(eParts[1])
+            : 1020;
 
         for (var rec in dayRecords) {
           final rawIn = rec.checkIn;
           final rawOut = rec.checkOut ?? rawIn;
-          final cIn = DateTime(rawIn.year, rawIn.month, rawIn.day, rawIn.hour, rawIn.minute);
-          final cOut = DateTime(rawOut.year, rawOut.month, rawOut.day, rawOut.hour, rawOut.minute);
+          final cIn = DateTime(
+            rawIn.year,
+            rawIn.month,
+            rawIn.day,
+            rawIn.hour,
+            rawIn.minute,
+          );
+          final cOut = DateTime(
+            rawOut.year,
+            rawOut.month,
+            rawOut.day,
+            rawOut.hour,
+            rawOut.minute,
+          );
 
-          final shiftStart = DateTime(date.year, date.month, date.day, shiftStartMins ~/ 60, shiftStartMins % 60);
-          var shiftEnd = DateTime(date.year, date.month, date.day, shiftEndMins ~/ 60, shiftEndMins % 60);
+          final shiftStart = DateTime(
+            date.year,
+            date.month,
+            date.day,
+            shiftStartMins ~/ 60,
+            shiftStartMins % 60,
+          );
+          var shiftEnd = DateTime(
+            date.year,
+            date.month,
+            date.day,
+            shiftEndMins ~/ 60,
+            shiftEndMins % 60,
+          );
           if (shiftEnd.isBefore(shiftStart)) {
             shiftEnd = shiftEnd.add(const Duration(days: 1));
           }
@@ -978,9 +1101,11 @@ class AttendanceProvider with ChangeNotifier {
         int dayEarlyExit = 0;
         int unexcusedRestMinutes = 0;
         if (isWorkingDay && !hasLeave && !isHoliday) {
-          final sorted = List<AttendanceRecord>.from(dayRecords)..sort((a, b) => a.checkIn.compareTo(b.checkIn));
+          final sorted = List<AttendanceRecord>.from(dayRecords)
+            ..sort((a, b) => a.checkIn.compareTo(b.checkIn));
           final firstRec = sorted.first;
-          final checkInMins = firstRec.checkIn.hour * 60 + firstRec.checkIn.minute;
+          final checkInMins =
+              firstRec.checkIn.hour * 60 + firstRec.checkIn.minute;
           final delay = checkInMins - shiftStartMins;
           if (delay > shift.forgivenessOfDelay) {
             dayDelay = delay;
@@ -988,7 +1113,8 @@ class AttendanceProvider with ChangeNotifier {
 
           final lastRec = sorted.last;
           if (lastRec.checkOut != null) {
-            final checkOutMins = lastRec.checkOut!.hour * 60 + lastRec.checkOut!.minute;
+            final checkOutMins =
+                lastRec.checkOut!.hour * 60 + lastRec.checkOut!.minute;
             final earlyExit = shiftEndMins - checkOutMins;
             if (earlyExit > shift.earlyExit) {
               dayEarlyExit = earlyExit;
@@ -1004,12 +1130,26 @@ class AttendanceProvider with ChangeNotifier {
 
           DateTime? bStart;
           DateTime? bEnd;
-          if (breakStartStr.isNotEmpty && breakEndStr.isNotEmpty && allowedBreakDuration > 0) {
+          if (breakStartStr.isNotEmpty &&
+              breakEndStr.isNotEmpty &&
+              allowedBreakDuration > 0) {
             final bsParts = breakStartStr.split(':');
             final beParts = breakEndStr.split(':');
             if (bsParts.length >= 2 && beParts.length >= 2) {
-              bStart = DateTime(date.year, date.month, date.day, int.parse(bsParts[0]), int.parse(bsParts[1]));
-              bEnd = DateTime(date.year, date.month, date.day, int.parse(beParts[0]), int.parse(beParts[1]));
+              bStart = DateTime(
+                date.year,
+                date.month,
+                date.day,
+                int.parse(bsParts[0]),
+                int.parse(bsParts[1]),
+              );
+              bEnd = DateTime(
+                date.year,
+                date.month,
+                date.day,
+                int.parse(beParts[0]),
+                int.parse(beParts[1]),
+              );
               if (bEnd.isBefore(bStart)) {
                 bEnd = bEnd.add(const Duration(days: 1));
               }
@@ -1019,24 +1159,30 @@ class AttendanceProvider with ChangeNotifier {
           if (sorted.length > 1) {
             for (int i = 0; i < sorted.length - 1; i++) {
               final currentOut = sorted[i].checkOut;
-              final nextIn = sorted[i+1].checkIn;
+              final nextIn = sorted[i + 1].checkIn;
               if (currentOut != null && nextIn.isAfter(currentOut)) {
                 final gapDuration = nextIn.difference(currentOut).inMinutes;
-                
+
                 if (bStart != null && bEnd != null) {
-                  final intersectStart = currentOut.isAfter(bStart) ? currentOut : bStart;
+                  final intersectStart = currentOut.isAfter(bStart)
+                      ? currentOut
+                      : bStart;
                   final intersectEnd = nextIn.isBefore(bEnd) ? nextIn : bEnd;
-                  
+
                   int excusedInGap = 0;
                   if (intersectEnd.isAfter(intersectStart)) {
-                    excusedInGap = intersectEnd.difference(intersectStart).inMinutes;
+                    excusedInGap = intersectEnd
+                        .difference(intersectStart)
+                        .inMinutes;
                   }
-                  
-                  if (totalExcusedRestMinutes + excusedInGap > allowedBreakDuration) {
-                    excusedInGap = allowedBreakDuration - totalExcusedRestMinutes;
+
+                  if (totalExcusedRestMinutes + excusedInGap >
+                      allowedBreakDuration) {
+                    excusedInGap =
+                        allowedBreakDuration - totalExcusedRestMinutes;
                     if (excusedInGap < 0) excusedInGap = 0;
                   }
-                  
+
                   totalExcusedRestMinutes += excusedInGap;
                   unexcusedRestMinutes += (gapDuration - excusedInGap);
                 } else {
@@ -1047,16 +1193,16 @@ class AttendanceProvider with ChangeNotifier {
           }
         }
 
-
-
         // Removed unused delay & early exit accumulators
 
         // Penalties
         double delayPenalty = 0.0;
         if (dayDelay > 0 && group.delayPenaltiesEnabled) {
-          if (dayDelay >= group.delayTier1Min && dayDelay <= group.delayTier1Max) {
+          if (dayDelay >= group.delayTier1Min &&
+              dayDelay <= group.delayTier1Max) {
             delayPenalty = group.delayTier1Penalty;
-          } else if (dayDelay >= group.delayTier2Min && dayDelay <= group.delayTier2Max) {
+          } else if (dayDelay >= group.delayTier2Min &&
+              dayDelay <= group.delayTier2Max) {
             delayPenalty = group.delayTier2Penalty;
           } else if (dayDelay >= group.delayTier3Min) {
             delayPenalty = group.delayTier3Penalty;
@@ -1065,9 +1211,11 @@ class AttendanceProvider with ChangeNotifier {
 
         double earlyExitPenalty = 0.0;
         if (dayEarlyExit > 0 && group.earlyExitPenaltiesEnabled) {
-          if (dayEarlyExit >= group.earlyExitTier1Min && dayEarlyExit <= group.earlyExitTier1Max) {
+          if (dayEarlyExit >= group.earlyExitTier1Min &&
+              dayEarlyExit <= group.earlyExitTier1Max) {
             earlyExitPenalty = group.earlyExitTier1Penalty;
-          } else if (dayEarlyExit >= group.earlyExitTier2Min && dayEarlyExit <= group.earlyExitTier2Max) {
+          } else if (dayEarlyExit >= group.earlyExitTier2Min &&
+              dayEarlyExit <= group.earlyExitTier2Max) {
             earlyExitPenalty = group.earlyExitTier2Penalty;
           } else if (dayEarlyExit >= group.earlyExitTier3Min) {
             earlyExitPenalty = group.earlyExitTier3Penalty;
@@ -1081,7 +1229,8 @@ class AttendanceProvider with ChangeNotifier {
           if (dayExtra >= group.minOvertimeMinutes) {
             final baseOt = dayExtra.clamp(0, group.maxOvertimeMinutes);
             if (!isWorkingDay) {
-              totalOvertimeMinutes += (baseOt * group.weekendOvertimeRatio).toInt();
+              totalOvertimeMinutes += (baseOt * group.weekendOvertimeRatio)
+                  .toInt();
             } else {
               totalOvertimeMinutes += baseOt;
             }
@@ -1093,7 +1242,7 @@ class AttendanceProvider with ChangeNotifier {
         totalDeficitMinutes += dayDeficit;
       } else {
         // No record on this day
-        // Since Gross Salary is based on Days Worked (salaryCalcByDay), 
+        // Since Gross Salary is based on Days Worked (salaryCalcByDay),
         // completely missing a day naturally reduces the gross.
         // We do not add the missing shift to the deficit to avoid double-deduction.
       }
@@ -1104,15 +1253,21 @@ class AttendanceProvider with ChangeNotifier {
     final double overtimeValue = overtimeHours * hourlyRate * 1.5;
     final double attendanceDeficitHours = totalDeficitMinutes / 60.0;
     final double attendanceDeficit = attendanceDeficitHours * hourlyRate;
-    
+
     // Salary calculation by day / attendance
     // Standard HR practice: calculate daily rate based on 30 days regardless of the actual month length
     final double dailyRate = basicSalary / 30.0;
     final double salaryCalcByDay = daysWorked * dailyRate;
 
-    final double incrementalSalary = salaryCalcByDay + overtimeValue + (daysWorked > 0 ? totalAllowances : 0.0);
+    final double incrementalSalary =
+        salaryCalcByDay +
+        overtimeValue +
+        (daysWorked > 0 ? totalAllowances : 0.0);
     final double decrementalSalary = attendanceDeficit + totalPenalties;
-    final double netEarnings = (incrementalSalary - decrementalSalary).clamp(0.0, double.infinity);
+    final double netEarnings = (incrementalSalary - decrementalSalary).clamp(
+      0.0,
+      double.infinity,
+    );
 
     return PayrollReport(
       employee: emp,
@@ -1154,8 +1309,11 @@ class AttendanceProvider with ChangeNotifier {
     _decrementalSalary = report.decrementalSalary;
     _monthlyEarnings = report.netEarnings;
     final config = getActiveSalaryConfig(emp, selectedMonth);
-    _hourlyRate = config.workingHours > 0 ? (config.basicSalary / config.workingHours) : 0.0;
+    _hourlyRate = config.workingHours > 0
+        ? (config.basicSalary / config.workingHours)
+        : 0.0;
   }
+
   void _initializeMockData() {}
   void _initializeHRMockData() {}
   void _initializeMockChats() {}
@@ -1269,7 +1427,11 @@ class AttendanceProvider with ChangeNotifier {
                   final contactEmp = _employees.firstWhere((e) => e.id == cId);
                   contactName = contactEmp.name;
                 } catch (_) {}
-                _showLocalChatNotification(contactName, newMsg.text, senderId: cId);
+                _showLocalChatNotification(
+                  contactName,
+                  newMsg.text,
+                  senderId: cId,
+                );
               }
             }
 
@@ -1290,18 +1452,49 @@ class AttendanceProvider with ChangeNotifier {
       ensureChatLoaded(contact.id);
     }
   }
+
   Future<List<AttendanceRecord>> getEmployeeRecords(String empId) async {
+    final cleanId = empId.trim();
+    if (cleanId.isEmpty) return [];
+
+    // 1. If requesting current user and in-memory records are present
+    if (cleanId.toLowerCase() == _employeeId.toLowerCase() && _records.isNotEmpty) {
+      return _records;
+    }
+
+    // 2. Direct Firestore query
     if (_firebaseService.isAvailable) {
-      final fetched = await _firebaseService.getUserRecords(empId);
+      final fetched = await _firebaseService.getUserRecords(cleanId);
       if (fetched.isNotEmpty) {
         return fetched;
       }
+
+      // Check if cleanId matches an employee's name or email or alternative id
+      final match = _employees.firstWhere(
+        (e) => e.id.toLowerCase() == cleanId.toLowerCase() ||
+               e.email.toLowerCase() == cleanId.toLowerCase() ||
+               e.name.toLowerCase() == cleanId.toLowerCase(),
+        orElse: () => CompanyEmployee(id: '', name: '', email: '', position: ''),
+      );
+      if (match.id.isNotEmpty && match.id.toLowerCase() != cleanId.toLowerCase()) {
+        final altFetched = await _firebaseService.getUserRecords(match.id);
+        if (altFetched.isNotEmpty) {
+          return altFetched;
+        }
+      }
     }
-    final fromAll = _allCompanyRecords.where((r) => r.employeeId == empId).toList();
+
+    // 3. Check in-memory company records
+    final fromAll = _allCompanyRecords
+        .where((r) => r.employeeId != null &&
+            r.employeeId!.trim().toLowerCase() == cleanId.toLowerCase())
+        .toList();
     if (fromAll.isNotEmpty) {
       return fromAll;
     }
-    if (empId == _employeeId) {
+
+    // 4. Fallback if cleanId matches current employee
+    if (cleanId.toLowerCase() == _employeeId.toLowerCase()) {
       return _records;
     }
     return [];
@@ -1318,44 +1511,73 @@ class AttendanceProvider with ChangeNotifier {
     if (currentEmployee?.role == 'supervisor') {
       final subordinateIds = _structures
           .where((s) => s.supervisorId == _employeeId)
-          .expand((s) => _employees.where((e) => e.structureId == s.id).map((e) => e.id))
+          .expand(
+            (s) =>
+                _employees.where((e) => e.structureId == s.id).map((e) => e.id),
+          )
           .toSet();
       return _allCompanyRequests
-          .where((r) => r.status == 'Pending' && subordinateIds.contains(r.employeeId))
+          .where(
+            (r) =>
+                r.status == 'Pending' && subordinateIds.contains(r.employeeId),
+          )
           .length;
     }
     return 0;
   }
 
   Future<List<Request>> getEmployeeRequests(String empId) async {
+    final cleanId = empId.trim();
+    if (cleanId.isEmpty) return [];
+
     if (_firebaseService.isAvailable) {
-      final fetched = await _firebaseService.getUserRequests(empId);
+      final fetched = await _firebaseService.getUserRequests(cleanId);
       if (fetched.isNotEmpty) {
-        _allRequestsMap[empId] = fetched;
+        _allRequestsMap[cleanId] = fetched;
         return fetched;
       }
+
+      final match = _employees.firstWhere(
+        (e) => e.id.toLowerCase() == cleanId.toLowerCase() ||
+               e.email.toLowerCase() == cleanId.toLowerCase(),
+        orElse: () => CompanyEmployee(id: '', name: '', email: '', position: ''),
+      );
+      if (match.id.isNotEmpty && match.id.toLowerCase() != cleanId.toLowerCase()) {
+        final altFetched = await _firebaseService.getUserRequests(match.id);
+        if (altFetched.isNotEmpty) {
+          _allRequestsMap[cleanId] = altFetched;
+          return altFetched;
+        }
+      }
     }
-    final fromAll = _allCompanyRequests.where((r) => r.employeeId == empId).toList();
+    final fromAll = _allCompanyRequests
+        .where((r) => r.employeeId != null &&
+            r.employeeId!.trim().toLowerCase() == cleanId.toLowerCase())
+        .toList();
     if (fromAll.isNotEmpty) {
-      _allRequestsMap[empId] = fromAll;
+      _allRequestsMap[cleanId] = fromAll;
       return fromAll;
     }
-    return _allRequestsMap[empId] ?? [];
+    return _allRequestsMap[cleanId] ?? [];
   }
 
-  List<Request> getRequestsForEmployee(String empId) => _allRequestsMap[empId] ?? [];
+  List<Request> getRequestsForEmployee(String empId) =>
+      _allRequestsMap[empId] ?? [];
 
   // Profile screen stubs
   Future<void> updateProfileImage(dynamic file) async {}
   Future<void> switchProfile(String userId) async {
-    final emp = _employees.firstWhere((e) => e.id == userId, orElse: () => _employees.first);
+    final emp = _employees.firstWhere(
+      (e) => e.id == userId,
+      orElse: () => _employees.first,
+    );
     _employeeId = emp.id;
     _userName = emp.name;
     _userTitle = emp.position;
     _email = emp.email;
     _department = emp.structureId ?? '';
     _position = emp.position;
-    
+
     _records.clear();
     _isClockedIn = false;
     _activeRecord = null;
@@ -1371,6 +1593,7 @@ class AttendanceProvider with ChangeNotifier {
     recalculateAllStats();
     notifyListeners();
   }
+
   Future<void> updatePassword(dynamic oldOrNew, [dynamic newPass]) async {}
 
   // Requests screen stubs
@@ -1379,10 +1602,14 @@ class AttendanceProvider with ChangeNotifier {
       if (emp.groupHistory.isNotEmpty) {
         for (var entry in emp.groupHistory) {
           DateTime start = DateTime.parse(entry.startDate);
-          DateTime? end = entry.endDate.isNotEmpty ? DateTime.parse(entry.endDate) : null;
-          
+          DateTime? end = entry.endDate.isNotEmpty
+              ? DateTime.parse(entry.endDate)
+              : null;
+
           if (date.isAtSameMomentAs(start) || date.isAfter(start)) {
-            if (end == null || date.isBefore(end) || date.isAtSameMomentAs(end)) {
+            if (end == null ||
+                date.isBefore(end) ||
+                date.isAtSameMomentAs(end)) {
               return entry.groupId;
             }
           }
@@ -1402,13 +1629,15 @@ class AttendanceProvider with ChangeNotifier {
     String? note,
   }) async {
     final empId = employeeId ?? _employeeId;
-    
+
     // Auto-approve if the employee is the top of the structure and manager of it
     String status = 'Pending';
+    bool isTopManager = false;
     try {
-      final isTopManager = _structures.any((s) => 
-        s.supervisorId == empId && 
-        (s.parentId == null || s.parentId!.isEmpty)
+      isTopManager = _structures.any(
+        (s) =>
+            s.supervisorId == empId &&
+            (s.parentId == null || s.parentId!.isEmpty),
       );
       if (isTopManager) {
         status = 'Approved';
@@ -1424,6 +1653,9 @@ class AttendanceProvider with ChangeNotifier {
       targetShiftId: targetShiftId?.toString(),
       employeeId: empId,
       note: note,
+      createdAt: DateTime.now().toIso8601String(),
+      actionBy: isTopManager ? empId : null,
+      actionDate: isTopManager ? DateTime.now().toIso8601String() : null,
     );
     if (_allRequestsMap[empId] == null) {
       _allRequestsMap[empId] = [];
@@ -1482,7 +1714,12 @@ class AttendanceProvider with ChangeNotifier {
       final idx = reqs.indexWhere((r) => r.id == reqId);
       if (idx != -1) {
         final old = reqs[idx];
-        updatedReq = old.copyWith(status: status, employeeId: empId);
+        updatedReq = old.copyWith(
+          status: status,
+          employeeId: empId,
+          actionBy: _employeeId,
+          actionDate: DateTime.now().toIso8601String(),
+        );
         reqs[idx] = updatedReq;
       }
     }
@@ -1490,7 +1727,12 @@ class AttendanceProvider with ChangeNotifier {
     final cIdx = _allCompanyRequests.indexWhere((r) => r.id == reqId);
     if (cIdx != -1) {
       final old = _allCompanyRequests[cIdx];
-      updatedReq = old.copyWith(status: status, employeeId: empId);
+      updatedReq = old.copyWith(
+        status: status,
+        employeeId: empId,
+        actionBy: _employeeId,
+        actionDate: DateTime.now().toIso8601String(),
+      );
       _allCompanyRequests[cIdx] = updatedReq;
     }
 
@@ -1498,9 +1740,10 @@ class AttendanceProvider with ChangeNotifier {
 
     if (updatedReq != null && _firebaseService.isAvailable) {
       await _firebaseService.saveRequest(empId, updatedReq);
-      
+
       if (empId != _employeeId && status != 'Pending') {
-        final messageText = 'Your request for ${updatedReq.type} has been $status.';
+        final messageText =
+            'Your request for ${updatedReq.type} has been $status.';
         await sendChatMessage(empId, messageText);
       }
     }
@@ -1510,14 +1753,16 @@ class AttendanceProvider with ChangeNotifier {
   Future<String?> verifyLocation() async {
     final emp = currentEmployee;
     if (emp == null) return 'No employee found.';
-    
+
     List<Map<String, dynamic>> allowedZones = [];
-    
+
     // Check structure
     if (emp.structureId != null) {
       try {
         final struct = _structures.firstWhere((s) => s.id == emp.structureId);
-        if (struct.latitude != null && struct.longitude != null && struct.radius != null) {
+        if (struct.latitude != null &&
+            struct.longitude != null &&
+            struct.radius != null) {
           allowedZones.add({
             'lat': struct.latitude!,
             'lng': struct.longitude!,
@@ -1527,7 +1772,7 @@ class AttendanceProvider with ChangeNotifier {
         }
       } catch (_) {}
     }
-    
+
     // Check group locations
     final String? groupId = getGroupIdForDate(emp, DateTime.now());
     if (groupId != null) {
@@ -1542,11 +1787,11 @@ class AttendanceProvider with ChangeNotifier {
         }
       }
     }
-    
+
     if (allowedZones.isEmpty) {
       return null; // If no zones are configured, skip location verification.
     }
-    
+
     bool serviceEnabled;
     LocationPermission permission;
 
@@ -1562,20 +1807,22 @@ class AttendanceProvider with ChangeNotifier {
         return 'Location permissions are denied';
       }
     }
-    
+
     if (permission == LocationPermission.deniedForever) {
       return 'Location permissions are permanently denied, we cannot request permissions.';
-    } 
+    }
 
     Position position;
     try {
       position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
     } catch (e) {
       return 'Failed to get current location: $e';
     }
-    
+
     for (var zone in allowedZones) {
       double distanceInMeters = Geolocator.distanceBetween(
         position.latitude,
@@ -1587,7 +1834,7 @@ class AttendanceProvider with ChangeNotifier {
         return null; // Inside an allowed zone
       }
     }
-    
+
     return 'You are out of the allowed work zones. Please move closer to clock in/out.';
   }
 
@@ -1598,14 +1845,16 @@ class AttendanceProvider with ChangeNotifier {
       employeeId: _employeeId,
     );
     // Add to local records list at the beginning (sorted newest first)
-    _records.removeWhere((r) =>
-        r.checkIn.year == _activeRecord!.checkIn.year &&
-        r.checkIn.month == _activeRecord!.checkIn.month &&
-        r.checkIn.day == _activeRecord!.checkIn.day &&
-        r.checkIn.hour == _activeRecord!.checkIn.hour &&
-        r.checkIn.minute == _activeRecord!.checkIn.minute);
+    _records.removeWhere(
+      (r) =>
+          r.checkIn.year == _activeRecord!.checkIn.year &&
+          r.checkIn.month == _activeRecord!.checkIn.month &&
+          r.checkIn.day == _activeRecord!.checkIn.day &&
+          r.checkIn.hour == _activeRecord!.checkIn.hour &&
+          r.checkIn.minute == _activeRecord!.checkIn.minute,
+    );
     _records.insert(0, _activeRecord!);
-    
+
     if (_firebaseService.isAvailable) {
       try {
         await _firebaseService.saveRecord(_employeeId, _activeRecord!);
@@ -1635,12 +1884,14 @@ class AttendanceProvider with ChangeNotifier {
         employeeId: _employeeId,
       );
       // Update it in the records list
-      final idx = _records.indexWhere((r) =>
-          r.checkIn.year == _activeRecord!.checkIn.year &&
-          r.checkIn.month == _activeRecord!.checkIn.month &&
-          r.checkIn.day == _activeRecord!.checkIn.day &&
-          r.checkIn.hour == _activeRecord!.checkIn.hour &&
-          r.checkIn.minute == _activeRecord!.checkIn.minute);
+      final idx = _records.indexWhere(
+        (r) =>
+            r.checkIn.year == _activeRecord!.checkIn.year &&
+            r.checkIn.month == _activeRecord!.checkIn.month &&
+            r.checkIn.day == _activeRecord!.checkIn.day &&
+            r.checkIn.hour == _activeRecord!.checkIn.hour &&
+            r.checkIn.minute == _activeRecord!.checkIn.minute,
+      );
       if (idx != -1) {
         _records[idx] = _activeRecord!;
       } else {
@@ -1680,17 +1931,27 @@ class AttendanceProvider with ChangeNotifier {
   List<CompanyEmployee> getEmployeesInStructure(dynamic structId) {
     return _employees.where((e) => e.structureId == structId).toList();
   }
-  Future<void> deleteStructure(dynamic id) async => await _firebaseService.deleteStructure(id);
-  Future<void> updateStructure(dynamic struct) async => await _firebaseService.saveStructure(struct);
-  Future<void> addStructure(dynamic struct) async => await _firebaseService.saveStructure(struct);
 
-  Future<void> deleteShift(dynamic id) async => await _firebaseService.deleteShift(id);
-  Future<void> updateShift(dynamic shift) async => await _firebaseService.saveShift(shift);
-  Future<void> addShift(dynamic shift) async => await _firebaseService.saveShift(shift);
+  Future<void> deleteStructure(dynamic id) async =>
+      await _firebaseService.deleteStructure(id);
+  Future<void> updateStructure(dynamic struct) async =>
+      await _firebaseService.saveStructure(struct);
+  Future<void> addStructure(dynamic struct) async =>
+      await _firebaseService.saveStructure(struct);
 
-  Future<void> deleteGroup(dynamic id) async => await _firebaseService.deleteGroup(id);
-  Future<void> updateGroup(dynamic group) async => await _firebaseService.saveGroup(group);
-  Future<void> addGroup(dynamic group) async => await _firebaseService.saveGroup(group);
+  Future<void> deleteShift(dynamic id) async =>
+      await _firebaseService.deleteShift(id);
+  Future<void> updateShift(dynamic shift) async =>
+      await _firebaseService.saveShift(shift);
+  Future<void> addShift(dynamic shift) async =>
+      await _firebaseService.saveShift(shift);
+
+  Future<void> deleteGroup(dynamic id) async =>
+      await _firebaseService.deleteGroup(id);
+  Future<void> updateGroup(dynamic group) async =>
+      await _firebaseService.saveGroup(group);
+  Future<void> addGroup(dynamic group) async =>
+      await _firebaseService.saveGroup(group);
 
   Future<void> deleteEmployee(dynamic id) async {
     final strId = id.toString();
@@ -1743,16 +2004,24 @@ class AttendanceProvider with ChangeNotifier {
     await addEmployee(superAdmin);
   }
 
+  Future<void> deleteHoliday(dynamic id) async =>
+      await _firebaseService.deleteHoliday(id);
+  Future<void> updateHoliday(dynamic holiday) async =>
+      await _firebaseService.saveHoliday(holiday);
+  Future<void> addHoliday(dynamic holiday) async =>
+      await _firebaseService.saveHoliday(holiday);
 
-  Future<void> deleteHoliday(dynamic id) async => await _firebaseService.deleteHoliday(id);
-  Future<void> updateHoliday(dynamic holiday) async => await _firebaseService.saveHoliday(holiday);
-  Future<void> addHoliday(dynamic holiday) async => await _firebaseService.saveHoliday(holiday);
+  Future<void> deleteLocation(dynamic id) async =>
+      await _firebaseService.deleteLocation(id);
+  Future<void> updateLocation(dynamic loc) async =>
+      await _firebaseService.saveLocation(loc);
+  Future<void> addLocation(dynamic loc) async =>
+      await _firebaseService.saveLocation(loc);
 
-  Future<void> deleteLocation(dynamic id) async => await _firebaseService.deleteLocation(id);
-  Future<void> updateLocation(dynamic loc) async => await _firebaseService.saveLocation(loc);
-  Future<void> addLocation(dynamic loc) async => await _firebaseService.saveLocation(loc);
-
-  Future<void> updateEmployeeFaceEmbedding(dynamic empId, dynamic embedding) async {}
+  Future<void> updateEmployeeFaceEmbedding(
+    dynamic empId,
+    dynamic embedding,
+  ) async {}
   dynamic getHolidayForEmployee(dynamic emp, dynamic date) => null;
   dynamic getApprovedLeaveForDate(dynamic date, {dynamic employeeId}) => null;
 
@@ -1761,10 +2030,10 @@ class AttendanceProvider with ChangeNotifier {
     try {
       final emp = _employees.firstWhere((e) => e.id == empId);
       if (emp.structureId == null) return [];
-      
+
       final struct = _structures.firstWhere((s) => s.id == emp.structureId);
       if (struct.supervisorId == null) return [];
-      
+
       return _employees.where((e) => e.id == struct.supervisorId).toList();
     } catch (_) {
       return [];
@@ -1804,7 +2073,11 @@ class AttendanceProvider with ChangeNotifier {
 
   Request? getRequestById(dynamic reqId, [dynamic b]) => null;
 
-  Future<void> sendChatMessage(dynamic receiverId, [dynamic text, dynamic c]) async {
+  Future<void> sendChatMessage(
+    dynamic receiverId, [
+    dynamic text,
+    dynamic c,
+  ]) async {
     final msgStr = text?.toString() ?? '';
     if (msgStr.isEmpty) return;
 

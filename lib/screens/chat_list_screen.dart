@@ -239,7 +239,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
   Widget _buildBackButton(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
-      onTap: () => Navigator.pop(context),
+      onTap: () {
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        } else {
+          Navigator.of(context, rootNavigator: true).pop();
+        }
+      },
       child: Container(
         width: 44,
         height: 44,
