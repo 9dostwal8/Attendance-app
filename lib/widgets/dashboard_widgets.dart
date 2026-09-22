@@ -954,16 +954,20 @@ class PendingApprovalsCard extends StatelessWidget {
                       provider.currentEmployee?.role != 'hr' &&
                       provider.currentEmployee?.role != 'admin' &&
                       !provider.canEditCompanyInfo;
+                  final hasHRManager = provider.employees.any(
+                    (e) => (e.role == 'hr' || e.role == 'admin') && e.id != emp.id,
+                  );
+                  final shouldMoveToHR = isSuper && hasHRManager;
                   await provider.updateRequestStatus(
                     emp.id,
                     req.id,
-                    isSuper ? 'Pending HR' : 'Approved',
+                    shouldMoveToHR ? 'Pending HR' : 'Approved',
                   );
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                          isSuper
+                          shouldMoveToHR
                               ? '${emp.name}\'s request was approved and forwarded to HR.'
                               : '${emp.name}\'s request was approved.',
                         ),

@@ -1260,7 +1260,10 @@ class _RequestsScreenState extends State<RequestsScreen> {
                           // Approve Button
                           GestureDetector(
                             onTap: () async {
-                              final nextStatus = canActAsHR ? 'Approved' : 'Pending HR';
+                              final hasHRManager = provider.employees.any(
+                                (e) => (e.role == 'hr' || e.role == 'admin') && e.id != employee.id,
+                              );
+                              final nextStatus = (canActAsHR || !hasHRManager) ? 'Approved' : 'Pending HR';
                               await provider.updateRequestStatus(
                                 employee.id,
                                 request.id,
@@ -1303,17 +1306,25 @@ class _RequestsScreenState extends State<RequestsScreen> {
                                     size: 14,
                                   ),
                                   SizedBox(width: 4),
-                                  Text(
-                                    canActAsHR
-                                        ? provider.translate('approve')
-                                        : (provider.translate('approve') != 'approve'
+                                  Builder(
+                                    builder: (context) {
+                                      final hasHRManager = provider.employees.any(
+                                        (e) => (e.role == 'hr' || e.role == 'admin') && e.id != employee.id,
+                                      );
+                                      final isDirectApproval = canActAsHR || !hasHRManager;
+                                      return Text(
+                                        isDirectApproval
                                             ? provider.translate('approve')
-                                            : 'Approve & Forward to HR'),
-                                    style: TextStyle(
-                                      color: Color(0xFFA7F3D0),
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                            : (provider.translate('approve') != 'approve'
+                                                ? provider.translate('approve')
+                                                : 'Approve & Forward to HR'),
+                                        style: TextStyle(
+                                          color: Color(0xFFA7F3D0),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      );
+                                    },
                                   ),
                                 ],
                               ),

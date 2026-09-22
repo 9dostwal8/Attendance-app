@@ -2654,8 +2654,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
     } else if (isSupBypassed) {
       supColor = const Color(0xFF3B82F6);
       supIcon = Icons.check_circle_outline_rounded;
-      supTitle = 'Direct to HR Review';
-      supSubtitle = 'Supervisor step not required for this role';
+      supTitle = 'Passed Supervisor Review';
+      supSubtitle = 'Structure has no supervisor assigned (Passed)';
     } else {
       supColor = textColor.withValues(alpha: 0.3);
       supIcon = Icons.radio_button_unchecked_rounded;
@@ -2664,6 +2664,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
 
     // Determine Step 3 (HR Manager) State
+    final bool hasHRManager = provider.employees.any(
+      (e) => (e.role == 'hr' || e.role == 'admin') && e.id != req.employeeId,
+    );
     final bool isHrApproved = isApproved;
     final bool isHrRejected = isRejected && !isSupRejected;
     final bool isHrPending = req.status == 'Pending HR';
@@ -2674,10 +2677,22 @@ class _HistoryScreenState extends State<HistoryScreen> {
     String hrSubtitle;
 
     if (isHrApproved) {
-      hrColor = const Color(0xFF10B981);
-      hrIcon = Icons.check_circle_rounded;
-      hrTitle = 'Approved by $hrName';
-      hrSubtitle = '$hrRole • $formattedHrDate (Message sent to employee)';
+      if (req.hrActionBy == null && req.supervisorActionBy != null && !hasHRManager) {
+        hrColor = const Color(0xFF10B981);
+        hrIcon = Icons.check_circle_rounded;
+        hrTitle = 'Approved (Passed HR Review)';
+        hrSubtitle = 'No HR Manager configured (Passed)';
+      } else if (req.hrActionBy == null && req.supervisorActionBy == null && !hasHRManager) {
+        hrColor = const Color(0xFF10B981);
+        hrIcon = Icons.check_circle_rounded;
+        hrTitle = 'Auto-Approved';
+        hrSubtitle = 'No supervisor or HR Manager required (Passed)';
+      } else {
+        hrColor = const Color(0xFF10B981);
+        hrIcon = Icons.check_circle_rounded;
+        hrTitle = 'Approved by $hrName';
+        hrSubtitle = '$hrRole • $formattedHrDate (Message sent to employee)';
+      }
     } else if (isHrRejected) {
       hrColor = const Color(0xFFEF4444);
       hrIcon = Icons.cancel_rounded;

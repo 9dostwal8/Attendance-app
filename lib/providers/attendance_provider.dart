@@ -1658,16 +1658,28 @@ class AttendanceProvider with ChangeNotifier {
         structureSupervisorId = struct?.supervisorId;
       }
 
-      // If employee has a structure supervisor who is not themselves, route to supervisor
-      if (structureSupervisorId != null &&
+      // Check if structure has an active supervisor who is not the submitter
+      final hasSupervisor = structureSupervisorId != null &&
           structureSupervisorId.isNotEmpty &&
           structureSupervisorId != empId &&
+          _employees.any((e) => e.id == structureSupervisorId) &&
           emp?.role != 'hr' &&
-          emp?.role != 'admin') {
+          emp?.role != 'admin';
+
+      // Check if company has an HR Manager
+      final hasHRManager = _employees.any(
+        (e) => (e.role == 'hr' || e.role == 'admin') && e.id != empId,
+      );
+
+      if (hasSupervisor) {
+        // Starts with Supervisor
         status = 'Pending Supervisor';
-      } else {
-        // If employee is HR, or has no supervisor, or is their structure's supervisor: route directly to HR Manager
+      } else if (hasHRManager) {
+        // Structure does not have a supervisor -> pass supervisor review, go to HR Manager
         status = 'Pending HR';
+      } else {
+        // Neither supervisor nor HR Manager -> pass both directly to Approved!
+        status = 'Approved';
       }
     }
 
@@ -1681,8 +1693,8 @@ class AttendanceProvider with ChangeNotifier {
       employeeId: empId,
       note: note,
       createdAt: DateTime.now().toIso8601String(),
-      actionBy: isTopManager ? empId : null,
-      actionDate: isTopManager ? DateTime.now().toIso8601String() : null,
+      actionBy: (isTopManager || status == 'Approved') ? empId : null,
+      actionDate: (isTopManager || status == 'Approved') ? DateTime.now().toIso8601String() : null,
     );
     if (_allRequestsMap[empId] == null) {
       _allRequestsMap[empId] = [];
@@ -1769,12 +1781,27 @@ class AttendanceProvider with ChangeNotifier {
       actBy = _employeeId;
       actDate = nowIso;
     } else if (targetStatus == 'Approved') {
-      // If supervisor approves a request in 'Pending Supervisor' (or 'Pending'), advance to HR
+      // Check if the organization has an HR Manager
+      final hasHRManager = _employees.any(
+        (e) => (e.role == 'hr' || e.role == 'admin') && e.id != empId,
+      );
+
+      // If supervisor approves a request in 'Pending Supervisor' (or 'Pending')
       if (isSupervisor && !isHR && (existing?.status == 'Pending Supervisor' || existing?.status == 'Pending')) {
-        finalStatus = 'Pending HR';
-        supBy = _employeeId;
-        supDate = nowIso;
-        supStatus = 'Approved';
+        if (hasHRManager) {
+          finalStatus = 'Pending HR';
+          supBy = _employeeId;
+          supDate = nowIso;
+          supStatus = 'Approved';
+        } else {
+          // If no HR Manager, just pass HR and approve directly!
+          finalStatus = 'Approved';
+          supBy = _employeeId;
+          supDate = nowIso;
+          supStatus = 'Approved';
+          actBy = _employeeId;
+          actDate = nowIso;
+        }
       } else {
         // HR approves or final approval
         finalStatus = 'Approved';
@@ -1839,9 +1866,10 @@ class AttendanceProvider with ChangeNotifier {
       // Automated messages to the employee who registered the request:
       if (empId != _employeeId) {
         if (finalStatus == 'Approved') {
-          // When HR Manager accepts the request
+          // When request gets final approval
+          final approvedByLabel = hrBy != null ? 'HR Management' : 'your Supervisor';
           final messageText =
-              'Your request for ${updatedReq.type} on ${updatedReq.date} has been approved by HR Management.';
+              'Your request for ${updatedReq.type} on ${updatedReq.date} has been approved by $approvedByLabel.';
           await sendChatMessage(empId, messageText);
         } else if (finalStatus == 'Pending HR') {
           // When Supervisor approves and it moves to HR Manager
