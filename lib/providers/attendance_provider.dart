@@ -39,30 +39,57 @@ class AttendanceProvider with ChangeNotifier {
   bool get isLoggedIn => _isLoggedIn;
 
   void _syncCurrentEmployeeInfo() {
-    if (_employees.isNotEmpty) {
+    if (_employees.isNotEmpty && _employeeId.isNotEmpty) {
       CompanyEmployee? match;
-      try {
-        match = _employees.firstWhere((e) => e.id == _employeeId);
-      } catch (_) {
-        match = _employees.first;
-        _employeeId = match.id;
+      for (var e in _employees) {
+        if (e.id == _employeeId) {
+          match = e;
+          break;
+        }
       }
-      _userName = match.name;
-      _userTitle = match.position;
-      _position = match.position;
-      _email = match.email;
-      _department = match.position;
+      if (match != null) {
+        _userName = match.name;
+        _userTitle = match.position;
+        _position = match.position;
+        _email = match.email;
+        _department = match.structureId ?? match.position;
+        if (_isLoggedIn) {
+          _saveAuthSession(
+            true,
+            match.id,
+            name: match.name,
+            email: match.email,
+            position: match.position,
+          );
+        }
+      }
+      // Note: If match is null (e.g. employee list still streaming from Firestore),
+      // we purposefully preserve _employeeId so it is not hijacked or replaced.
     }
   }
 
-  Future<void> _saveAuthSession(bool loggedIn, String empId) async {
+  Future<void> _saveAuthSession(
+    bool loggedIn,
+    String empId, {
+    String? name,
+    String? email,
+    String? position,
+  }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isLoggedIn', loggedIn);
       if (loggedIn) {
         await prefs.setString('loggedInEmployeeId', empId);
+        if (name != null) await prefs.setString('loggedInUserName', name);
+        if (email != null) await prefs.setString('loggedInEmail', email);
+        if (position != null) {
+          await prefs.setString('loggedInPosition', position);
+        }
       } else {
         await prefs.remove('loggedInEmployeeId');
+        await prefs.remove('loggedInUserName');
+        await prefs.remove('loggedInEmail');
+        await prefs.remove('loggedInPosition');
       }
     } catch (e) {
       debugPrint('Error saving auth session: $e');
@@ -74,13 +101,26 @@ class AttendanceProvider with ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final isLoggedInSaved = prefs.getBool('isLoggedIn') ?? false;
       final savedEmployeeId = prefs.getString('loggedInEmployeeId');
+      final savedName = prefs.getString('loggedInUserName');
+      final savedEmail = prefs.getString('loggedInEmail');
+      final savedPosition = prefs.getString('loggedInPosition');
 
       if (isLoggedInSaved) {
         _isLoggedIn = true;
         if (savedEmployeeId != null && savedEmployeeId.isNotEmpty) {
           _employeeId = savedEmployeeId;
-          _syncCurrentEmployeeInfo();
         }
+        if (savedName != null && savedName.isNotEmpty) {
+          _userName = savedName;
+        }
+        if (savedEmail != null && savedEmail.isNotEmpty) {
+          _email = savedEmail;
+        }
+        if (savedPosition != null && savedPosition.isNotEmpty) {
+          _position = savedPosition;
+          _userTitle = savedPosition;
+        }
+        _syncCurrentEmployeeInfo();
         notifyListeners();
       }
     } catch (e) {
@@ -114,7 +154,13 @@ class AttendanceProvider with ChangeNotifier {
         _email = match.email;
         _isLoggedIn = true;
         _isLoading = false;
-        await _saveAuthSession(true, _employeeId);
+        await _saveAuthSession(
+          true,
+          _employeeId,
+          name: _userName,
+          email: _email,
+          position: _position,
+        );
 
         _records.clear();
         await _setupFirestoreListeners();
@@ -143,7 +189,13 @@ class AttendanceProvider with ChangeNotifier {
     _position = employee.position;
     _email = employee.email;
     _isLoggedIn = true;
-    await _saveAuthSession(true, _employeeId);
+    await _saveAuthSession(
+      true,
+      _employeeId,
+      name: _userName,
+      email: _email,
+      position: _position,
+    );
 
     _records.clear();
     await _setupFirestoreListeners();
@@ -294,6 +346,14 @@ class AttendanceProvider with ChangeNotifier {
   CompanyEmployee? get currentEmployee {
     for (var e in _employees) {
       if (e.id == _employeeId) return e;
+    }
+    if (_isLoggedIn && _employeeId.isNotEmpty) {
+      return CompanyEmployee(
+        id: _employeeId,
+        name: _userName,
+        email: _email,
+        position: _position,
+      );
     }
     return null;
   }
@@ -455,9 +515,10 @@ class AttendanceProvider with ChangeNotifier {
       ),
     ];
 
-    // Always ensure Super Admin is available in the list so the user is never locked out
-    if (!_employees.any((e) => e.email == 'admin@company.com')) {
-      _employees.add(
+    // Always ensure Super Admin is available in seed list if database needs initial seeding
+    final seedEmployees = List<CompanyEmployee>.from(_employees);
+    if (!seedEmployees.any((e) => e.email == 'admin@company.com')) {
+      seedEmployees.add(
         CompanyEmployee(
           id: 'admin_super_account',
           name: 'Super Admin',
@@ -481,7 +542,7 @@ class AttendanceProvider with ChangeNotifier {
             structures: _structures,
             shifts: _shifts,
             groups: _groups,
-            employees: _employees,
+            employees: seedEmployees,
             userRecords: _records,
             testUserId: _employeeId,
             userRequests: defaultRequests,
@@ -1607,6 +1668,14 @@ class AttendanceProvider with ChangeNotifier {
     }
     _chatSubscriptionsMap.clear();
     _chatMessagesMap.clear();
+
+    await _saveAuthSession(
+      true,
+      _employeeId,
+      name: _userName,
+      email: _email,
+      position: _position,
+    );
 
     // Restart listeners
     await _setupFirestoreListeners();
