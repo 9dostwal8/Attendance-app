@@ -888,9 +888,9 @@ class AttendanceProvider with ChangeNotifier {
 
     // 3. Fallback to base configuration if no history matches
     return SalaryHistoryEntry(
-      basicSalary: emp.basicSalary > 0 ? emp.basicSalary : 3240.0,
+      basicSalary: emp.basicSalary,
       workingHours: emp.workingHours > 0 ? emp.workingHours : 160.0,
-      currency: emp.salaryCurrency,
+      currency: emp.salaryCurrency.isNotEmpty ? emp.salaryCurrency : 'USD',
       startDate: '',
       foodAllowance: emp.foodAllowance,
       transportationAllowance: emp.transportationAllowance,
@@ -924,8 +924,23 @@ class AttendanceProvider with ChangeNotifier {
     // Records for this employee
     final employeeRecords =
         customRecords ??
-        ((emp.id == _employeeId) ? _records : <AttendanceRecord>[]);
-    final employeeRequests = _allRequestsMap[emp.id] ?? [];
+        ((emp.id == _employeeId)
+            ? _records
+            : _allCompanyRecords
+                .where((r) =>
+                    r.employeeId != null &&
+                    (r.employeeId!.trim().toLowerCase() == emp.id.trim().toLowerCase() ||
+                     r.employeeId!.trim().toLowerCase() == emp.name.trim().toLowerCase() ||
+                     r.employeeId!.trim().toLowerCase() == emp.email.trim().toLowerCase()))
+                .toList());
+    final employeeRequests = _allRequestsMap[emp.id] ??
+        _allCompanyRequests
+            .where((r) =>
+                r.employeeId != null &&
+                (r.employeeId!.trim().toLowerCase() == emp.id.trim().toLowerCase() ||
+                 r.employeeId!.trim().toLowerCase() == emp.name.trim().toLowerCase() ||
+                 r.employeeId!.trim().toLowerCase() == emp.email.trim().toLowerCase()))
+            .toList();
 
     final daysInMonth = DateUtils.getDaysInMonth(
       targetMonth.year,

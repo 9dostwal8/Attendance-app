@@ -114,8 +114,11 @@ class PayrollScreen extends StatelessWidget {
                                 visibleEmployees = [currentUser];
                               }
                             }
-                            final reports = visibleEmployees
-                                .where((emp) => emp.salaryHistory.isNotEmpty)
+                            final payrollEmployees = visibleEmployees
+                                .where((emp) => emp.basicSalary > 0 || emp.salaryHistory.isNotEmpty)
+                                .toList();
+                            final targetEmployees = payrollEmployees.isNotEmpty ? payrollEmployees : visibleEmployees;
+                            final reports = targetEmployees
                                 .map((emp) => provider.generatePayrollReport(emp, provider.selectedMonth))
                                 .toList();
                             if (reports.isEmpty) {
@@ -474,10 +477,49 @@ class PayrollScreen extends StatelessWidget {
       }
     }
 
-    final reports = visibleEmployees
-        .where((emp) => emp.salaryHistory.isNotEmpty)
+    final payrollEmployees = visibleEmployees
+        .where((emp) => emp.basicSalary > 0 || emp.salaryHistory.isNotEmpty)
+        .toList();
+    final targetEmployees = payrollEmployees.isNotEmpty ? payrollEmployees : visibleEmployees;
+    final reports = targetEmployees
         .map((emp) => provider.generatePayrollReport(emp, provider.selectedMonth))
         .toList();
+
+    if (reports.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 48.0),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.monetization_on_outlined,
+                size: 48,
+                color: (Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.3),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'No Payroll Records Found',
+                style: TextStyle(
+                  color: (Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'No employees have a configured salary or salary history for this period.',
+                style: TextStyle(
+                  color: (Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.5),
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final numberFormat = NumberFormat('#,##0.00');
 
     String formatEmpAmount(double amount, String currency) {
