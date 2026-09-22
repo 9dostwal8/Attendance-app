@@ -1819,29 +1819,32 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Widget _buildAddRequestButton(AttendanceProvider provider) {
-    return ElevatedButton.icon(
-      onPressed: () {
-        showNewRequestDialog(
-          context: context,
-          provider: provider,
-        );
-      },
-      icon: const Icon(Icons.add, size: 20, color: Colors.white),
-      label: Text(
-        provider.translate('new_request'),
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          letterSpacing: -0.2,
+    return SizedBox(
+      height: 44,
+      child: ElevatedButton.icon(
+        onPressed: () {
+          showNewRequestDialog(
+            context: context,
+            provider: provider,
+          );
+        },
+        icon: const Icon(Icons.add, size: 20, color: Colors.white),
+        label: Text(
+          provider.translate('new_request'),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.2,
+          ),
         ),
-      ),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFFFF5C38),
-        foregroundColor: Colors.white,
-        elevation: 0,
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
-        shape: const StadiumBorder(),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFFFF5C38),
+          foregroundColor: Colors.white,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 22),
+          shape: const StadiumBorder(),
+        ),
       ),
     );
   }
@@ -2005,70 +2008,76 @@ class _HistoryScreenState extends State<HistoryScreen> {
     if (!isSelected) {
       return Tooltip(
         message: 'Click on any day row in the table to view its requests',
-        child: OutlinedButton.icon(
-          onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Click on any day row in the table first.'),
-                duration: Duration(seconds: 2),
-              ),
-            );
-          },
-          icon: Icon(
-            Icons.assignment_outlined,
-            size: 18,
-            color: isDark
-                ? Colors.white38
-                : const Color(0xFF64748B).withValues(alpha: 0.5),
-          ),
-          label: Text(
-            provider.translate('requests'),
-            style: TextStyle(
+        child: SizedBox(
+          height: 44,
+          child: OutlinedButton.icon(
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Click on any day row in the table first.'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+            icon: Icon(
+              Icons.assignment_outlined,
+              size: 18,
               color: isDark
                   ? Colors.white38
                   : const Color(0xFF64748B).withValues(alpha: 0.5),
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
             ),
-          ),
-          style: OutlinedButton.styleFrom(
-            side: BorderSide(
-              color: (Theme.of(context).textTheme.bodyLarge?.color ??
-                      Colors.black)
-                  .withValues(alpha: 0.12),
+            label: Text(
+              provider.translate('requests'),
+              style: TextStyle(
+                color: isDark
+                    ? Colors.white38
+                    : const Color(0xFF64748B).withValues(alpha: 0.5),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
-            shape: const StadiumBorder(),
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(
+                color: (Theme.of(context).textTheme.bodyLarge?.color ??
+                        Colors.black)
+                    .withValues(alpha: 0.12),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              shape: const StadiumBorder(),
+            ),
           ),
         ),
       );
     }
 
-    return ElevatedButton.icon(
-      onPressed: () {
-        if (selectedRow != null) {
-          _showDayRequestsDialog(context, provider, selectedRow);
-        }
-      },
-      icon: const Icon(Icons.assignment_outlined, size: 18, color: Colors.white),
-      label: Text(
-        count > 0
-            ? '${provider.translate('requests')} ($count)'
-            : provider.translate('requests'),
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-          letterSpacing: -0.2,
+    return SizedBox(
+      height: 44,
+      child: ElevatedButton.icon(
+        onPressed: () {
+          if (selectedRow != null) {
+            _showDayRequestsDialog(context, provider, selectedRow);
+          }
+        },
+        icon: const Icon(Icons.assignment_outlined, size: 18, color: Colors.white),
+        label: Text(
+          count > 0
+              ? '${provider.translate('requests')} ($count)'
+              : provider.translate('requests'),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.2,
+          ),
         ),
-      ),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF2E65FF),
-        foregroundColor: Colors.white,
-        elevation: 2,
-        shadowColor: const Color(0xFF2E65FF).withValues(alpha: 0.4),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
-        shape: const StadiumBorder(),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF2E65FF),
+          foregroundColor: Colors.white,
+          elevation: 2,
+          shadowColor: const Color(0xFF2E65FF).withValues(alpha: 0.4),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          shape: const StadiumBorder(),
+        ),
       ),
     );
   }
