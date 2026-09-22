@@ -49,113 +49,76 @@ class PayrollScreen extends StatelessWidget {
       }
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SafeArea(
-        child: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Page Header
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10.0,
-                  vertical: 8.0,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(left: 10.0),
-                      child: Text(
-                        provider.translate('payroll_details'),
-                        style: TextStyle(
-                          color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                    ),
-                    Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Controls (Month Selector, Export)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20.0, 16.0, 20.0, 8.0),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  if (constraints.maxWidth >= 750) {
+                    return Row(
                       children: [
-                        IconButton(
-                          icon: Icon(Icons.chevron_left, color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black))),
-                          onPressed: () {
-                            final current = provider.selectedMonth;
-                            provider.setSelectedMonth(DateTime(current.year, current.month - 1));
-                          },
-                        ),
-                        Text(
-                          DateFormat('MMM yyyy').format(provider.selectedMonth),
-                          style: TextStyle(
-                            color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)), 
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                        Expanded(
+                          child: Align(
+                            alignment: AlignmentDirectional.centerStart,
+                            child: Text(
+                              provider.translate('payroll_details'),
+                              style: TextStyle(
+                                color: textColor,
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
                           ),
                         ),
-                        IconButton(
-                          icon: Icon(Icons.chevron_right, color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black))),
-                          onPressed: () {
-                            final current = provider.selectedMonth;
-                            provider.setSelectedMonth(DateTime(current.year, current.month + 1));
-                          },
-                        ),
-                        PopupMenuButton<String>(
-                          icon: Icon(Icons.file_download, color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black))),
-                          tooltip: 'Export Payroll',
-                          onSelected: (String value) async {
-                            final currentUser = provider.currentEmployee;
-                            List<CompanyEmployee> visibleEmployees = [];
-                            if (currentUser != null) {
-                              if (currentUser.role == 'hr' || currentUser.role == 'admin') {
-                                visibleEmployees = provider.employees;
-                              } else {
-                                visibleEmployees = [currentUser];
-                              }
-                            }
-                            final payrollEmployees = visibleEmployees
-                                .where((emp) => emp.basicSalary > 0 || emp.salaryHistory.isNotEmpty)
-                                .toList();
-                            final targetEmployees = payrollEmployees.isNotEmpty ? payrollEmployees : visibleEmployees;
-                            final reports = targetEmployees
-                                .map((emp) => provider.generatePayrollReport(emp, provider.selectedMonth))
-                                .toList();
-                            if (reports.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No payroll data to export.')));
-                              return;
-                            }
-                            try {
-                              if (value == 'excel') {
-                                await ExportService.exportPayrollToExcel(reports, provider.selectedMonth, provider.companyProfile);
-                              } else if (value == 'pdf') {
-                                await ExportService.exportPayrollToPdf(reports, provider.selectedMonth, provider.companyProfile);
-                              }
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Export successful!')));
-                              }
-                            } catch (e) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e')));
-                              }
-                            }
-                          },
-                          itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                            const PopupMenuItem<String>(
-                              value: 'excel',
-                              child: Text('Export to Excel'),
-                            ),
-                            const PopupMenuItem<String>(
-                              value: 'pdf',
-                              child: Text('Export to PDF'),
-                            ),
-                          ],
+                        _buildMonthSelector(context, provider),
+                        Expanded(
+                          child: Align(
+                            alignment: AlignmentDirectional.centerEnd,
+                            child: _buildExportButton(context, provider),
+                          ),
                         ),
                       ],
-                    ),
-                  ],
-                ),
+                    );
+                  } else {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                provider.translate('payroll_details'),
+                                style: TextStyle(
+                                  color: textColor,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                            ),
+                            _buildExportButton(context, provider),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Center(
+                          child: _buildMonthSelector(context, provider),
+                        ),
+                      ],
+                    );
+                  }
+                },
               ),
+            ),
 
               Expanded(
                 child: SingleChildScrollView(
@@ -460,8 +423,7 @@ class PayrollScreen extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildWebPayrollTable(BuildContext context, AttendanceProvider provider) {
@@ -530,6 +492,10 @@ class PayrollScreen extends StatelessWidget {
       }
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final dividerColor = isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.06);
+
     return ConstrainedBox(
       constraints: BoxConstraints(minWidth: MediaQuery.of(context).size.width - 40),
       child: GlassContainer(
@@ -540,57 +506,244 @@ class PayrollScreen extends StatelessWidget {
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             child: Theme(
-              data: ThemeData.dark().copyWith(
-                dividerColor: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.08)),
+              data: (isDark ? ThemeData.dark() : ThemeData.light()).copyWith(
+                dividerColor: dividerColor,
               ),
               child: DataTable(
                 columnSpacing: 22,
-                headingRowColor: WidgetStateProperty.all(((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.06))),
+                headingRowColor: WidgetStateProperty.all(
+                  isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF1F5F9),
+                ),
                 headingRowHeight: 46,
                 dataRowMinHeight: 44,
                 dataRowMaxHeight: 64,
                 columns: [
-                  DataColumn(label: Text('Employee', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
-                  DataColumn(label: Text('Basic Salary', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
-                  DataColumn(label: Text('Salary by Day', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF5B9BFF)))),
-                  DataColumn(label: Text('Days Worked', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
-                  DataColumn(label: Text('Working Hrs', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
-                  DataColumn(label: Text('Overtime (Hrs)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF00FF87)))),
-                  DataColumn(label: Text('Overtime (Val)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF00FF87)))),
-                  DataColumn(label: Text('Deficit (Hrs)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFFF5C5C)))),
-                  DataColumn(label: Text('Deficit (Val)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFFF5C5C)))),
-                  DataColumn(label: Text('Food Allow.', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF5B9BFF)))),
-                  DataColumn(label: Text('Trans. Allow.', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF5B9BFF)))),
-                  DataColumn(label: Text('Other Allow.', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF5B9BFF)))),
-                  DataColumn(label: Text('Penalties', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFFF5C5C)))),
-                  DataColumn(label: Text('Gross Salary', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2EBD96)))),
-                  DataColumn(label: Text('Deductions', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFFF5C5C)))),
-                  DataColumn(label: Text('Net Earnings', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2EBD96)))),
+                  DataColumn(label: Text('Employee', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13))),
+                  DataColumn(label: Text('Basic Salary', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13))),
+                  DataColumn(label: Text('Salary by Day', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF5B9BFF)))),
+                  DataColumn(label: Text('Days Worked', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13))),
+                  DataColumn(label: Text('Working Hrs', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13))),
+                  DataColumn(label: Text('Overtime (Hrs)', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF00FF87)))),
+                  DataColumn(label: Text('Overtime (Val)', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF00FF87)))),
+                  DataColumn(label: Text('Deficit (Hrs)', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFFF5C5C)))),
+                  DataColumn(label: Text('Deficit (Val)', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFFF5C5C)))),
+                  DataColumn(label: Text('Food Allow.', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF5B9BFF)))),
+                  DataColumn(label: Text('Trans. Allow.', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF5B9BFF)))),
+                  DataColumn(label: Text('Other Allow.', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF5B9BFF)))),
+                  DataColumn(label: Text('Penalties', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFFF5C5C)))),
+                  DataColumn(label: Text('Gross Salary', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2EBD96)))),
+                  DataColumn(label: Text('Deductions', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFFF5C5C)))),
+                  DataColumn(label: Text('Net Earnings', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2EBD96)))),
                 ],
                 rows: reports.map((r) {
                   return DataRow(
                     cells: [
-                      DataCell(Text(r.employee.name, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12))),
-                      DataCell(Text(formatEmpAmount(r.basicSalary, r.currency), style: TextStyle(fontSize: 12))),
-                      DataCell(Text(formatEmpAmount(r.salaryCalcByDay, r.currency), style: TextStyle(fontSize: 12, color: Color(0xFF5B9BFF)))),
-                      DataCell(Text('${r.daysWorked} days', style: TextStyle(fontSize: 12))),
-                      DataCell(Text('${r.workingHours.toStringAsFixed(1)} hrs', style: TextStyle(fontSize: 12))),
-                      DataCell(Text('${r.overtimeHours.toStringAsFixed(1)} hrs', style: TextStyle(fontSize: 12, color: Color(0xFF00FF87)))),
-                      DataCell(Text(formatEmpAmount(r.overtimeValue, r.currency), style: TextStyle(fontSize: 12, color: Color(0xFF00FF87)))),
-                      DataCell(Text('${r.attendanceDeficitHours.toStringAsFixed(1)} hrs', style: TextStyle(fontSize: 12, color: Color(0xFFFF5C5C)))),
-                      DataCell(Text(formatEmpAmount(r.attendanceDeficit, r.currency), style: TextStyle(fontSize: 12, color: Color(0xFFFF5C5C)))),
-                      DataCell(Text(formatEmpAmount(r.foodAllowance, r.currency), style: TextStyle(fontSize: 12))),
-                      DataCell(Text(formatEmpAmount(r.transportationAllowance, r.currency), style: TextStyle(fontSize: 12))),
-                      DataCell(Text(formatEmpAmount(r.otherAllowance, r.currency), style: TextStyle(fontSize: 12))),
-                      DataCell(Text(formatEmpAmount(r.monthlyPenalties, r.currency), style: TextStyle(fontSize: 12, color: Color(0xFFFF5C5C)))),
-                      DataCell(Text(formatEmpAmount(r.incrementalSalary, r.currency), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFF2EBD96)))),
-                      DataCell(Text(formatEmpAmount(r.decrementalSalary, r.currency), style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFFFF5C5C)))),
-                      DataCell(Text(formatEmpAmount(r.netEarnings, r.currency), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2EBD96)))),
+                      DataCell(Text(r.employee.name, style: TextStyle(color: textColor, fontWeight: FontWeight.w600, fontSize: 12))),
+                      DataCell(Text(formatEmpAmount(r.basicSalary, r.currency), style: TextStyle(color: textColor, fontSize: 12))),
+                      DataCell(Text(formatEmpAmount(r.salaryCalcByDay, r.currency), style: const TextStyle(fontSize: 12, color: Color(0xFF5B9BFF)))),
+                      DataCell(Text('${r.daysWorked} days', style: TextStyle(color: textColor, fontSize: 12))),
+                      DataCell(Text('${r.workingHours.toStringAsFixed(1)} hrs', style: TextStyle(color: textColor, fontSize: 12))),
+                      DataCell(Text('${r.overtimeHours.toStringAsFixed(1)} hrs', style: const TextStyle(fontSize: 12, color: Color(0xFF00FF87)))),
+                      DataCell(Text(formatEmpAmount(r.overtimeValue, r.currency), style: const TextStyle(fontSize: 12, color: Color(0xFF00FF87)))),
+                      DataCell(Text('${r.attendanceDeficitHours.toStringAsFixed(1)} hrs', style: const TextStyle(fontSize: 12, color: Color(0xFFFF5C5C)))),
+                      DataCell(Text(formatEmpAmount(r.attendanceDeficit, r.currency), style: const TextStyle(fontSize: 12, color: Color(0xFFFF5C5C)))),
+                      DataCell(Text(formatEmpAmount(r.foodAllowance, r.currency), style: TextStyle(color: textColor, fontSize: 12))),
+                      DataCell(Text(formatEmpAmount(r.transportationAllowance, r.currency), style: TextStyle(color: textColor, fontSize: 12))),
+                      DataCell(Text(formatEmpAmount(r.otherAllowance, r.currency), style: TextStyle(color: textColor, fontSize: 12))),
+                      DataCell(Text(formatEmpAmount(r.monthlyPenalties, r.currency), style: const TextStyle(fontSize: 12, color: Color(0xFFFF5C5C)))),
+                      DataCell(Text(formatEmpAmount(r.incrementalSalary, r.currency), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFF2EBD96)))),
+                      DataCell(Text(formatEmpAmount(r.decrementalSalary, r.currency), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFFFF5C5C)))),
+                      DataCell(Text(formatEmpAmount(r.netEarnings, r.currency), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2EBD96)))),
                     ],
                   );
                 }).toList(),
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMonthSelector(BuildContext context, AttendanceProvider provider) {
+    final monthStr = DateFormat('MMMM yyyy').format(provider.selectedMonth);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.chevron_left),
+          color: textColor,
+          iconSize: 22,
+          splashRadius: 20,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          onPressed: () {
+            final current = provider.selectedMonth;
+            provider.setSelectedMonth(DateTime(current.year, current.month - 1));
+          },
+        ),
+        const SizedBox(width: 20),
+        Text(
+          monthStr,
+          style: TextStyle(
+            color: textColor,
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.2,
+          ),
+        ),
+        const SizedBox(width: 20),
+        IconButton(
+          icon: const Icon(Icons.chevron_right),
+          color: textColor,
+          iconSize: 22,
+          splashRadius: 20,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          onPressed: () {
+            final current = provider.selectedMonth;
+            provider.setSelectedMonth(DateTime(current.year, current.month + 1));
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildExportButton(BuildContext context, AttendanceProvider provider) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        shape: const CircleBorder(),
+        child: Theme(
+          data: Theme.of(context).copyWith(
+            hoverColor: isDark ? Colors.white10 : Colors.black12,
+          ),
+          child: PopupMenuButton<String>(
+            tooltip: 'Export Payroll',
+            padding: EdgeInsets.zero,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+            elevation: 8,
+            icon: Icon(
+              Icons.file_download_outlined,
+              color: isDark ? Colors.white70 : const Color(0xFF64748B),
+              size: 20,
+            ),
+            onSelected: (String value) async {
+              final currentUser = provider.currentEmployee;
+              List<CompanyEmployee> visibleEmployees = [];
+              if (currentUser != null) {
+                if (currentUser.role == 'hr' || currentUser.role == 'admin') {
+                  visibleEmployees = provider.employees;
+                } else {
+                  visibleEmployees = [currentUser];
+                }
+              }
+              final payrollEmployees = visibleEmployees
+                  .where((emp) => emp.basicSalary > 0 || emp.salaryHistory.isNotEmpty)
+                  .toList();
+              final targetEmployees = payrollEmployees.isNotEmpty ? payrollEmployees : visibleEmployees;
+              final reports = targetEmployees
+                  .map((emp) => provider.generatePayrollReport(emp, provider.selectedMonth))
+                  .toList();
+              if (reports.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('No payroll data to export.')),
+                );
+                return;
+              }
+              try {
+                if (value == 'excel') {
+                  await ExportService.exportPayrollToExcel(
+                    reports,
+                    provider.selectedMonth,
+                    provider.companyProfile,
+                  );
+                } else if (value == 'pdf') {
+                  await ExportService.exportPayrollToPdf(
+                    reports,
+                    provider.selectedMonth,
+                    provider.companyProfile,
+                  );
+                }
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Export successful!')),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Export failed: $e')),
+                  );
+                }
+              }
+            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              PopupMenuItem<String>(
+                value: 'excel',
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.table_chart_outlined,
+                      size: 18,
+                      color: Color(0xFF2EBD96),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Export to Excel',
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'pdf',
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.picture_as_pdf_outlined,
+                      size: 18,
+                      color: Color(0xFFFF5C5C),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Export to PDF',
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
