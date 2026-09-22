@@ -354,9 +354,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       return _buildTextBubble(context, message, isMe, isDark);
     }
 
-    final isSupervisor =
-        currentUser?.role == 'supervisor' || currentUser?.role == 'hr';
-    final isPending = request.status == 'Pending';
+    final isHR = currentUser?.role == 'hr' || currentUser?.role == 'admin' || provider.canEditCompanyInfo;
+    final isSupervisor = currentUser?.role == 'supervisor' || isHR;
+    final isPending = request.status.startsWith('Pending');
     final translatedType = _translateRequestType(request.type, provider);
 
     return GlassContainer(
@@ -510,16 +510,19 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                 // Approve Button
                 GestureDetector(
                   onTap: () async {
+                    final nextStatus = isHR ? 'Approved' : 'Pending HR';
                     await provider.updateRequestStatus(
                       requestOwnerId,
                       request.id,
-                      'Approved',
+                      nextStatus,
                     );
                     if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                          '${widget.contact.name}\'s request approved.',
+                          nextStatus == 'Approved'
+                              ? '${widget.contact.name}\'s request approved.'
+                              : '${widget.contact.name}\'s request approved and forwarded to HR.',
                         ),
                         backgroundColor: const Color(0xFF10B981),
                       ),
@@ -665,6 +668,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         return provider.translate('status_approved');
       case 'Pending':
         return provider.translate('status_pending');
+      case 'Pending Supervisor':
+        return 'Pending Supervisor';
+      case 'Pending HR':
+        return 'Pending HR';
       case 'Rejected':
         return provider.translate('status_rejected');
       default:

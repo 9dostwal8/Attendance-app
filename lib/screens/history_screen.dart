@@ -2509,20 +2509,23 @@ class _HistoryScreenState extends State<HistoryScreen> {
     // 1. Submitter Resolution
     String submitterName = 'Employee';
     String submitterRole = 'Staff';
+    CompanyEmployee? submitterEmp;
     if (req.employeeId != null && req.employeeId!.isNotEmpty) {
-      final empMatch = provider.employees.where(
+      submitterEmp = provider.employees.where(
         (e) => e.id == req.employeeId || e.email == req.employeeId,
       ).firstOrNull;
-      if (empMatch != null) {
-        submitterName = empMatch.name;
-        submitterRole = empMatch.position.isNotEmpty ? empMatch.position : empMatch.role;
+      if (submitterEmp != null) {
+        submitterName = submitterEmp.name;
+        submitterRole = submitterEmp.position.isNotEmpty ? submitterEmp.position : submitterEmp.role;
       } else if (provider.currentEmployee != null &&
           (provider.currentEmployee!.id == req.employeeId ||
            provider.currentEmployee!.name == req.employeeId)) {
+        submitterEmp = provider.currentEmployee;
         submitterName = provider.currentEmployee!.name;
         submitterRole = provider.currentEmployee!.position;
       }
     } else if (provider.currentEmployee != null) {
+      submitterEmp = provider.currentEmployee;
       submitterName = provider.currentEmployee!.name;
       submitterRole = provider.currentEmployee!.position;
     }
@@ -2543,65 +2546,159 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
     final formattedSubmitDate = DateFormat('MMM d, yyyy • hh:mm a').format(submitDate);
 
-    // 3. Approver Resolution
-    String approverName = '';
-    String approverRole = 'HR Management';
-
-    if (req.actionBy != null && req.actionBy!.isNotEmpty) {
-      final approverMatch = provider.employees.where(
-        (e) => e.id == req.actionBy || e.name.toLowerCase() == req.actionBy!.toLowerCase() || e.email == req.actionBy,
+    // 3. Structure Supervisor Resolution
+    String supervisorName = 'Supervisor';
+    String supervisorRole = 'Structure Supervisor';
+    if (req.supervisorActionBy != null && req.supervisorActionBy!.isNotEmpty) {
+      final sMatch = provider.employees.where(
+        (e) => e.id == req.supervisorActionBy || e.name.toLowerCase() == req.supervisorActionBy!.toLowerCase(),
       ).firstOrNull;
-      if (approverMatch != null) {
-        approverName = approverMatch.name;
-        approverRole = approverMatch.position.isNotEmpty ? approverMatch.position : approverMatch.role;
-      } else {
-        approverName = req.actionBy!;
+      if (sMatch != null) {
+        supervisorName = sMatch.name;
+        supervisorRole = sMatch.position.isNotEmpty ? sMatch.position : 'Structure Supervisor';
+      }
+    } else {
+      // Find supervisor of the employee's structure
+      if (submitterEmp?.structureId != null && submitterEmp!.structureId!.isNotEmpty) {
+        final struct = provider.structures.where((s) => s.id == submitterEmp!.structureId).firstOrNull;
+        if (struct?.supervisorId != null) {
+          final sMatch = provider.employees.where((e) => e.id == struct!.supervisorId).firstOrNull;
+          if (sMatch != null) {
+            supervisorName = sMatch.name;
+            supervisorRole = sMatch.position.isNotEmpty ? sMatch.position : 'Structure Supervisor';
+          }
+        }
       }
     }
 
-    if (approverName.isEmpty) {
-      final hrOrAdmin = provider.employees.where(
+    DateTime supervisorDate = submitDate.add(const Duration(minutes: 30));
+    if (req.supervisorActionDate != null && req.supervisorActionDate!.isNotEmpty) {
+      supervisorDate = DateTime.tryParse(req.supervisorActionDate!) ?? supervisorDate;
+    }
+    final formattedSupervisorDate = DateFormat('MMM d, yyyy • hh:mm a').format(supervisorDate);
+
+    // 4. HR Manager Resolution
+    String hrName = 'HR Manager';
+    String hrRole = 'HR Management';
+    final hrActionTarget = req.hrActionBy ?? (req.supervisorActionBy == null ? req.actionBy : null);
+    if (hrActionTarget != null && hrActionTarget.isNotEmpty) {
+      final hMatch = provider.employees.where(
+        (e) => e.id == hrActionTarget || e.name.toLowerCase() == hrActionTarget.toLowerCase(),
+      ).firstOrNull;
+      if (hMatch != null) {
+        hrName = hMatch.name;
+        hrRole = hMatch.position.isNotEmpty ? hMatch.position : 'HR Management';
+      }
+    } else {
+      final hrEmp = provider.employees.where(
         (e) => (e.role == 'hr' || e.role == 'admin') && e.id != req.employeeId,
       ).firstOrNull ?? provider.employees.where((e) => e.role == 'hr' || e.role == 'admin').firstOrNull;
-
-      if (hrOrAdmin != null) {
-        approverName = hrOrAdmin.name;
-        approverRole = hrOrAdmin.position.isNotEmpty ? hrOrAdmin.position : 'HR Manager';
-      } else {
-        approverName = 'HR Administrator';
-        approverRole = 'HR Department';
+      if (hrEmp != null) {
+        hrName = hrEmp.name;
+        hrRole = hrEmp.position.isNotEmpty ? hrEmp.position : 'HR Management';
       }
     }
 
-    // 4. Action Date & Time
-    DateTime actionDate = submitDate.add(const Duration(minutes: 45));
-    if (req.actionDate != null && req.actionDate!.isNotEmpty) {
-      actionDate = DateTime.tryParse(req.actionDate!) ?? actionDate;
+    DateTime hrDate = supervisorDate.add(const Duration(minutes: 30));
+    final hrDateTarget = req.hrActionDate ?? (req.supervisorActionDate == null ? req.actionDate : null);
+    if (hrDateTarget != null && hrDateTarget.isNotEmpty) {
+      hrDate = DateTime.tryParse(hrDateTarget) ?? hrDate;
     }
-    final formattedActionDate = DateFormat('MMM d, yyyy • hh:mm a').format(actionDate);
+    final formattedHrDate = DateFormat('MMM d, yyyy • hh:mm a').format(hrDate);
 
     final isApproved = req.status == 'Approved';
     final isRejected = req.status == 'Rejected';
 
-    final Color statusColor = isApproved
+    // Badge status styling
+    final Color overallColor = isApproved
         ? const Color(0xFF10B981)
-        : (isRejected ? const Color(0xFFEF4444) : const Color(0xFFF59E0B));
+        : (isRejected
+            ? const Color(0xFFEF4444)
+            : (req.status == 'Pending HR' ? const Color(0xFF8B5CF6) : const Color(0xFFF59E0B)));
 
-    final IconData statusIcon = isApproved
+    final IconData overallIcon = isApproved
         ? Icons.check_circle_rounded
-        : (isRejected ? Icons.cancel_rounded : Icons.hourglass_top_rounded);
-
-    final String statusActionTitle = isApproved
-        ? 'Approved by $approverName'
         : (isRejected
-            ? 'Rejected by $approverName'
-            : 'Pending Approval');
+            ? Icons.cancel_rounded
+            : Icons.hourglass_top_rounded);
 
-    final String statusActionSubtitle = isApproved
-        ? '$approverRole • $formattedActionDate'
-        : (isRejected
-            ? '$approverRole • $formattedActionDate'
-            : 'Awaiting review by $approverName ($approverRole)');
+    // Determine Step 2 (Supervisor) State
+    final bool isSupApproved = req.supervisorStatus == 'Approved' ||
+        (req.supervisorActionBy != null && req.status != 'Rejected') ||
+        (req.status == 'Pending HR' && req.supervisorActionBy != null);
+    final bool isSupRejected = req.supervisorStatus == 'Rejected' ||
+        (isRejected && req.supervisorActionBy != null && req.hrActionBy == null);
+    final bool isSupPending = req.status == 'Pending Supervisor';
+    final bool isSupBypassed = req.supervisorActionBy == null && (req.status == 'Pending HR' || req.status == 'Approved');
+
+    Color supColor;
+    IconData supIcon;
+    String supTitle;
+    String supSubtitle;
+
+    if (isSupApproved) {
+      supColor = const Color(0xFF10B981);
+      supIcon = Icons.check_circle_rounded;
+      supTitle = 'Approved by $supervisorName';
+      supSubtitle = '$supervisorRole • $formattedSupervisorDate';
+    } else if (isSupRejected) {
+      supColor = const Color(0xFFEF4444);
+      supIcon = Icons.cancel_rounded;
+      supTitle = 'Rejected by $supervisorName';
+      supSubtitle = '$supervisorRole • $formattedSupervisorDate';
+    } else if (isSupPending) {
+      supColor = const Color(0xFFF59E0B);
+      supIcon = Icons.hourglass_top_rounded;
+      supTitle = 'Awaiting Supervisor Review';
+      supSubtitle = 'Pending review by $supervisorName ($supervisorRole)';
+    } else if (isSupBypassed) {
+      supColor = const Color(0xFF3B82F6);
+      supIcon = Icons.check_circle_outline_rounded;
+      supTitle = 'Direct to HR Review';
+      supSubtitle = 'Supervisor step not required for this role';
+    } else {
+      supColor = textColor.withValues(alpha: 0.3);
+      supIcon = Icons.radio_button_unchecked_rounded;
+      supTitle = 'Supervisor Review';
+      supSubtitle = 'Pending';
+    }
+
+    // Determine Step 3 (HR Manager) State
+    final bool isHrApproved = isApproved;
+    final bool isHrRejected = isRejected && !isSupRejected;
+    final bool isHrPending = req.status == 'Pending HR';
+
+    Color hrColor;
+    IconData hrIcon;
+    String hrTitle;
+    String hrSubtitle;
+
+    if (isHrApproved) {
+      hrColor = const Color(0xFF10B981);
+      hrIcon = Icons.check_circle_rounded;
+      hrTitle = 'Approved by $hrName';
+      hrSubtitle = '$hrRole • $formattedHrDate (Message sent to employee)';
+    } else if (isHrRejected) {
+      hrColor = const Color(0xFFEF4444);
+      hrIcon = Icons.cancel_rounded;
+      hrTitle = 'Rejected by $hrName';
+      hrSubtitle = '$hrRole • $formattedHrDate';
+    } else if (isHrPending) {
+      hrColor = const Color(0xFF8B5CF6);
+      hrIcon = Icons.hourglass_top_rounded;
+      hrTitle = 'Awaiting HR Manager Approval';
+      hrSubtitle = 'Assigned to $hrName ($hrRole)';
+    } else if (isSupRejected) {
+      hrColor = textColor.withValues(alpha: 0.3);
+      hrIcon = Icons.block_rounded;
+      hrTitle = 'HR Manager Review';
+      hrSubtitle = 'Terminated due to supervisor rejection';
+    } else {
+      hrColor = textColor.withValues(alpha: 0.3);
+      hrIcon = Icons.radio_button_unchecked_rounded;
+      hrTitle = 'HR Manager Review';
+      hrSubtitle = 'Pending supervisor approval first';
+    }
 
     return Container(
       margin: const EdgeInsets.only(top: 14),
@@ -2637,18 +2734,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.12),
+                  color: overallColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(statusIcon, size: 12, color: statusColor),
+                    Icon(overallIcon, size: 12, color: overallColor),
                     const SizedBox(width: 4),
                     Text(
                       req.status,
                       style: TextStyle(
-                        color: statusColor,
+                        color: overallColor,
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
                       ),
@@ -2694,7 +2791,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Submitted by $submitterName',
+                        '1. Registered by $submitterName',
                         style: TextStyle(
                           color: textColor,
                           fontSize: 13,
@@ -2717,7 +2814,64 @@ class _HistoryScreenState extends State<HistoryScreen> {
             ],
           ),
 
-          // Step 2: Approval Decision
+          // Step 2: Structure Supervisor Review
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Column(
+                children: [
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: supColor.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      supIcon,
+                      size: 13,
+                      color: supColor,
+                    ),
+                  ),
+                  Container(
+                    width: 2,
+                    height: 28,
+                    color: isDark ? Colors.white12 : Colors.black12,
+                  ),
+                ],
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '2. $supTitle',
+                        style: TextStyle(
+                          color: isSupApproved || isSupRejected ? textColor : textColor.withValues(alpha: 0.75),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        supSubtitle,
+                        style: TextStyle(
+                          color: textColor.withValues(alpha: 0.55),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          // Step 3: HR Manager Final Approval
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -2725,13 +2879,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 width: 24,
                 height: 24,
                 decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.15),
+                  color: hrColor.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  statusIcon,
+                  hrIcon,
                   size: 13,
-                  color: statusColor,
+                  color: hrColor,
                 ),
               ),
               const SizedBox(width: 12),
@@ -2742,16 +2896,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        statusActionTitle,
+                        '3. $hrTitle',
                         style: TextStyle(
-                          color: isApproved || isRejected ? textColor : textColor.withValues(alpha: 0.75),
+                          color: isHrApproved || isHrRejected ? textColor : textColor.withValues(alpha: 0.75),
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        statusActionSubtitle,
+                        hrSubtitle,
                         style: TextStyle(
                           color: textColor.withValues(alpha: 0.55),
                           fontSize: 11,

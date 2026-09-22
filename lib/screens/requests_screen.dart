@@ -326,8 +326,10 @@ class _RequestsScreenState extends State<RequestsScreen> {
     combined.sort((a, b) {
       final rA = a['request'] as Request;
       final rB = b['request'] as Request;
-      if (rA.status == 'Pending' && rB.status != 'Pending') return -1;
-      if (rA.status != 'Pending' && rB.status == 'Pending') return 1;
+      final isPendingA = rA.status.startsWith('Pending');
+      final isPendingB = rB.status.startsWith('Pending');
+      if (isPendingA && !isPendingB) return -1;
+      if (!isPendingA && isPendingB) return 1;
       return rB.id.compareTo(rA.id);
     });
 
@@ -383,8 +385,10 @@ class _RequestsScreenState extends State<RequestsScreen> {
     combined.sort((a, b) {
       final rA = a['request'] as Request;
       final rB = b['request'] as Request;
-      if (rA.status == 'Pending' && rB.status != 'Pending') return -1;
-      if (rA.status != 'Pending' && rB.status == 'Pending') return 1;
+      final isPendingA = rA.status.startsWith('Pending');
+      final isPendingB = rB.status.startsWith('Pending');
+      if (isPendingA && !isPendingB) return -1;
+      if (!isPendingA && isPendingB) return 1;
       return rB.id.compareTo(rA.id);
     });
 
@@ -448,6 +452,10 @@ class _RequestsScreenState extends State<RequestsScreen> {
         return provider.translate('status_approved');
       case 'Pending':
         return provider.translate('status_pending');
+      case 'Pending Supervisor':
+        return 'Pending Supervisor';
+      case 'Pending HR':
+        return 'Pending HR';
       case 'Rejected':
         return provider.translate('status_rejected');
       default:
@@ -1065,8 +1073,53 @@ class _RequestsScreenState extends State<RequestsScreen> {
                             ),
                           ),
                         ],
-                        if (request.actionBy != null &&
-                            request.actionDate != null) ...[
+                        if (request.createdAt != null) ...[
+                          SizedBox(height: 4),
+                          Text(
+                            'Registered: ${DateFormat('MMM d, yyyy HH:mm').format(DateTime.parse(request.createdAt!))}',
+                            style: TextStyle(
+                              color:
+                                  ((Theme.of(
+                                            context,
+                                          ).textTheme.bodyLarge?.color ??
+                                          Colors.black)
+                                      .withValues(alpha: 0.5)),
+                              fontSize: 10,
+                            ),
+                          ),
+                        ],
+                        if (request.supervisorActionBy != null &&
+                            request.supervisorActionDate != null) ...[
+                          SizedBox(height: 2),
+                          Text(
+                            'Supervisor: ${request.supervisorStatus ?? "Approved"} by ${provider.employees.firstWhere(
+                              (e) => e.id == request.supervisorActionBy,
+                              orElse: () => CompanyEmployee(id: '', name: 'Supervisor', email: '', position: ''),
+                            ).name} on ${DateFormat('MMM d, yyyy HH:mm').format(DateTime.parse(request.supervisorActionDate!))}',
+                            style: TextStyle(
+                              color: const Color(0xFF10B981).withValues(alpha: 0.8),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                        if (request.hrActionBy != null &&
+                            request.hrActionDate != null) ...[
+                          SizedBox(height: 2),
+                          Text(
+                            'HR: ${request.hrStatus ?? "Approved"} by ${provider.employees.firstWhere(
+                              (e) => e.id == request.hrActionBy,
+                              orElse: () => CompanyEmployee(id: '', name: 'HR Manager', email: '', position: ''),
+                            ).name} on ${DateFormat('MMM d, yyyy HH:mm').format(DateTime.parse(request.hrActionDate!))}',
+                            style: TextStyle(
+                              color: const Color(0xFF2E65FF).withValues(alpha: 0.8),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ] else if (request.actionBy != null &&
+                            request.actionDate != null &&
+                            request.supervisorActionBy == null) ...[
                           SizedBox(height: 2),
                           Text(
                             '${request.status} by: ${provider.employees.firstWhere(
@@ -1089,127 +1142,188 @@ class _RequestsScreenState extends State<RequestsScreen> {
                   ],
                 ),
 
-                // Approve / Reject actions (only for Pending status)
-                if (request.status == 'Pending') ...[
-                  SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      // Reject Button
-                      GestureDetector(
-                        onTap: () async {
-                          await provider.updateRequestStatus(
-                            employee.id,
-                            request.id,
-                            'Rejected',
-                          );
-                          _loadAllSubordinateRequests(provider);
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                '${employee.name}\'s request rejected.',
-                              ),
-                              backgroundColor: Colors.redAccent,
-                            ),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(
-                              0xFFEF4444,
-                            ).withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: const Color(
-                                0xFFEF4444,
-                              ).withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.close,
-                                color: Color(0xFFF87171),
-                                size: 14,
-                              ),
-                              SizedBox(width: 4),
-                              Text(
-                                provider.translate('reject'),
-                                style: TextStyle(
-                                  color: Color(0xFFFCA5A5),
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 10),
+                // Approve / Reject actions or awaiting status badge
+                Builder(
+                  builder: (context) {
+                    final currentUser = provider.currentEmployee;
+                    final isHR = currentUser?.role == 'hr' ||
+                        currentUser?.role == 'admin' ||
+                        provider.canEditCompanyInfo;
+                    final isSupervisor = currentUser?.role == 'supervisor';
 
-                      // Approve Button
-                      GestureDetector(
-                        onTap: () async {
-                          await provider.updateRequestStatus(
-                            employee.id,
-                            request.id,
-                            'Approved',
-                          );
-                          _loadAllSubordinateRequests(provider);
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                '${employee.name}\'s request approved.',
-                              ),
-                              backgroundColor: const Color(0xFF10B981),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(
-                              0xFF10B981,
-                            ).withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: const Color(
-                                0xFF10B981,
-                              ).withValues(alpha: 0.3),
-                            ),
-                          ),
+                    final canActAsSupervisor = (isSupervisor || isHR) &&
+                        (request.status == 'Pending Supervisor' || request.status == 'Pending');
+                    final canActAsHR = isHR &&
+                        (request.status == 'Pending HR' || request.status == 'Pending');
+
+                    final canAct = canActAsSupervisor || canActAsHR;
+
+                    if (!canAct) {
+                      if (request.status == 'Pending HR' && isSupervisor && !isHR) {
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 10.0),
                           child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              Icon(
-                                Icons.check,
-                                color: Color(0xFF34D399),
-                                size: 14,
-                              ),
-                              SizedBox(width: 4),
-                              Text(
-                                provider.translate('approve'),
-                                style: TextStyle(
-                                  color: Color(0xFFA7F3D0),
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF8B5CF6).withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: const Color(0xFF8B5CF6).withValues(alpha: 0.3)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: const [
+                                    Icon(Icons.hourglass_top_rounded, size: 12, color: Color(0xFF8B5CF6)),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'Awaiting HR Manager Approval',
+                                      style: TextStyle(
+                                        color: Color(0xFF8B5CF6),
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
-                        ),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    }
+
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 12.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          // Reject Button
+                          GestureDetector(
+                            onTap: () async {
+                              await provider.updateRequestStatus(
+                                employee.id,
+                                request.id,
+                                'Rejected',
+                              );
+                              _loadAllSubordinateRequests(provider);
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    '${employee.name}\'s request rejected.',
+                                  ),
+                                  backgroundColor: Colors.redAccent,
+                                ),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(
+                                  0xFFEF4444,
+                                ).withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: const Color(
+                                    0xFFEF4444,
+                                  ).withValues(alpha: 0.3),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.close,
+                                    color: Color(0xFFF87171),
+                                    size: 14,
+                                  ),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    provider.translate('reject'),
+                                    style: TextStyle(
+                                      color: Color(0xFFFCA5A5),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 10),
+
+                          // Approve Button
+                          GestureDetector(
+                            onTap: () async {
+                              final nextStatus = canActAsHR ? 'Approved' : 'Pending HR';
+                              await provider.updateRequestStatus(
+                                employee.id,
+                                request.id,
+                                nextStatus,
+                              );
+                              _loadAllSubordinateRequests(provider);
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    nextStatus == 'Approved'
+                                        ? '${employee.name}\'s request approved.'
+                                        : '${employee.name}\'s request approved and forwarded to HR Manager.',
+                                  ),
+                                  backgroundColor: const Color(0xFF10B981),
+                                ),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(
+                                  0xFF10B981,
+                                ).withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: const Color(
+                                    0xFF10B981,
+                                  ).withValues(alpha: 0.3),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.check,
+                                    color: Color(0xFF34D399),
+                                    size: 14,
+                                  ),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    canActAsHR
+                                        ? provider.translate('approve')
+                                        : (provider.translate('approve') != 'approve'
+                                            ? provider.translate('approve')
+                                            : 'Approve & Forward to HR'),
+                                    style: TextStyle(
+                                      color: Color(0xFFA7F3D0),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ],
+                    );
+                  },
+                ),
               ],
             ),
           ),

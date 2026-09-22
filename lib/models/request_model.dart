@@ -13,6 +13,13 @@ class Request {
   final String? actionBy;
   final String? actionDate;
 
+  final String? supervisorActionBy;
+  final String? supervisorActionDate;
+  final String? supervisorStatus;
+  final String? hrActionBy;
+  final String? hrActionDate;
+  final String? hrStatus;
+
   Request({
     required this.id,
     required this.type,
@@ -25,6 +32,12 @@ class Request {
     this.createdAt,
     this.actionBy,
     this.actionDate,
+    this.supervisorActionBy,
+    this.supervisorActionDate,
+    this.supervisorStatus,
+    this.hrActionBy,
+    this.hrActionDate,
+    this.hrStatus,
   });
 
   Color get statusColor {
@@ -33,6 +46,10 @@ class Request {
         return const Color(0xFF2EBD96);
       case 'Rejected':
         return const Color(0xFFEF4444);
+      case 'Pending Supervisor':
+        return const Color(0xFFF59E0B);
+      case 'Pending HR':
+        return const Color(0xFF8B5CF6);
       case 'Pending':
       default:
         return const Color(0xFF2E65FF);
@@ -52,6 +69,12 @@ class Request {
       'createdAt': createdAt,
       'actionBy': actionBy,
       'actionDate': actionDate,
+      'supervisorActionBy': supervisorActionBy,
+      'supervisorActionDate': supervisorActionDate,
+      'supervisorStatus': supervisorStatus,
+      'hrActionBy': hrActionBy,
+      'hrActionDate': hrActionDate,
+      'hrStatus': hrStatus,
     };
   }
 
@@ -68,6 +91,12 @@ class Request {
       createdAt: map['createdAt'],
       actionBy: map['actionBy'],
       actionDate: map['actionDate'],
+      supervisorActionBy: map['supervisorActionBy'],
+      supervisorActionDate: map['supervisorActionDate'],
+      supervisorStatus: map['supervisorStatus'],
+      hrActionBy: map['hrActionBy'],
+      hrActionDate: map['hrActionDate'],
+      hrStatus: map['hrStatus'],
     );
   }
 
@@ -83,6 +112,12 @@ class Request {
     String? createdAt,
     String? actionBy,
     String? actionDate,
+    String? supervisorActionBy,
+    String? supervisorActionDate,
+    String? supervisorStatus,
+    String? hrActionBy,
+    String? hrActionDate,
+    String? hrStatus,
     bool overrideTargetShiftId = false,
   }) {
     return Request(
@@ -99,6 +134,12 @@ class Request {
       createdAt: createdAt ?? this.createdAt,
       actionBy: actionBy ?? this.actionBy,
       actionDate: actionDate ?? this.actionDate,
+      supervisorActionBy: supervisorActionBy ?? this.supervisorActionBy,
+      supervisorActionDate: supervisorActionDate ?? this.supervisorActionDate,
+      supervisorStatus: supervisorStatus ?? this.supervisorStatus,
+      hrActionBy: hrActionBy ?? this.hrActionBy,
+      hrActionDate: hrActionDate ?? this.hrActionDate,
+      hrStatus: hrStatus ?? this.hrStatus,
     );
   }
 }

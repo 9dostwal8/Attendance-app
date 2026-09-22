@@ -598,7 +598,7 @@ class PendingApprovalsCard extends StatelessWidget {
 
     if (isHR) {
       for (var req in provider.allCompanyRequests) {
-        if (req.status == 'Pending' && req.employeeId != currentEmpId) {
+        if ((req.status == 'Pending' || req.status == 'Pending HR') && req.employeeId != currentEmpId) {
           final emp = provider.employees.firstWhere(
             (e) => e.id == req.employeeId,
             orElse: () => CompanyEmployee(
@@ -618,7 +618,7 @@ class PendingApprovalsCard extends StatelessWidget {
           .expand((s) => provider.employees.where((e) => e.structureId == s.id).map((e) => e.id))
           .toSet();
       for (var req in provider.allCompanyRequests) {
-        if (req.status == 'Pending' && subordinateIds.contains(req.employeeId)) {
+        if ((req.status == 'Pending' || req.status == 'Pending Supervisor') && subordinateIds.contains(req.employeeId)) {
           final emp = provider.employees.firstWhere(
             (e) => e.id == req.employeeId,
             orElse: () => CompanyEmployee(
@@ -950,15 +950,23 @@ class PendingApprovalsCard extends StatelessWidget {
               // Approve Button
               InkWell(
                 onTap: () async {
+                  final isSuper = provider.currentEmployee?.role == 'supervisor' &&
+                      provider.currentEmployee?.role != 'hr' &&
+                      provider.currentEmployee?.role != 'admin' &&
+                      !provider.canEditCompanyInfo;
                   await provider.updateRequestStatus(
                     emp.id,
                     req.id,
-                    'Approved',
+                    isSuper ? 'Pending HR' : 'Approved',
                   );
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('${emp.name}\'s request was approved.'),
+                        content: Text(
+                          isSuper
+                              ? '${emp.name}\'s request was approved and forwarded to HR.'
+                              : '${emp.name}\'s request was approved.',
+                        ),
                         backgroundColor: const Color(0xFF10B981),
                       ),
                     );

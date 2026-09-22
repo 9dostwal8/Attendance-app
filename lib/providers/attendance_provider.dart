@@ -1505,7 +1505,11 @@ class AttendanceProvider with ChangeNotifier {
         currentEmployee?.role == 'admin' ||
         canEditCompanyInfo) {
       return _allCompanyRequests
-          .where((r) => r.status == 'Pending' && r.employeeId != _employeeId)
+          .where(
+            (r) =>
+                (r.status == 'Pending' || r.status == 'Pending HR') &&
+                r.employeeId != _employeeId,
+          )
           .length;
     }
     if (currentEmployee?.role == 'supervisor') {
@@ -1519,7 +1523,8 @@ class AttendanceProvider with ChangeNotifier {
       return _allCompanyRequests
           .where(
             (r) =>
-                r.status == 'Pending' && subordinateIds.contains(r.employeeId),
+                (r.status == 'Pending' || r.status == 'Pending Supervisor') &&
+                subordinateIds.contains(r.employeeId),
           )
           .length;
     }
@@ -1631,7 +1636,7 @@ class AttendanceProvider with ChangeNotifier {
     final empId = employeeId ?? _employeeId;
 
     // Auto-approve if the employee is the top of the structure and manager of it
-    String status = 'Pending';
+    String status = 'Pending Supervisor';
     bool isTopManager = false;
     try {
       isTopManager = _structures.any(
@@ -1643,6 +1648,28 @@ class AttendanceProvider with ChangeNotifier {
         status = 'Approved';
       }
     } catch (_) {}
+
+    if (!isTopManager) {
+      // Find employee to check their structure supervisor
+      final emp = _employees.where((e) => e.id == empId).firstOrNull ?? currentEmployee;
+      String? structureSupervisorId;
+      if (emp?.structureId != null && emp!.structureId!.isNotEmpty) {
+        final struct = _structures.where((s) => s.id == emp.structureId).firstOrNull;
+        structureSupervisorId = struct?.supervisorId;
+      }
+
+      // If employee has a structure supervisor who is not themselves, route to supervisor
+      if (structureSupervisorId != null &&
+          structureSupervisorId.isNotEmpty &&
+          structureSupervisorId != empId &&
+          emp?.role != 'hr' &&
+          emp?.role != 'admin') {
+        status = 'Pending Supervisor';
+      } else {
+        // If employee is HR, or has no supervisor, or is their structure's supervisor: route directly to HR Manager
+        status = 'Pending HR';
+      }
+    }
 
     final newReq = Request(
       id: 'req_${DateTime.now().millisecondsSinceEpoch}',
@@ -1691,14 +1718,14 @@ class AttendanceProvider with ChangeNotifier {
   Future<void> updateRequestStatus(dynamic a, dynamic b, [dynamic c]) async {
     String empId = _employeeId;
     String reqId = '';
-    String status = '';
+    String targetStatus = '';
     if (c != null) {
       empId = a.toString();
       reqId = b.toString();
-      status = c.toString();
+      targetStatus = c.toString();
     } else {
       reqId = a.toString();
-      status = b.toString();
+      targetStatus = b.toString();
     }
 
     if (empId == _employeeId) {
@@ -1708,6 +1735,62 @@ class AttendanceProvider with ChangeNotifier {
       }
     }
 
+    final isHR = currentEmployee?.role == 'hr' ||
+        currentEmployee?.role == 'admin' ||
+        canEditCompanyInfo;
+    final isSupervisor = currentEmployee?.role == 'supervisor';
+
+    final existing = _allCompanyRequests.where((r) => r.id == reqId).firstOrNull ??
+        _allRequestsMap[empId]?.where((r) => r.id == reqId).firstOrNull;
+
+    String finalStatus = targetStatus;
+    String? supBy = existing?.supervisorActionBy;
+    String? supDate = existing?.supervisorActionDate;
+    String? supStatus = existing?.supervisorStatus;
+    String? hrBy = existing?.hrActionBy;
+    String? hrDate = existing?.hrActionDate;
+    String? hrStatus = existing?.hrStatus;
+    String? actBy = existing?.actionBy;
+    String? actDate = existing?.actionDate;
+
+    final nowIso = DateTime.now().toIso8601String();
+
+    if (targetStatus == 'Rejected') {
+      finalStatus = 'Rejected';
+      if (isHR) {
+        hrBy = _employeeId;
+        hrDate = nowIso;
+        hrStatus = 'Rejected';
+      } else {
+        supBy = _employeeId;
+        supDate = nowIso;
+        supStatus = 'Rejected';
+      }
+      actBy = _employeeId;
+      actDate = nowIso;
+    } else if (targetStatus == 'Approved') {
+      // If supervisor approves a request in 'Pending Supervisor' (or 'Pending'), advance to HR
+      if (isSupervisor && !isHR && (existing?.status == 'Pending Supervisor' || existing?.status == 'Pending')) {
+        finalStatus = 'Pending HR';
+        supBy = _employeeId;
+        supDate = nowIso;
+        supStatus = 'Approved';
+      } else {
+        // HR approves or final approval
+        finalStatus = 'Approved';
+        hrBy = _employeeId;
+        hrDate = nowIso;
+        hrStatus = 'Approved';
+        actBy = _employeeId;
+        actDate = nowIso;
+      }
+    } else if (targetStatus == 'Pending HR') {
+      finalStatus = 'Pending HR';
+      supBy = _employeeId;
+      supDate = nowIso;
+      supStatus = 'Approved';
+    }
+
     Request? updatedReq;
     final reqs = _allRequestsMap[empId];
     if (reqs != null) {
@@ -1715,10 +1798,16 @@ class AttendanceProvider with ChangeNotifier {
       if (idx != -1) {
         final old = reqs[idx];
         updatedReq = old.copyWith(
-          status: status,
+          status: finalStatus,
           employeeId: empId,
-          actionBy: _employeeId,
-          actionDate: DateTime.now().toIso8601String(),
+          actionBy: actBy,
+          actionDate: actDate,
+          supervisorActionBy: supBy,
+          supervisorActionDate: supDate,
+          supervisorStatus: supStatus,
+          hrActionBy: hrBy,
+          hrActionDate: hrDate,
+          hrStatus: hrStatus,
         );
         reqs[idx] = updatedReq;
       }
@@ -1728,10 +1817,16 @@ class AttendanceProvider with ChangeNotifier {
     if (cIdx != -1) {
       final old = _allCompanyRequests[cIdx];
       updatedReq = old.copyWith(
-        status: status,
+        status: finalStatus,
         employeeId: empId,
-        actionBy: _employeeId,
-        actionDate: DateTime.now().toIso8601String(),
+        actionBy: actBy,
+        actionDate: actDate,
+        supervisorActionBy: supBy,
+        supervisorActionDate: supDate,
+        supervisorStatus: supStatus,
+        hrActionBy: hrBy,
+        hrActionDate: hrDate,
+        hrStatus: hrStatus,
       );
       _allCompanyRequests[cIdx] = updatedReq;
     }
@@ -1741,10 +1836,24 @@ class AttendanceProvider with ChangeNotifier {
     if (updatedReq != null && _firebaseService.isAvailable) {
       await _firebaseService.saveRequest(empId, updatedReq);
 
-      if (empId != _employeeId && status != 'Pending') {
-        final messageText =
-            'Your request for ${updatedReq.type} has been $status.';
-        await sendChatMessage(empId, messageText);
+      // Automated messages to the employee who registered the request:
+      if (empId != _employeeId) {
+        if (finalStatus == 'Approved') {
+          // When HR Manager accepts the request
+          final messageText =
+              'Your request for ${updatedReq.type} on ${updatedReq.date} has been approved by HR Management.';
+          await sendChatMessage(empId, messageText);
+        } else if (finalStatus == 'Pending HR') {
+          // When Supervisor approves and it moves to HR Manager
+          final messageText =
+              'Your request for ${updatedReq.type} on ${updatedReq.date} has been approved by your Supervisor and forwarded to HR Manager for review.';
+          await sendChatMessage(empId, messageText);
+        } else if (finalStatus == 'Rejected') {
+          final rejecter = isHR ? 'HR Management' : 'your Supervisor';
+          final messageText =
+              'Your request for ${updatedReq.type} on ${updatedReq.date} has been rejected by $rejecter.';
+          await sendChatMessage(empId, messageText);
+        }
       }
     }
   }
