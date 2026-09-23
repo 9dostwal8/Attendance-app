@@ -467,7 +467,13 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
           children: [
             _buildSearchBar('Search structures...'),
             const SizedBox(height: 16),
-            Expanded(child: HrStructuresTab(searchQuery: _searchQuery)),
+            Expanded(
+              child: HrStructuresTab(
+                searchQuery: _searchQuery,
+                onEdit: (structure) => _showAddEditDialog(structure: structure),
+                onDelete: (id) => provider.deleteStructure(id),
+              ),
+            ),
           ],
         );
       case HrTab.shifts:

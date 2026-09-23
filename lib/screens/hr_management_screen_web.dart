@@ -332,36 +332,27 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
         break;
     }
 
-    return GestureDetector(
-      onTap: () => _showAddEditDialog(),
-      child: Container(
-        height: 52,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: const Color(0xFF3B82F6), // Professional Blue
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
+    return SizedBox(
+      height: 38,
+      child: ElevatedButton.icon(
+        onPressed: () => _showAddEditDialog(),
+        icon: const Icon(Icons.add_rounded, size: 16, color: Colors.white),
+        label: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 12.5,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.add, color: Colors.white, size: 20),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF2E65FF),
+          foregroundColor: Colors.white,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       ),
     );
@@ -439,7 +430,13 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
           children: [
             _buildSearchBar('Search structures...'),
             const SizedBox(height: 16),
-            Expanded(child: HrStructuresTab(searchQuery: _searchQuery)),
+            Expanded(
+              child: HrStructuresTab(
+                searchQuery: _searchQuery,
+                onEdit: (structure) => _showAddEditDialog(structure: structure),
+                onDelete: (id) => provider.deleteStructure(id),
+              ),
+            ),
           ],
         );
       case HrTab.shifts:
@@ -921,6 +918,36 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
               if (_activeTab == HrTab.structures) ...[
                 _buildDialogField('Structure Name', nameController),
                 const SizedBox(height: 12),
+                if (provider.locations.isNotEmpty) ...[
+                  _buildDropdownField(
+                    label: 'Company Location Preset (Optional)',
+                    value: null,
+                    items: [
+                      const DropdownMenuItem(
+                        value: null,
+                        child: Text('Custom Location'),
+                      ),
+                      ...provider.locations.map(
+                        (loc) => DropdownMenuItem(
+                          value: loc.id,
+                          child: Text('${loc.name} (${loc.radius.round()}m)'),
+                        ),
+                      ),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        final found = provider.locations.firstWhere((l) => l.id == val);
+                        setDialogState(() {
+                          extraController1.text = found.name;
+                          selectedLatitude = found.latitude;
+                          selectedLongitude = found.longitude;
+                          selectedRadius = found.radius;
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 _buildDialogField('Location (e.g. Downtown)', extraController1),
                 const SizedBox(height: 12),
                 _buildDialogField(
@@ -934,18 +961,32 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white10),
+                    border: Border.all(
+                      color: selectedLatitude != null
+                          ? const Color(0xFF10B981).withValues(alpha: 0.4)
+                          : Colors.white10,
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'GPS Geofencing Settings',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.my_location_rounded,
+                            size: 16,
+                            color: selectedLatitude != null ? const Color(0xFF10B981) : Colors.white70,
+                          ),
+                          const SizedBox(width: 6),
+                          const Text(
+                            'GPS Geofencing Settings',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 8),
                       Row(
@@ -956,15 +997,15 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                                       selectedLongitude != null
                                   ? 'Lat: ${selectedLatitude!.toStringAsFixed(4)}, Lng: ${selectedLongitude!.toStringAsFixed(4)}\nRadius: ${selectedRadius?.round() ?? 0}m'
                                   : 'No Location Set',
-                              style: const TextStyle(
-                                color: Colors.white54,
+                              style: TextStyle(
+                                color: selectedLatitude != null ? const Color(0xFF10B981) : Colors.white54,
                                 fontSize: 13,
                               ),
                             ),
                           ),
                           ElevatedButton.icon(
                             icon: const Icon(Icons.map, size: 16),
-                            label: const Text('Pick on Map'),
+                            label: Text(selectedLatitude != null ? 'Change on Map' : 'Pick on Map'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF2E65FF),
                               padding: const EdgeInsets.symmetric(
@@ -999,6 +1040,19 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                               }
                             },
                           ),
+                          if (selectedLatitude != null) ...[
+                            const SizedBox(width: 8),
+                            TextButton(
+                              onPressed: () {
+                                setDialogState(() {
+                                  selectedLatitude = null;
+                                  selectedLongitude = null;
+                                  selectedRadius = null;
+                                });
+                              },
+                              child: const Text('Clear', style: TextStyle(color: Colors.redAccent, fontSize: 12)),
+                            ),
+                          ],
                         ],
                       ),
                     ],
