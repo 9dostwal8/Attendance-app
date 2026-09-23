@@ -481,7 +481,13 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
           children: [
             _buildSearchBar('Search shifts...'),
             const SizedBox(height: 16),
-            Expanded(child: HrShiftsTab(searchQuery: _searchQuery)),
+            Expanded(
+              child: HrShiftsTab(
+                searchQuery: _searchQuery,
+                onEdit: (shift) => _showAddEditDialog(shift: shift),
+                onDelete: (id) => provider.deleteShift(id),
+              ),
+            ),
           ],
         );
       case HrTab.groups:
@@ -489,7 +495,13 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
           children: [
             _buildSearchBar('Search groups...'),
             const SizedBox(height: 16),
-            Expanded(child: HrGroupsTab(searchQuery: _searchQuery)),
+            Expanded(
+              child: HrGroupsTab(
+                searchQuery: _searchQuery,
+                onEdit: (group) => _showAddEditDialog(group: group),
+                onDelete: (id) => provider.deleteGroup(id),
+              ),
+            ),
           ],
         );
       case HrTab.employees:
@@ -497,7 +509,13 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
           children: [
             _buildSearchBar('Search employees...'),
             const SizedBox(height: 16),
-            Expanded(child: HrEmployeesTab(searchQuery: _searchQuery)),
+            Expanded(
+              child: HrEmployeesTab(
+                searchQuery: _searchQuery,
+                onEdit: (employee) => _showAddEditDialog(employee: employee),
+                onDelete: (id) => provider.deleteEmployee(id),
+              ),
+            ),
           ],
         );
       case HrTab.holidays:
@@ -505,7 +523,13 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
           children: [
             _buildSearchBar('Search holidays...'),
             const SizedBox(height: 16),
-            Expanded(child: HrHolidaysTab(searchQuery: _searchQuery)),
+            Expanded(
+              child: HrHolidaysTab(
+                searchQuery: _searchQuery,
+                onEdit: (holiday) => _showAddEditDialog(holiday: holiday),
+                onDelete: (id) => provider.deleteHoliday(id),
+              ),
+            ),
           ],
         );
       case HrTab.locations:
@@ -513,7 +537,13 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
           children: [
             _buildSearchBar('Search locations...'),
             const SizedBox(height: 16),
-            Expanded(child: HrLocationsTab(searchQuery: _searchQuery)),
+            Expanded(
+              child: HrLocationsTab(
+                searchQuery: _searchQuery,
+                onEdit: (location) => _showAddEditDialog(location: location),
+                onDelete: (id) => provider.deleteLocation(id),
+              ),
+            ),
           ],
         );
       case HrTab.payroll:
