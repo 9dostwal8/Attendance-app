@@ -1167,7 +1167,9 @@ Widget _buildDropdownFieldWidget({
       ),
       Theme(
         data: Theme.of(context).copyWith(
-          canvasColor: const Color(0xFF1E293B),
+          canvasColor: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF1E293B)
+              : Colors.white,
         ),
         child: DropdownButton<String>(
           value: value,

@@ -15,6 +15,12 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<AttendanceProvider>(context);
+    final currentUser = provider.currentEmployee;
+    final bool isHrOrAdmin = currentUser != null && (
+      currentUser.role == 'hr' ||
+      currentUser.role == 'admin' ||
+      currentUser.email == 'admin@company.com'
+    );
 
     return Directionality(
       textDirection: provider.currentLanguageDirection,
@@ -122,31 +128,33 @@ class ProfileScreen extends StatelessWidget {
                         _buildSecurityCard(context, provider),
                         SizedBox(height: 24),
 
-                        // User Management Section
-                        Text(
-                          'User & Access Management',
-                          style: TextStyle(
-                            color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.7)),
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
+                        if (isHrOrAdmin) ...[
+                          // User Management Section
+                          Text(
+                            'User & Access Management',
+                            style: TextStyle(
+                              color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.7)),
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        SizedBox(height: 12),
-                        _buildUserManagementCard(provider, context),
-                        SizedBox(height: 24),
+                          SizedBox(height: 12),
+                          _buildUserManagementCard(provider, context),
+                          SizedBox(height: 24),
 
-                        // Account Switcher Section (Testing Only)
-                        Text(
-                          provider.translate('switch_account'),
-                          style: TextStyle(
-                            color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.7)),
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
+                          // Account Switcher Section (Testing Only)
+                          Text(
+                            provider.translate('switch_account'),
+                            style: TextStyle(
+                              color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.7)),
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        SizedBox(height: 12),
-                        _buildAccountSwitcherCard(provider, context),
-                        SizedBox(height: 24),
+                          SizedBox(height: 12),
+                          _buildAccountSwitcherCard(provider, context),
+                          SizedBox(height: 24),
+                        ],
 
                         // Sign Out Section
                         _buildLogoutCard(provider, context),
@@ -741,39 +749,54 @@ class ProfileScreen extends StatelessWidget {
   }
 
   Widget _buildAccountSwitcherCard(AttendanceProvider provider, BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final dropdownBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+
     return GlassContainer(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Theme(
-        data: ThemeData.dark().copyWith(canvasColor: const Color(0xFF1E293B)),
-        child: DropdownButtonHideUnderline(
-          child: DropdownButton<String>(
-            value: provider.employeeId,
-            isExpanded: true,
-            icon: Icon(Icons.swap_horiz, color: (Theme.of(context).brightness == Brightness.dark ? Colors.white60 : Colors.black54)),
-            style: TextStyle(
-              color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-            items: provider.employees.map((emp) {
-              String roleLabel = 'Employee';
-              if (emp.role == 'hr') {
-                roleLabel = 'HR Manager';
-              } else if (emp.role == 'supervisor') {
-                roleLabel = 'Supervisor';
-              }
-
-              return DropdownMenuItem<String>(
-                value: emp.id,
-                child: Text('${emp.name} ($roleLabel)'),
-              );
-            }).toList(),
-            onChanged: (val) {
-              if (val != null) {
-                provider.switchProfile(val);
-              }
-            },
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: provider.employeeId,
+          isExpanded: true,
+          dropdownColor: dropdownBg,
+          borderRadius: BorderRadius.circular(14),
+          icon: Icon(
+            Icons.swap_horiz,
+            color: isDark ? Colors.white60 : Colors.black54,
           ),
+          style: TextStyle(
+            color: textColor,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+          items: provider.employees.map((emp) {
+            String roleLabel = 'Employee';
+            if (emp.role == 'hr') {
+              roleLabel = 'HR Manager';
+            } else if (emp.role == 'supervisor') {
+              roleLabel = 'Supervisor';
+            } else if (emp.role == 'admin') {
+              roleLabel = 'Super Admin';
+            }
+
+            return DropdownMenuItem<String>(
+              value: emp.id,
+              child: Text(
+                '${emp.name} ($roleLabel)',
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            );
+          }).toList(),
+          onChanged: (val) {
+            if (val != null) {
+              provider.switchProfile(val);
+            }
+          },
         ),
       ),
     );

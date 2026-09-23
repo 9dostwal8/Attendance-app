@@ -2369,7 +2369,11 @@ class _RequestsScreenState extends State<RequestsScreen> {
         Theme(
           data: Theme.of(
             context,
-          ).copyWith(canvasColor: const Color(0xFF1E293B)),
+          ).copyWith(
+            canvasColor: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF1E293B)
+                : Colors.white,
+          ),
           child: DropdownButton<String>(
             value: value,
             items: items,

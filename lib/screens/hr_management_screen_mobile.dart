@@ -3595,7 +3595,11 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
         Theme(
           data: Theme.of(
             context,
-          ).copyWith(canvasColor: const Color(0xFF1E293B)),
+          ).copyWith(
+            canvasColor: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF1E293B)
+                : Colors.white,
+          ),
           child: DropdownButton<T>(
             value: value,
             items: items,
