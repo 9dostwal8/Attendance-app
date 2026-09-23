@@ -580,55 +580,89 @@ void showStructureDialog(BuildContext context, {OrgStructure? structure}) {
               const SizedBox(height: 14),
 
               // Parent Structure Dropdown
-              DropdownButtonFormField<String?>(
-                initialValue: selectedParentId,
-                decoration: const InputDecoration(
-                  labelText: 'Parent Department',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.folder_outlined, size: 20),
-                ),
-                items: [
-                  const DropdownMenuItem(
-                    value: null,
-                    child: Text('None (Top-Level Structure)'),
-                  ),
-                  ...provider.structures
-                      .where((s) => structure == null || s.id != structure.id)
-                      .map(
+              Builder(
+                builder: (context) {
+                  final structureMap = <String, OrgStructure>{};
+                  for (final s in provider.structures) {
+                    if (structure == null || s.id != structure.id) {
+                      structureMap[s.id] = s;
+                    }
+                  }
+                  final hasCurrentParent = selectedParentId == null ||
+                      structureMap.containsKey(selectedParentId);
+
+                  return DropdownButtonFormField<String?>(
+                    key: ValueKey(selectedParentId),
+                    initialValue: selectedParentId,
+                    decoration: const InputDecoration(
+                      labelText: 'Parent Department',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.folder_outlined, size: 20),
+                    ),
+                    items: [
+                      const DropdownMenuItem(
+                        value: null,
+                        child: Text('None (Top-Level Structure)'),
+                      ),
+                      if (selectedParentId != null && !hasCurrentParent)
+                        DropdownMenuItem(
+                          value: selectedParentId,
+                          child: Text('Assigned Parent ($selectedParentId)'),
+                        ),
+                      ...structureMap.values.map(
                         (s) => DropdownMenuItem(
                           value: s.id,
                           child: Text(s.name),
                         ),
                       ),
-                ],
-                onChanged: (val) {
-                  setDialogState(() => selectedParentId = val);
+                    ],
+                    onChanged: (val) {
+                      setDialogState(() => selectedParentId = val);
+                    },
+                  );
                 },
               ),
               const SizedBox(height: 14),
 
               // Supervisor Dropdown
-              DropdownButtonFormField<String?>(
-                initialValue: selectedSupervisorId,
-                decoration: const InputDecoration(
-                  labelText: 'Department Supervisor',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.shield_outlined, size: 20),
-                ),
-                items: [
-                  const DropdownMenuItem(
-                    value: null,
-                    child: Text('None (No Supervisor)'),
-                  ),
-                  ...provider.employees.map(
-                    (emp) => DropdownMenuItem(
-                      value: emp.id,
-                      child: Text('${emp.name} (${emp.position.isNotEmpty ? emp.position : emp.role.toUpperCase()})'),
+              Builder(
+                builder: (context) {
+                  final employeeMap = <String, CompanyEmployee>{};
+                  for (final emp in provider.employees) {
+                    employeeMap[emp.id] = emp;
+                  }
+                  final hasCurrentSupervisor = selectedSupervisorId == null ||
+                      employeeMap.containsKey(selectedSupervisorId);
+
+                  return DropdownButtonFormField<String?>(
+                    key: ValueKey(selectedSupervisorId),
+                    initialValue: selectedSupervisorId,
+                    decoration: const InputDecoration(
+                      labelText: 'Department Supervisor',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.shield_outlined, size: 20),
                     ),
-                  ),
-                ],
-                onChanged: (val) {
-                  setDialogState(() => selectedSupervisorId = val);
+                    items: [
+                      const DropdownMenuItem(
+                        value: null,
+                        child: Text('None (No Supervisor)'),
+                      ),
+                      if (selectedSupervisorId != null && !hasCurrentSupervisor)
+                        DropdownMenuItem(
+                          value: selectedSupervisorId,
+                          child: Text('Assigned ($selectedSupervisorId)'),
+                        ),
+                      ...employeeMap.values.map(
+                        (emp) => DropdownMenuItem(
+                          value: emp.id,
+                          child: Text('${emp.name} (${emp.position.isNotEmpty ? emp.position : emp.role.toUpperCase()})'),
+                        ),
+                      ),
+                    ],
+                    onChanged: (val) {
+                      setDialogState(() => selectedSupervisorId = val);
+                    },
+                  );
                 },
               ),
             ],

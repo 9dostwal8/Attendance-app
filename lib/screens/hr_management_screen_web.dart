@@ -3612,6 +3612,28 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
     required List<DropdownMenuItem<T>> items,
     required ValueChanged<T?> onChanged,
   }) {
+    // 1. De-duplicate items by item.value
+    final seen = <T?>{};
+    final cleanItems = <DropdownMenuItem<T>>[];
+    for (final item in items) {
+      if (!seen.contains(item.value)) {
+        seen.add(item.value);
+        cleanItems.add(item);
+      }
+    }
+
+    // 2. Ensure current value exists in cleanItems
+    T? effectiveValue = value;
+    if (value != null && !cleanItems.any((it) => it.value == value)) {
+      cleanItems.add(
+        DropdownMenuItem<T>(
+          value: value,
+          child: Text('$value (Current)'),
+        ),
+      );
+      effectiveValue = value;
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -3633,8 +3655,9 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                 : Colors.white,
           ),
           child: DropdownButtonFormField<T>(
-            initialValue: value,
-            items: items,
+            key: ValueKey(effectiveValue),
+            initialValue: effectiveValue,
+            items: cleanItems,
             onChanged: onChanged,
             isExpanded: true,
             icon: const Icon(Icons.arrow_drop_down, color: Colors.white60),
