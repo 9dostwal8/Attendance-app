@@ -71,7 +71,9 @@ class ExportService {
       'Food Allow.',
       'Trans. Allow.',
       'Other Allow.',
+      'Additions',
       'Penalties',
+      'Other Deduct.',
       'Gross Salary',
       'Deductions',
       'Net Earnings',
@@ -99,11 +101,13 @@ class ExportService {
       sheet.getRangeByIndex(row, 10).setNumber(r.foodAllowance);
       sheet.getRangeByIndex(row, 11).setNumber(r.transportationAllowance);
       sheet.getRangeByIndex(row, 12).setNumber(r.otherAllowance);
-      sheet.getRangeByIndex(row, 13).setNumber(r.monthlyPenalties);
-      sheet.getRangeByIndex(row, 14).setNumber(r.incrementalSalary);
-      sheet.getRangeByIndex(row, 15).setNumber(r.decrementalSalary);
-      sheet.getRangeByIndex(row, 16).setNumber(r.netEarnings);
-      sheet.getRangeByIndex(row, 17).setText(r.currency);
+      sheet.getRangeByIndex(row, 13).setNumber(r.monthlyAdditions);
+      sheet.getRangeByIndex(row, 14).setNumber(r.monthlyPenalties);
+      sheet.getRangeByIndex(row, 15).setNumber(r.monthlyDeductions);
+      sheet.getRangeByIndex(row, 16).setNumber(r.incrementalSalary);
+      sheet.getRangeByIndex(row, 17).setNumber(r.decrementalSalary);
+      sheet.getRangeByIndex(row, 18).setNumber(r.netEarnings);
+      sheet.getRangeByIndex(row, 19).setText(r.currency);
     }
 
     // Total row
@@ -117,6 +121,8 @@ class ExportService {
       final totalOvertimeValue = reports.fold(0.0, (sum, r) => sum + r.overtimeValue);
       final totalDeficitHours = reports.fold(0.0, (sum, r) => sum + r.attendanceDeficitHours);
       final totalDeficitValue = reports.fold(0.0, (sum, r) => sum + r.attendanceDeficit);
+      final totalMonthlyAdditions = reports.fold(0.0, (sum, r) => sum + r.monthlyAdditions);
+      final totalMonthlyDeductions = reports.fold(0.0, (sum, r) => sum + r.monthlyDeductions);
       final totalFoodAllowance = reports.fold(0.0, (sum, r) => sum + r.foodAllowance);
       final totalTransportationAllowance = reports.fold(0.0, (sum, r) => sum + r.transportationAllowance);
       final totalOtherAllowance = reports.fold(0.0, (sum, r) => sum + r.otherAllowance);
@@ -137,13 +143,15 @@ class ExportService {
       sheet.getRangeByIndex(totalRow, 10).setNumber(totalFoodAllowance);
       sheet.getRangeByIndex(totalRow, 11).setNumber(totalTransportationAllowance);
       sheet.getRangeByIndex(totalRow, 12).setNumber(totalOtherAllowance);
-      sheet.getRangeByIndex(totalRow, 13).setNumber(totalPenalties);
-      sheet.getRangeByIndex(totalRow, 14).setNumber(totalGrossSalary);
-      sheet.getRangeByIndex(totalRow, 15).setNumber(totalDeductions);
-      sheet.getRangeByIndex(totalRow, 16).setNumber(totalNetEarnings);
-      sheet.getRangeByIndex(totalRow, 17).setText('');
+      sheet.getRangeByIndex(totalRow, 13).setNumber(totalMonthlyAdditions);
+      sheet.getRangeByIndex(totalRow, 14).setNumber(totalPenalties);
+      sheet.getRangeByIndex(totalRow, 15).setNumber(totalMonthlyDeductions);
+      sheet.getRangeByIndex(totalRow, 16).setNumber(totalGrossSalary);
+      sheet.getRangeByIndex(totalRow, 17).setNumber(totalDeductions);
+      sheet.getRangeByIndex(totalRow, 18).setNumber(totalNetEarnings);
+      sheet.getRangeByIndex(totalRow, 19).setText('');
 
-      for (int col = 1; col <= 17; col++) {
+      for (int col = 1; col <= 19; col++) {
         sheet.getRangeByIndex(totalRow, col).cellStyle.bold = true;
       }
     }
@@ -180,7 +188,9 @@ class ExportService {
       'Food',
       'Trans.',
       'Other',
+      'Add.',
       'Penal.',
+      'Other Ded.',
       'Gross',
       'Ded.',
       'Net',
@@ -221,7 +231,9 @@ class ExportService {
                   r.foodAllowance.toStringAsFixed(0),
                   r.transportationAllowance.toStringAsFixed(0),
                   r.otherAllowance.toStringAsFixed(0),
+                  r.monthlyAdditions.toStringAsFixed(0),
                   r.monthlyPenalties.toStringAsFixed(0),
+                  r.monthlyDeductions.toStringAsFixed(0),
                   r.incrementalSalary.toStringAsFixed(0),
                   r.decrementalSalary.toStringAsFixed(0),
                   r.netEarnings.toStringAsFixed(0),
@@ -239,6 +251,8 @@ class ExportService {
             final totalOvertimeValue = reports.fold(0.0, (sum, r) => sum + r.overtimeValue);
             final totalDeficitHours = reports.fold(0.0, (sum, r) => sum + r.attendanceDeficitHours);
             final totalDeficitValue = reports.fold(0.0, (sum, r) => sum + r.attendanceDeficit);
+            final totalMonthlyAdditions = reports.fold(0.0, (sum, r) => sum + r.monthlyAdditions);
+            final totalMonthlyDeductions = reports.fold(0.0, (sum, r) => sum + r.monthlyDeductions);
             final totalFoodAllowance = reports.fold(0.0, (sum, r) => sum + r.foodAllowance);
             final totalTransportationAllowance = reports.fold(0.0, (sum, r) => sum + r.transportationAllowance);
             final totalOtherAllowance = reports.fold(0.0, (sum, r) => sum + r.otherAllowance);
@@ -260,7 +274,9 @@ class ExportService {
               totalFoodAllowance.toStringAsFixed(0),
               totalTransportationAllowance.toStringAsFixed(0),
               totalOtherAllowance.toStringAsFixed(0),
+              totalMonthlyAdditions.toStringAsFixed(0),
               totalPenalties.toStringAsFixed(0),
+              totalMonthlyDeductions.toStringAsFixed(0),
               totalGrossSalary.toStringAsFixed(0),
               totalDeductions.toStringAsFixed(0),
               totalNetEarnings.toStringAsFixed(0),

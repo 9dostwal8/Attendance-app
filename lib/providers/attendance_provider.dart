@@ -290,9 +290,11 @@ class AttendanceProvider with ChangeNotifier {
   final List<CompanyEmployee> _employees = [];
   final List<Holiday> _holidays = [];
   final List<WorkLocation> _locations = [];
+  final List<PayrollAdjustment> _payrollAdjustments = [];
   CompanyProfile? _companyProfile;
 
   // Getters
+  List<PayrollAdjustment> get payrollAdjustments => _payrollAdjustments;
   String get userName => _userName;
   String get userTitle => _userTitle;
   String get employeeId => _employeeId;
@@ -647,6 +649,15 @@ class AttendanceProvider with ChangeNotifier {
         _firebaseService.streamLocations().listen((data) {
           _locations.clear();
           _locations.addAll(data);
+          notifyListeners();
+        }),
+      );
+
+      _subscriptions.add(
+        _firebaseService.streamPayrollAdjustments().listen((data) {
+          _payrollAdjustments.clear();
+          _payrollAdjustments.addAll(data);
+          recalculateAllStats();
           notifyListeners();
         }),
       );
@@ -1335,11 +1346,31 @@ class AttendanceProvider with ChangeNotifier {
     final double dailyRate = basicSalary / 30.0;
     final double salaryCalcByDay = daysWorked * dailyRate;
 
+    // Monthly additions & deductions for this employee in this target month
+    final targetMonthStr = DateFormat('yyyy-MM').format(targetMonth);
+    final empAdjustments = _payrollAdjustments.where((adj) {
+      final matchesEmp = adj.employeeId.trim().toLowerCase() == emp.id.trim().toLowerCase() ||
+          adj.employeeId.trim().toLowerCase() == emp.name.trim().toLowerCase() ||
+          adj.employeeId.trim().toLowerCase() == emp.email.trim().toLowerCase();
+      final matchesMonth = adj.month == targetMonthStr ||
+          (adj.date.length >= 7 && adj.date.substring(0, 7) == targetMonthStr);
+      return matchesEmp && matchesMonth;
+    }).toList();
+
+    final double monthlyAdditions = empAdjustments
+        .where((adj) => adj.type.toLowerCase() == 'addition')
+        .fold(0.0, (sum, adj) => sum + adj.amount);
+
+    final double monthlyDeductions = empAdjustments
+        .where((adj) => adj.type.toLowerCase() == 'deduction')
+        .fold(0.0, (sum, adj) => sum + adj.amount);
+
     final double incrementalSalary =
         salaryCalcByDay +
         overtimeValue +
-        (daysWorked > 0 ? totalAllowances : 0.0);
-    final double decrementalSalary = attendanceDeficit + totalPenalties;
+        (daysWorked > 0 ? totalAllowances : 0.0) +
+        monthlyAdditions;
+    final double decrementalSalary = attendanceDeficit + totalPenalties + monthlyDeductions;
     final double netEarnings = (incrementalSalary - decrementalSalary).clamp(
       0.0,
       double.infinity,
@@ -1359,11 +1390,49 @@ class AttendanceProvider with ChangeNotifier {
       foodAllowance: foodAllowance,
       transportationAllowance: transportationAllowance,
       otherAllowance: otherAllowance,
+      monthlyAdditions: monthlyAdditions,
+      monthlyDeductions: monthlyDeductions,
+      adjustments: empAdjustments,
       incrementalSalary: incrementalSalary,
       decrementalSalary: decrementalSalary,
       netEarnings: netEarnings,
       currency: currency,
     );
+  }
+
+  Future<void> addPayrollAdjustment(PayrollAdjustment adjustment) async {
+    final existingIdx = _payrollAdjustments.indexWhere((a) => a.id == adjustment.id);
+    if (existingIdx != -1) {
+      _payrollAdjustments[existingIdx] = adjustment;
+    } else {
+      _payrollAdjustments.add(adjustment);
+    }
+    recalculateAllStats();
+    notifyListeners();
+
+    if (_firebaseService.isAvailable) {
+      await _firebaseService.savePayrollAdjustment(adjustment);
+    }
+  }
+
+  Future<void> deletePayrollAdjustment(String id) async {
+    _payrollAdjustments.removeWhere((a) => a.id == id);
+    recalculateAllStats();
+    notifyListeners();
+
+    if (_firebaseService.isAvailable) {
+      await _firebaseService.deletePayrollAdjustment(id);
+    }
+  }
+
+  List<PayrollAdjustment> getAdjustmentsForEmployee(String empId, DateTime targetMonth) {
+    final targetMonthStr = DateFormat('yyyy-MM').format(targetMonth);
+    return _payrollAdjustments.where((adj) {
+      final matchesEmp = adj.employeeId.trim().toLowerCase() == empId.trim().toLowerCase();
+      final matchesMonth = adj.month == targetMonthStr ||
+          (adj.date.length >= 7 && adj.date.substring(0, 7) == targetMonthStr);
+      return matchesEmp && matchesMonth;
+    }).toList();
   }
 
   void recalculateAllStats() {
@@ -2343,6 +2412,9 @@ class PayrollReport {
   final double foodAllowance;
   final double transportationAllowance;
   final double otherAllowance;
+  final double monthlyAdditions;
+  final double monthlyDeductions;
+  final List<PayrollAdjustment> adjustments;
   final double netEarnings;
   final String currency;
 
@@ -2362,6 +2434,9 @@ class PayrollReport {
     required this.foodAllowance,
     required this.transportationAllowance,
     required this.otherAllowance,
+    this.monthlyAdditions = 0.0,
+    this.monthlyDeductions = 0.0,
+    this.adjustments = const [],
     required this.netEarnings,
     required this.currency,
   });

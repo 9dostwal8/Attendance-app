@@ -959,3 +959,96 @@ class CompanyProfile {
     );
   }
 }
+
+class PayrollAdjustment {
+  final String id;
+  final String employeeId;
+  final String type; // 'addition' or 'deduction'
+  final String category; // 'Bonus', 'Commission', 'Loan Repayment', 'Fine', etc.
+  final double amount;
+  final String currency; // 'USD' or 'IQD'
+  final String date; // 'yyyy-MM-dd'
+  final String month; // 'yyyy-MM'
+  final String reason;
+  final String? createdBy;
+  final DateTime createdAt;
+
+  PayrollAdjustment({
+    required this.id,
+    required this.employeeId,
+    required this.type,
+    required this.category,
+    required this.amount,
+    required this.currency,
+    required this.date,
+    required this.month,
+    this.reason = '',
+    this.createdBy,
+    DateTime? createdAt,
+  }) : createdAt = createdAt ?? DateTime.now();
+
+  PayrollAdjustment copyWith({
+    String? id,
+    String? employeeId,
+    String? type,
+    String? category,
+    double? amount,
+    String? currency,
+    String? date,
+    String? month,
+    String? reason,
+    String? createdBy,
+    DateTime? createdAt,
+  }) {
+    return PayrollAdjustment(
+      id: id ?? this.id,
+      employeeId: employeeId ?? this.employeeId,
+      type: type ?? this.type,
+      category: category ?? this.category,
+      amount: amount ?? this.amount,
+      currency: currency ?? this.currency,
+      date: date ?? this.date,
+      month: month ?? this.month,
+      reason: reason ?? this.reason,
+      createdBy: createdBy ?? this.createdBy,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'employeeId': employeeId,
+      'type': type,
+      'category': category,
+      'amount': amount,
+      'currency': currency,
+      'date': date,
+      'month': month,
+      'reason': reason,
+      'createdBy': createdBy,
+      'createdAt': createdAt.toIso8601String(),
+    };
+  }
+
+  factory PayrollAdjustment.fromMap(Map<String, dynamic> map, String docId) {
+    final dStr = map['date'] ?? '';
+    final mStr = map['month'] ?? (dStr.length >= 7 ? dStr.substring(0, 7) : '');
+    return PayrollAdjustment(
+      id: map['id'] ?? docId,
+      employeeId: map['employeeId'] ?? '',
+      type: map['type'] ?? 'addition',
+      category: map['category'] ?? 'Bonus',
+      amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
+      currency: map['currency'] ?? 'USD',
+      date: dStr,
+      month: mStr,
+      reason: map['reason'] ?? '',
+      createdBy: map['createdBy'],
+      createdAt: map['createdAt'] != null
+          ? DateTime.tryParse(map['createdAt']) ?? DateTime.now()
+          : DateTime.now(),
+    );
+  }
+}
+

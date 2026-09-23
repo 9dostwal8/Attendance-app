@@ -819,12 +819,68 @@ class FirebaseService {
     });
   }
 
-  Future<void> saveCompanyProfile(CompanyProfile profile) async {
+    Future<void> saveCompanyProfile(CompanyProfile profile) async {
     if (!isAvailable) return;
     try {
       await _firestore.collection('settings').doc('company_profile').set(profile.toMap());
     } catch (e) {
       debugPrint('Error saving company profile: $e');
+    }
+  }
+
+  // --- Payroll Adjustments (Additions & Deductions) CRUD ---
+  Future<List<PayrollAdjustment>> getPayrollAdjustments() async {
+    if (!isAvailable) return [];
+    try {
+      final snapshot = await _firestore.collection('payroll_adjustments').get();
+      final list = <PayrollAdjustment>[];
+      for (var doc in snapshot.docs) {
+        try {
+          list.add(PayrollAdjustment.fromMap(doc.data(), doc.id));
+        } catch (e) {
+          debugPrint('Error parsing PayrollAdjustment ${doc.id}: $e');
+        }
+      }
+      return list;
+    } catch (e) {
+      debugPrint('Error getting payroll adjustments: $e');
+      return [];
+    }
+  }
+
+  Stream<List<PayrollAdjustment>> streamPayrollAdjustments() {
+    if (!isAvailable) return Stream.value([]);
+    return _firestore.collection('payroll_adjustments').snapshots().map((snapshot) {
+      final list = <PayrollAdjustment>[];
+      for (var doc in snapshot.docs) {
+        try {
+          list.add(PayrollAdjustment.fromMap(doc.data(), doc.id));
+        } catch (e) {
+          debugPrint('Error parsing PayrollAdjustment ${doc.id}: $e');
+        }
+      }
+      return list;
+    });
+  }
+
+  Future<void> savePayrollAdjustment(PayrollAdjustment adjustment) async {
+    if (!isAvailable) return;
+    try {
+      await _firestore
+          .collection('payroll_adjustments')
+          .doc(adjustment.id)
+          .set(adjustment.toMap());
+    } catch (e) {
+      debugPrint('Error saving payroll adjustment: $e');
+    }
+  }
+
+  Future<void> deletePayrollAdjustment(String id) async {
+    if (!isAvailable) return;
+    try {
+      await _firestore.collection('payroll_adjustments').doc(id).delete();
+    } catch (e) {
+      debugPrint('Error deleting payroll adjustment: $e');
     }
   }
 }

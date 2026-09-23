@@ -6,6 +6,7 @@ import '../providers/attendance_provider.dart';
 import '../widgets/glass_container.dart';
 import '../models/hr_models.dart';
 import '../services/export_service.dart';
+import '../widgets/payroll_adjustment_dialog.dart';
 
 class PayrollScreen extends StatelessWidget {
   const PayrollScreen({super.key});
@@ -31,6 +32,12 @@ class PayrollScreen extends StatelessWidget {
     final foodAllowance = provider.foodAllowance;
     final transportAllowance = provider.transportationAllowance;
     final otherAllowance = provider.otherAllowance;
+
+    final currentReport = provider.currentEmployee != null
+        ? provider.generatePayrollReport(provider.currentEmployee!, provider.selectedMonth)
+        : null;
+    final currentMonthlyAdditions = currentReport?.monthlyAdditions ?? 0.0;
+    final currentMonthlyDeductions = currentReport?.monthlyDeductions ?? 0.0;
 
     final activeConfig = provider.currentEmployee != null 
         ? provider.getActiveSalaryConfig(provider.currentEmployee!, provider.selectedMonth)
@@ -84,7 +91,14 @@ class PayrollScreen extends StatelessWidget {
                         Expanded(
                           child: Align(
                             alignment: AlignmentDirectional.centerEnd,
-                            child: _buildExportButton(context, provider),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _buildAdjustmentButtons(context, provider),
+                                const SizedBox(width: 10),
+                                _buildExportButton(context, provider),
+                              ],
+                            ),
                           ),
                         ),
                       ],
@@ -112,6 +126,10 @@ class PayrollScreen extends StatelessWidget {
                         const SizedBox(height: 12),
                         Center(
                           child: _buildMonthSelector(context, provider),
+                        ),
+                        const SizedBox(height: 12),
+                        Center(
+                          child: _buildAdjustmentButtons(context, provider),
                         ),
                       ],
                     );
@@ -377,6 +395,24 @@ class PayrollScreen extends StatelessWidget {
                               color: const Color(0xFF00FF87),
                             ),
                           ],
+                          if (currentMonthlyAdditions > 0) ...[
+                            Divider(color: (Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.black12), height: 1),
+                            _buildBreakdownRow(context, 
+                              label: 'Additions (Bonuses & Incentives)',
+                              details: 'Approved monthly additions',
+                              amount: '+${formatAmount(currentMonthlyAdditions)}',
+                              color: const Color(0xFF10B981),
+                            ),
+                          ],
+                          if (currentMonthlyDeductions > 0) ...[
+                            Divider(color: (Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.black12), height: 1),
+                            _buildBreakdownRow(context, 
+                              label: 'Loans & Other Deductions',
+                              details: 'Approved monthly deductions',
+                              amount: '-${formatAmount(currentMonthlyDeductions)}',
+                              color: const Color(0xFFFF5C5C),
+                            ),
+                          ],
                           if (attendanceDeficit > 0) ...[
                             Divider(color: (Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.black12), height: 1),
                             _buildBreakdownRow(context, 
@@ -505,6 +541,8 @@ class PayrollScreen extends StatelessWidget {
     final double totalOvertimeValue = reports.fold(0.0, (sum, r) => sum + r.overtimeValue);
     final double totalDeficitHours = reports.fold(0.0, (sum, r) => sum + r.attendanceDeficitHours);
     final double totalDeficitValue = reports.fold(0.0, (sum, r) => sum + r.attendanceDeficit);
+    final double totalMonthlyAdditions = reports.fold(0.0, (sum, r) => sum + r.monthlyAdditions);
+    final double totalMonthlyDeductions = reports.fold(0.0, (sum, r) => sum + r.monthlyDeductions);
     final double totalFoodAllowance = reports.fold(0.0, (sum, r) => sum + r.foodAllowance);
     final double totalTransportationAllowance = reports.fold(0.0, (sum, r) => sum + r.transportationAllowance);
     final double totalOtherAllowance = reports.fold(0.0, (sum, r) => sum + r.otherAllowance);
@@ -547,10 +585,13 @@ class PayrollScreen extends StatelessWidget {
                   DataColumn(label: Text('Food Allow.', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF5B9BFF)))),
                   DataColumn(label: Text('Trans. Allow.', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF5B9BFF)))),
                   DataColumn(label: Text('Other Allow.', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF5B9BFF)))),
+                  DataColumn(label: Text('Additions', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF10B981)))),
                   DataColumn(label: Text('Penalties', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFFF5C5C)))),
+                  DataColumn(label: Text('Other Deduct.', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFFF5C5C)))),
                   DataColumn(label: Text('Gross Salary', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2EBD96)))),
                   DataColumn(label: Text('Deductions', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFFF5C5C)))),
                   DataColumn(label: Text('Net Earnings', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2EBD96)))),
+                  DataColumn(label: Text('Actions', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13))),
                 ],
                 rows: [
                   ...reports.map((r) {
@@ -568,10 +609,68 @@ class PayrollScreen extends StatelessWidget {
                         DataCell(Text(formatEmpAmount(r.foodAllowance, r.currency), style: TextStyle(color: textColor, fontSize: 12))),
                         DataCell(Text(formatEmpAmount(r.transportationAllowance, r.currency), style: TextStyle(color: textColor, fontSize: 12))),
                         DataCell(Text(formatEmpAmount(r.otherAllowance, r.currency), style: TextStyle(color: textColor, fontSize: 12))),
+                        DataCell(Text(formatEmpAmount(r.monthlyAdditions, r.currency), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF10B981)))),
                         DataCell(Text(formatEmpAmount(r.monthlyPenalties, r.currency), style: const TextStyle(fontSize: 12, color: Color(0xFFFF5C5C)))),
+                        DataCell(Text(formatEmpAmount(r.monthlyDeductions, r.currency), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFFF5C5C)))),
                         DataCell(Text(formatEmpAmount(r.incrementalSalary, r.currency), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFF2EBD96)))),
                         DataCell(Text(formatEmpAmount(r.decrementalSalary, r.currency), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFFFF5C5C)))),
                         DataCell(Text(formatEmpAmount(r.netEarnings, r.currency), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2EBD96)))),
+                        DataCell(
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Tooltip(
+                                message: 'Add Addition for ${r.employee.name}',
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(6),
+                                  onTap: () => showPayrollAdjustmentDialog(
+                                    context: context,
+                                    employee: r.employee,
+                                    initialType: 'addition',
+                                    initialMonth: provider.selectedMonth,
+                                  ),
+                                  child: const Padding(
+                                    padding: EdgeInsets.all(4),
+                                    child: Icon(Icons.add_circle_outline_rounded, color: Color(0xFF10B981), size: 18),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Tooltip(
+                                message: 'Add Deduction for ${r.employee.name}',
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(6),
+                                  onTap: () => showPayrollAdjustmentDialog(
+                                    context: context,
+                                    employee: r.employee,
+                                    initialType: 'deduction',
+                                    initialMonth: provider.selectedMonth,
+                                  ),
+                                  child: const Padding(
+                                    padding: EdgeInsets.all(4),
+                                    child: Icon(Icons.remove_circle_outline_rounded, color: Color(0xFFEF4444), size: 18),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Tooltip(
+                                message: 'View Adjustments for ${r.employee.name}',
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(6),
+                                  onTap: () => showManageAdjustmentsDialog(
+                                    context: context,
+                                    targetMonth: provider.selectedMonth,
+                                    filterEmployee: r.employee,
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(4),
+                                    child: Icon(Icons.receipt_long_outlined, color: isDark ? Colors.white70 : Colors.black54, size: 18),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     );
                   }),
@@ -680,7 +779,23 @@ class PayrollScreen extends StatelessWidget {
                         ),
                       )),
                       DataCell(Text(
+                        formatEmpAmount(totalMonthlyAdditions, defaultCurrency),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: Color(0xFF10B981),
+                        ),
+                      )),
+                      DataCell(Text(
                         formatEmpAmount(totalPenalties, defaultCurrency),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: Color(0xFFFF5C5C),
+                        ),
+                      )),
+                      DataCell(Text(
+                        formatEmpAmount(totalMonthlyDeductions, defaultCurrency),
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
@@ -711,6 +826,7 @@ class PayrollScreen extends StatelessWidget {
                           color: Color(0xFF2EBD96),
                         ),
                       )),
+                      const DataCell(SizedBox.shrink()),
                     ],
                   ),
                 ],
@@ -951,6 +1067,138 @@ class PayrollScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildAdjustmentButtons(BuildContext context, AttendanceProvider provider) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final targetMonthStr = DateFormat('yyyy-MM').format(provider.selectedMonth);
+    final count = provider.payrollAdjustments.where((adj) {
+      return adj.month == targetMonthStr ||
+          (adj.date.length >= 7 && adj.date.substring(0, 7) == targetMonthStr);
+    }).length;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Manage / View adjustments button
+        Tooltip(
+          message: 'Manage Monthly Adjustments ($count)',
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => showManageAdjustmentsDialog(
+                context: context,
+                targetMonth: provider.selectedMonth,
+              ),
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFCBD5E1),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.tune_rounded,
+                      size: 16,
+                      color: isDark ? Colors.white70 : Colors.black87,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Adjustments',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white70 : Colors.black87,
+                      ),
+                    ),
+                    if (count > 0) ...[
+                      const SizedBox(width: 5),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2E65FF),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '$count',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+
+        // + Addition Button
+        Tooltip(
+          message: 'Add Bonus / Addition',
+          child: ElevatedButton.icon(
+            onPressed: () => showPayrollAdjustmentDialog(
+              context: context,
+              initialType: 'addition',
+              initialMonth: provider.selectedMonth,
+            ),
+            icon: const Icon(Icons.add_circle_outline_rounded, size: 16, color: Colors.white),
+            label: const Text(
+              'Addition',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 12.5,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF10B981),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              elevation: 0,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+
+        // - Deduction Button
+        Tooltip(
+          message: 'Add Loan / Fine / Deduction',
+          child: ElevatedButton.icon(
+            onPressed: () => showPayrollAdjustmentDialog(
+              context: context,
+              initialType: 'deduction',
+              initialMonth: provider.selectedMonth,
+            ),
+            icon: const Icon(Icons.remove_circle_outline_rounded, size: 16, color: Colors.white),
+            label: const Text(
+              'Deduction',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 12.5,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              elevation: 0,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
