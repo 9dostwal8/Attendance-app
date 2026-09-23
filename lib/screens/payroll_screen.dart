@@ -95,6 +95,13 @@ class _PayrollScreenState extends State<PayrollScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
 
+    final currentUser = provider.currentEmployee;
+    final bool isHrOrAdmin = currentUser != null && (
+      currentUser.role == 'hr' ||
+      currentUser.role == 'admin' ||
+      currentUser.email == 'admin@company.com'
+    );
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SafeArea(
@@ -124,8 +131,10 @@ class _PayrollScreenState extends State<PayrollScreen> {
                                     letterSpacing: -0.5,
                                   ),
                                 ),
-                                const SizedBox(width: 14),
-                                _buildStructureFilter(context, provider),
+                                if (isHrOrAdmin) ...[
+                                  const SizedBox(width: 14),
+                                  _buildStructureFilter(context, provider),
+                                ],
                               ],
                             ),
                           ),
@@ -137,8 +146,10 @@ class _PayrollScreenState extends State<PayrollScreen> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                _buildAdjustmentButtons(context, provider),
-                                const SizedBox(width: 10),
+                                if (isHrOrAdmin) ...[
+                                  _buildAdjustmentButtons(context, provider),
+                                  const SizedBox(width: 10),
+                                ],
                                 _buildExportButton(context, provider),
                               ],
                             ),
@@ -170,17 +181,19 @@ class _PayrollScreenState extends State<PayrollScreen> {
                         Center(
                           child: _buildMonthSelector(context, provider),
                         ),
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          alignment: WrapAlignment.center,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            _buildStructureFilter(context, provider),
-                            _buildAdjustmentButtons(context, provider),
-                          ],
-                        ),
+                        if (isHrOrAdmin) ...[
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            alignment: WrapAlignment.center,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              _buildStructureFilter(context, provider),
+                              _buildAdjustmentButtons(context, provider),
+                            ],
+                          ),
+                        ],
                       ],
                     );
                   }
@@ -515,6 +528,12 @@ class _PayrollScreenState extends State<PayrollScreen> {
   Widget _buildWebPayrollTable(BuildContext context, AttendanceProvider provider) {
     List<CompanyEmployee> visibleEmployees = [];
     final currentUser = provider.currentEmployee;
+    final bool isHrOrAdmin = currentUser != null && (
+      currentUser.role == 'hr' ||
+      currentUser.role == 'admin' ||
+      currentUser.email == 'admin@company.com'
+    );
+
     if (currentUser != null) {
       if (currentUser.role == 'hr' || currentUser.role == 'admin') {
         visibleEmployees = provider.employees;
@@ -529,8 +548,9 @@ class _PayrollScreenState extends State<PayrollScreen> {
         .where((emp) => emp.basicSalary > 0 || emp.salaryHistory.isNotEmpty)
         .toList();
     final allPayrollEmployees = payrollEmployees.isNotEmpty ? payrollEmployees : visibleEmployees;
+    final effectiveStructureId = isHrOrAdmin ? _selectedStructureId : null;
     final targetEmployees = allPayrollEmployees
-        .where((emp) => _matchesStructure(emp.structureId, _selectedStructureId, provider.structures))
+        .where((emp) => _matchesStructure(emp.structureId, effectiveStructureId, provider.structures))
         .toList();
     final reports = targetEmployees
         .map((emp) => provider.generatePayrollReport(emp, provider.selectedMonth))
@@ -538,7 +558,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
 
     if (reports.isEmpty) {
       final selectedStruct = provider.structures
-          .where((s) => s.id == _selectedStructureId)
+          .where((s) => s.id == effectiveStructureId)
           .firstOrNull;
       final structName = selectedStruct?.name;
 
@@ -666,7 +686,8 @@ class _PayrollScreenState extends State<PayrollScreen> {
                   DataColumn(label: Text('Gross Salary', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2EBD96)))),
                   DataColumn(label: Text('Deductions', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFFF5C5C)))),
                   DataColumn(label: Text('Net Earnings', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2EBD96)))),
-                  DataColumn(label: Text('Actions', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13))),
+                  if (isHrOrAdmin)
+                    DataColumn(label: Text('Actions', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13))),
                 ],
                 rows: [
                   ...reports.map((r) {
@@ -690,62 +711,63 @@ class _PayrollScreenState extends State<PayrollScreen> {
                         DataCell(Text(formatEmpAmount(r.incrementalSalary, r.currency), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFF2EBD96)))),
                         DataCell(Text(formatEmpAmount(r.decrementalSalary, r.currency), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFFFF5C5C)))),
                         DataCell(Text(formatEmpAmount(r.netEarnings, r.currency), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2EBD96)))),
-                        DataCell(
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Tooltip(
-                                message: 'Add Addition for ${r.employee.name}',
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(6),
-                                  onTap: () => showPayrollAdjustmentDialog(
-                                    context: context,
-                                    employee: r.employee,
-                                    initialType: 'addition',
-                                    initialMonth: provider.selectedMonth,
-                                  ),
-                                  child: const Padding(
-                                    padding: EdgeInsets.all(4),
-                                    child: Icon(Icons.add_circle_outline_rounded, color: Color(0xFF10B981), size: 18),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Tooltip(
-                                message: 'Add Deduction for ${r.employee.name}',
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(6),
-                                  onTap: () => showPayrollAdjustmentDialog(
-                                    context: context,
-                                    employee: r.employee,
-                                    initialType: 'deduction',
-                                    initialMonth: provider.selectedMonth,
-                                  ),
-                                  child: const Padding(
-                                    padding: EdgeInsets.all(4),
-                                    child: Icon(Icons.remove_circle_outline_rounded, color: Color(0xFFEF4444), size: 18),
+                        if (isHrOrAdmin)
+                          DataCell(
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Tooltip(
+                                  message: 'Add Addition for ${r.employee.name}',
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(6),
+                                    onTap: () => showPayrollAdjustmentDialog(
+                                      context: context,
+                                      employee: r.employee,
+                                      initialType: 'addition',
+                                      initialMonth: provider.selectedMonth,
+                                    ),
+                                    child: const Padding(
+                                      padding: EdgeInsets.all(4),
+                                      child: Icon(Icons.add_circle_outline_rounded, color: Color(0xFF10B981), size: 18),
+                                    ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 4),
-                              Tooltip(
-                                message: 'View Adjustments for ${r.employee.name}',
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(6),
-                                  onTap: () => showManageAdjustmentsDialog(
-                                    context: context,
-                                    targetMonth: provider.selectedMonth,
-                                    filterEmployee: r.employee,
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(4),
-                                    child: Icon(Icons.receipt_long_outlined, color: isDark ? Colors.white70 : Colors.black54, size: 18),
+                                const SizedBox(width: 4),
+                                Tooltip(
+                                  message: 'Add Deduction for ${r.employee.name}',
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(6),
+                                    onTap: () => showPayrollAdjustmentDialog(
+                                      context: context,
+                                      employee: r.employee,
+                                      initialType: 'deduction',
+                                      initialMonth: provider.selectedMonth,
+                                    ),
+                                    child: const Padding(
+                                      padding: EdgeInsets.all(4),
+                                      child: Icon(Icons.remove_circle_outline_rounded, color: Color(0xFFEF4444), size: 18),
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 4),
+                                Tooltip(
+                                  message: 'View Adjustments for ${r.employee.name}',
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(6),
+                                    onTap: () => showManageAdjustmentsDialog(
+                                      context: context,
+                                      targetMonth: provider.selectedMonth,
+                                      filterEmployee: r.employee,
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(4),
+                                      child: Icon(Icons.receipt_long_outlined, color: isDark ? Colors.white70 : Colors.black54, size: 18),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
                       ],
                     );
                   }),
@@ -901,7 +923,8 @@ class _PayrollScreenState extends State<PayrollScreen> {
                           color: Color(0xFF2EBD96),
                         ),
                       )),
-                      const DataCell(SizedBox.shrink()),
+                      if (isHrOrAdmin)
+                        const DataCell(SizedBox.shrink()),
                     ],
                   ),
                 ],
@@ -1000,10 +1023,17 @@ class _PayrollScreenState extends State<PayrollScreen> {
             ),
             onSelected: (String value) async {
               final currentUser = provider.currentEmployee;
+              final bool isHrOrAdmin = currentUser != null && (
+                currentUser.role == 'hr' ||
+                currentUser.role == 'admin' ||
+                currentUser.email == 'admin@company.com'
+              );
               List<CompanyEmployee> visibleEmployees = [];
               if (currentUser != null) {
                 if (currentUser.role == 'hr' || currentUser.role == 'admin') {
                   visibleEmployees = provider.employees;
+                } else if (currentUser.role == 'supervisor') {
+                  visibleEmployees = [currentUser, ...provider.getSubordinates(currentUser)];
                 } else {
                   visibleEmployees = [currentUser];
                 }
@@ -1012,8 +1042,9 @@ class _PayrollScreenState extends State<PayrollScreen> {
                   .where((emp) => emp.basicSalary > 0 || emp.salaryHistory.isNotEmpty)
                   .toList();
               final allPayrollEmployees = payrollEmployees.isNotEmpty ? payrollEmployees : visibleEmployees;
+              final effectiveStructureId = isHrOrAdmin ? _selectedStructureId : null;
               final targetEmployees = allPayrollEmployees
-                  .where((emp) => _matchesStructure(emp.structureId, _selectedStructureId, provider.structures))
+                  .where((emp) => _matchesStructure(emp.structureId, effectiveStructureId, provider.structures))
                   .toList();
               final reports = targetEmployees
                   .map((emp) => provider.generatePayrollReport(emp, provider.selectedMonth))

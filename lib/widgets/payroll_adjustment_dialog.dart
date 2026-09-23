@@ -10,6 +10,22 @@ Future<void> showPayrollAdjustmentDialog({
   String initialType = 'addition',
   DateTime? initialMonth,
 }) async {
+  final provider = Provider.of<AttendanceProvider>(context, listen: false);
+  final currentUser = provider.currentEmployee;
+  final isAllowed = currentUser != null && (
+    currentUser.role == 'hr' ||
+    currentUser.role == 'admin' ||
+    currentUser.email == 'admin@company.com'
+  );
+  if (!isAllowed) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Access denied. Only HR Managers and Super Admins can add payroll adjustments.'),
+      ),
+    );
+    return;
+  }
+
   await showGeneralDialog(
     context: context,
     barrierDismissible: true,
@@ -938,6 +954,22 @@ Future<void> showManageAdjustmentsDialog({
   required DateTime targetMonth,
   CompanyEmployee? filterEmployee,
 }) async {
+  final provider = Provider.of<AttendanceProvider>(context, listen: false);
+  final currentUser = provider.currentEmployee;
+  final isAllowed = currentUser != null && (
+    currentUser.role == 'hr' ||
+    currentUser.role == 'admin' ||
+    currentUser.email == 'admin@company.com'
+  );
+  if (!isAllowed) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Access denied. Only HR Managers and Super Admins can manage payroll adjustments.'),
+      ),
+    );
+    return;
+  }
+
   await showGeneralDialog(
     context: context,
     barrierDismissible: true,

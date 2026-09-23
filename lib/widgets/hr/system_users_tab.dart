@@ -304,8 +304,9 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
                     ),
                   ],
                   onChanged: (val) {
-                    if (val != null)
+                    if (val != null) {
                       setState(() => _selectedStatusFilter = val);
+                    }
                   },
                 ),
               ],
