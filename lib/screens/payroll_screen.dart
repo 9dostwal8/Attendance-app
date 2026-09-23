@@ -496,6 +496,23 @@ class PayrollScreen extends StatelessWidget {
     final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
     final dividerColor = isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.06);
 
+    final String defaultCurrency = reports.isNotEmpty ? reports.first.currency : 'USD';
+    final double totalBasicSalary = reports.fold(0.0, (sum, r) => sum + r.basicSalary);
+    final double totalSalaryCalcByDay = reports.fold(0.0, (sum, r) => sum + r.salaryCalcByDay);
+    final int totalDaysWorked = reports.fold(0, (sum, r) => sum + r.daysWorked);
+    final double totalWorkingHours = reports.fold(0.0, (sum, r) => sum + r.workingHours);
+    final double totalOvertimeHours = reports.fold(0.0, (sum, r) => sum + r.overtimeHours);
+    final double totalOvertimeValue = reports.fold(0.0, (sum, r) => sum + r.overtimeValue);
+    final double totalDeficitHours = reports.fold(0.0, (sum, r) => sum + r.attendanceDeficitHours);
+    final double totalDeficitValue = reports.fold(0.0, (sum, r) => sum + r.attendanceDeficit);
+    final double totalFoodAllowance = reports.fold(0.0, (sum, r) => sum + r.foodAllowance);
+    final double totalTransportationAllowance = reports.fold(0.0, (sum, r) => sum + r.transportationAllowance);
+    final double totalOtherAllowance = reports.fold(0.0, (sum, r) => sum + r.otherAllowance);
+    final double totalPenalties = reports.fold(0.0, (sum, r) => sum + r.monthlyPenalties);
+    final double totalGrossSalary = reports.fold(0.0, (sum, r) => sum + r.incrementalSalary);
+    final double totalDeductions = reports.fold(0.0, (sum, r) => sum + r.decrementalSalary);
+    final double totalNetEarnings = reports.fold(0.0, (sum, r) => sum + r.netEarnings);
+
     return ConstrainedBox(
       constraints: BoxConstraints(minWidth: MediaQuery.of(context).size.width - 40),
       child: GlassContainer(
@@ -535,28 +552,168 @@ class PayrollScreen extends StatelessWidget {
                   DataColumn(label: Text('Deductions', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFFF5C5C)))),
                   DataColumn(label: Text('Net Earnings', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2EBD96)))),
                 ],
-                rows: reports.map((r) {
-                  return DataRow(
+                rows: [
+                  ...reports.map((r) {
+                    return DataRow(
+                      cells: [
+                        DataCell(Text(r.employee.name, style: TextStyle(color: textColor, fontWeight: FontWeight.w600, fontSize: 12))),
+                        DataCell(Text(formatEmpAmount(r.basicSalary, r.currency), style: TextStyle(color: textColor, fontSize: 12))),
+                        DataCell(Text(formatEmpAmount(r.salaryCalcByDay, r.currency), style: const TextStyle(fontSize: 12, color: Color(0xFF5B9BFF)))),
+                        DataCell(Text('${r.daysWorked} days', style: TextStyle(color: textColor, fontSize: 12))),
+                        DataCell(Text('${r.workingHours.toStringAsFixed(1)} hrs', style: TextStyle(color: textColor, fontSize: 12))),
+                        DataCell(Text('${r.overtimeHours.toStringAsFixed(1)} hrs', style: const TextStyle(fontSize: 12, color: Color(0xFF00FF87)))),
+                        DataCell(Text(formatEmpAmount(r.overtimeValue, r.currency), style: const TextStyle(fontSize: 12, color: Color(0xFF00FF87)))),
+                        DataCell(Text('${r.attendanceDeficitHours.toStringAsFixed(1)} hrs', style: const TextStyle(fontSize: 12, color: Color(0xFFFF5C5C)))),
+                        DataCell(Text(formatEmpAmount(r.attendanceDeficit, r.currency), style: const TextStyle(fontSize: 12, color: Color(0xFFFF5C5C)))),
+                        DataCell(Text(formatEmpAmount(r.foodAllowance, r.currency), style: TextStyle(color: textColor, fontSize: 12))),
+                        DataCell(Text(formatEmpAmount(r.transportationAllowance, r.currency), style: TextStyle(color: textColor, fontSize: 12))),
+                        DataCell(Text(formatEmpAmount(r.otherAllowance, r.currency), style: TextStyle(color: textColor, fontSize: 12))),
+                        DataCell(Text(formatEmpAmount(r.monthlyPenalties, r.currency), style: const TextStyle(fontSize: 12, color: Color(0xFFFF5C5C)))),
+                        DataCell(Text(formatEmpAmount(r.incrementalSalary, r.currency), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFF2EBD96)))),
+                        DataCell(Text(formatEmpAmount(r.decrementalSalary, r.currency), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFFFF5C5C)))),
+                        DataCell(Text(formatEmpAmount(r.netEarnings, r.currency), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2EBD96)))),
+                      ],
+                    );
+                  }),
+                  // Total / Sum Summary Row
+                  DataRow(
+                    color: WidgetStateProperty.all(
+                      isDark
+                          ? Colors.white.withValues(alpha: 0.08)
+                          : const Color(0xFFE2E8F0).withValues(alpha: 0.65),
+                    ),
                     cells: [
-                      DataCell(Text(r.employee.name, style: TextStyle(color: textColor, fontWeight: FontWeight.w600, fontSize: 12))),
-                      DataCell(Text(formatEmpAmount(r.basicSalary, r.currency), style: TextStyle(color: textColor, fontSize: 12))),
-                      DataCell(Text(formatEmpAmount(r.salaryCalcByDay, r.currency), style: const TextStyle(fontSize: 12, color: Color(0xFF5B9BFF)))),
-                      DataCell(Text('${r.daysWorked} days', style: TextStyle(color: textColor, fontSize: 12))),
-                      DataCell(Text('${r.workingHours.toStringAsFixed(1)} hrs', style: TextStyle(color: textColor, fontSize: 12))),
-                      DataCell(Text('${r.overtimeHours.toStringAsFixed(1)} hrs', style: const TextStyle(fontSize: 12, color: Color(0xFF00FF87)))),
-                      DataCell(Text(formatEmpAmount(r.overtimeValue, r.currency), style: const TextStyle(fontSize: 12, color: Color(0xFF00FF87)))),
-                      DataCell(Text('${r.attendanceDeficitHours.toStringAsFixed(1)} hrs', style: const TextStyle(fontSize: 12, color: Color(0xFFFF5C5C)))),
-                      DataCell(Text(formatEmpAmount(r.attendanceDeficit, r.currency), style: const TextStyle(fontSize: 12, color: Color(0xFFFF5C5C)))),
-                      DataCell(Text(formatEmpAmount(r.foodAllowance, r.currency), style: TextStyle(color: textColor, fontSize: 12))),
-                      DataCell(Text(formatEmpAmount(r.transportationAllowance, r.currency), style: TextStyle(color: textColor, fontSize: 12))),
-                      DataCell(Text(formatEmpAmount(r.otherAllowance, r.currency), style: TextStyle(color: textColor, fontSize: 12))),
-                      DataCell(Text(formatEmpAmount(r.monthlyPenalties, r.currency), style: const TextStyle(fontSize: 12, color: Color(0xFFFF5C5C)))),
-                      DataCell(Text(formatEmpAmount(r.incrementalSalary, r.currency), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFF2EBD96)))),
-                      DataCell(Text(formatEmpAmount(r.decrementalSalary, r.currency), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFFFF5C5C)))),
-                      DataCell(Text(formatEmpAmount(r.netEarnings, r.currency), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2EBD96)))),
+                      DataCell(Text(
+                        'Total',
+                        style: TextStyle(
+                          color: textColor,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                        ),
+                      )),
+                      DataCell(Text(
+                        formatEmpAmount(totalBasicSalary, defaultCurrency),
+                        style: TextStyle(
+                          color: textColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      )),
+                      DataCell(Text(
+                        formatEmpAmount(totalSalaryCalcByDay, defaultCurrency),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: Color(0xFF5B9BFF),
+                        ),
+                      )),
+                      DataCell(Text(
+                        '$totalDaysWorked days',
+                        style: TextStyle(
+                          color: textColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      )),
+                      DataCell(Text(
+                        '${totalWorkingHours.toStringAsFixed(1)} hrs',
+                        style: TextStyle(
+                          color: textColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      )),
+                      DataCell(Text(
+                        '${totalOvertimeHours.toStringAsFixed(1)} hrs',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: Color(0xFF00FF87),
+                        ),
+                      )),
+                      DataCell(Text(
+                        formatEmpAmount(totalOvertimeValue, defaultCurrency),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: Color(0xFF00FF87),
+                        ),
+                      )),
+                      DataCell(Text(
+                        '${totalDeficitHours.toStringAsFixed(1)} hrs',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: Color(0xFFFF5C5C),
+                        ),
+                      )),
+                      DataCell(Text(
+                        formatEmpAmount(totalDeficitValue, defaultCurrency),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: Color(0xFFFF5C5C),
+                        ),
+                      )),
+                      DataCell(Text(
+                        formatEmpAmount(totalFoodAllowance, defaultCurrency),
+                        style: TextStyle(
+                          color: textColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      )),
+                      DataCell(Text(
+                        formatEmpAmount(totalTransportationAllowance, defaultCurrency),
+                        style: TextStyle(
+                          color: textColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      )),
+                      DataCell(Text(
+                        formatEmpAmount(totalOtherAllowance, defaultCurrency),
+                        style: TextStyle(
+                          color: textColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      )),
+                      DataCell(Text(
+                        formatEmpAmount(totalPenalties, defaultCurrency),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: Color(0xFFFF5C5C),
+                        ),
+                      )),
+                      DataCell(Text(
+                        formatEmpAmount(totalGrossSalary, defaultCurrency),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: Color(0xFF2EBD96),
+                        ),
+                      )),
+                      DataCell(Text(
+                        formatEmpAmount(totalDeductions, defaultCurrency),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: Color(0xFFFF5C5C),
+                        ),
+                      )),
+                      DataCell(Text(
+                        formatEmpAmount(totalNetEarnings, defaultCurrency),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                          color: Color(0xFF2EBD96),
+                        ),
+                      )),
                     ],
-                  );
-                }).toList(),
+                  ),
+                ],
               ),
             ),
           ),

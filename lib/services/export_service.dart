@@ -106,6 +106,48 @@ class ExportService {
       sheet.getRangeByIndex(row, 17).setText(r.currency);
     }
 
+    // Total row
+    if (reports.isNotEmpty) {
+      final totalRow = rowOffset + reports.length + 1;
+      final totalBasicSalary = reports.fold(0.0, (sum, r) => sum + r.basicSalary);
+      final totalSalaryCalcByDay = reports.fold(0.0, (sum, r) => sum + r.salaryCalcByDay);
+      final totalDaysWorked = reports.fold(0, (sum, r) => sum + r.daysWorked);
+      final totalWorkingHours = reports.fold(0.0, (sum, r) => sum + r.workingHours);
+      final totalOvertimeHours = reports.fold(0.0, (sum, r) => sum + r.overtimeHours);
+      final totalOvertimeValue = reports.fold(0.0, (sum, r) => sum + r.overtimeValue);
+      final totalDeficitHours = reports.fold(0.0, (sum, r) => sum + r.attendanceDeficitHours);
+      final totalDeficitValue = reports.fold(0.0, (sum, r) => sum + r.attendanceDeficit);
+      final totalFoodAllowance = reports.fold(0.0, (sum, r) => sum + r.foodAllowance);
+      final totalTransportationAllowance = reports.fold(0.0, (sum, r) => sum + r.transportationAllowance);
+      final totalOtherAllowance = reports.fold(0.0, (sum, r) => sum + r.otherAllowance);
+      final totalPenalties = reports.fold(0.0, (sum, r) => sum + r.monthlyPenalties);
+      final totalGrossSalary = reports.fold(0.0, (sum, r) => sum + r.incrementalSalary);
+      final totalDeductions = reports.fold(0.0, (sum, r) => sum + r.decrementalSalary);
+      final totalNetEarnings = reports.fold(0.0, (sum, r) => sum + r.netEarnings);
+
+      sheet.getRangeByIndex(totalRow, 1).setText('Total');
+      sheet.getRangeByIndex(totalRow, 2).setNumber(totalBasicSalary);
+      sheet.getRangeByIndex(totalRow, 3).setNumber(totalSalaryCalcByDay);
+      sheet.getRangeByIndex(totalRow, 4).setNumber(totalDaysWorked.toDouble());
+      sheet.getRangeByIndex(totalRow, 5).setNumber(totalWorkingHours);
+      sheet.getRangeByIndex(totalRow, 6).setNumber(totalOvertimeHours);
+      sheet.getRangeByIndex(totalRow, 7).setNumber(totalOvertimeValue);
+      sheet.getRangeByIndex(totalRow, 8).setNumber(totalDeficitHours);
+      sheet.getRangeByIndex(totalRow, 9).setNumber(totalDeficitValue);
+      sheet.getRangeByIndex(totalRow, 10).setNumber(totalFoodAllowance);
+      sheet.getRangeByIndex(totalRow, 11).setNumber(totalTransportationAllowance);
+      sheet.getRangeByIndex(totalRow, 12).setNumber(totalOtherAllowance);
+      sheet.getRangeByIndex(totalRow, 13).setNumber(totalPenalties);
+      sheet.getRangeByIndex(totalRow, 14).setNumber(totalGrossSalary);
+      sheet.getRangeByIndex(totalRow, 15).setNumber(totalDeductions);
+      sheet.getRangeByIndex(totalRow, 16).setNumber(totalNetEarnings);
+      sheet.getRangeByIndex(totalRow, 17).setText('');
+
+      for (int col = 1; col <= 17; col++) {
+        sheet.getRangeByIndex(totalRow, col).cellStyle.bold = true;
+      }
+    }
+
     final List<int> bytes = workbook.saveAsStream();
     workbook.dispose();
 
@@ -162,6 +204,68 @@ class ExportService {
             } catch (e) {
               debugPrint('Could not decode pdf logo: $e');
             }
+          }
+
+          final List<List<String>> tableData = reports
+              .map(
+                (r) => [
+                  r.employee.name,
+                  r.basicSalary.toStringAsFixed(0),
+                  r.salaryCalcByDay.toStringAsFixed(0),
+                  r.daysWorked.toString(),
+                  r.workingHours.toStringAsFixed(1),
+                  r.overtimeHours.toStringAsFixed(1),
+                  r.overtimeValue.toStringAsFixed(0),
+                  r.attendanceDeficitHours.toStringAsFixed(1),
+                  r.attendanceDeficit.toStringAsFixed(0),
+                  r.foodAllowance.toStringAsFixed(0),
+                  r.transportationAllowance.toStringAsFixed(0),
+                  r.otherAllowance.toStringAsFixed(0),
+                  r.monthlyPenalties.toStringAsFixed(0),
+                  r.incrementalSalary.toStringAsFixed(0),
+                  r.decrementalSalary.toStringAsFixed(0),
+                  r.netEarnings.toStringAsFixed(0),
+                  r.currency,
+                ],
+              )
+              .toList();
+
+          if (reports.isNotEmpty) {
+            final totalBasicSalary = reports.fold(0.0, (sum, r) => sum + r.basicSalary);
+            final totalSalaryCalcByDay = reports.fold(0.0, (sum, r) => sum + r.salaryCalcByDay);
+            final totalDaysWorked = reports.fold(0, (sum, r) => sum + r.daysWorked);
+            final totalWorkingHours = reports.fold(0.0, (sum, r) => sum + r.workingHours);
+            final totalOvertimeHours = reports.fold(0.0, (sum, r) => sum + r.overtimeHours);
+            final totalOvertimeValue = reports.fold(0.0, (sum, r) => sum + r.overtimeValue);
+            final totalDeficitHours = reports.fold(0.0, (sum, r) => sum + r.attendanceDeficitHours);
+            final totalDeficitValue = reports.fold(0.0, (sum, r) => sum + r.attendanceDeficit);
+            final totalFoodAllowance = reports.fold(0.0, (sum, r) => sum + r.foodAllowance);
+            final totalTransportationAllowance = reports.fold(0.0, (sum, r) => sum + r.transportationAllowance);
+            final totalOtherAllowance = reports.fold(0.0, (sum, r) => sum + r.otherAllowance);
+            final totalPenalties = reports.fold(0.0, (sum, r) => sum + r.monthlyPenalties);
+            final totalGrossSalary = reports.fold(0.0, (sum, r) => sum + r.incrementalSalary);
+            final totalDeductions = reports.fold(0.0, (sum, r) => sum + r.decrementalSalary);
+            final totalNetEarnings = reports.fold(0.0, (sum, r) => sum + r.netEarnings);
+
+            tableData.add([
+              'Total',
+              totalBasicSalary.toStringAsFixed(0),
+              totalSalaryCalcByDay.toStringAsFixed(0),
+              totalDaysWorked.toString(),
+              totalWorkingHours.toStringAsFixed(1),
+              totalOvertimeHours.toStringAsFixed(1),
+              totalOvertimeValue.toStringAsFixed(0),
+              totalDeficitHours.toStringAsFixed(1),
+              totalDeficitValue.toStringAsFixed(0),
+              totalFoodAllowance.toStringAsFixed(0),
+              totalTransportationAllowance.toStringAsFixed(0),
+              totalOtherAllowance.toStringAsFixed(0),
+              totalPenalties.toStringAsFixed(0),
+              totalGrossSalary.toStringAsFixed(0),
+              totalDeductions.toStringAsFixed(0),
+              totalNetEarnings.toStringAsFixed(0),
+              '',
+            ]);
           }
 
           return [
@@ -224,29 +328,7 @@ class ExportService {
             ),
             pw.TableHelper.fromTextArray(
               headers: headers,
-              data: reports
-                  .map(
-                    (r) => [
-                      r.employee.name,
-                      r.basicSalary.toStringAsFixed(0),
-                      r.salaryCalcByDay.toStringAsFixed(0),
-                      r.daysWorked.toString(),
-                      r.workingHours.toStringAsFixed(1),
-                      r.overtimeHours.toStringAsFixed(1),
-                      r.overtimeValue.toStringAsFixed(0),
-                      r.attendanceDeficitHours.toStringAsFixed(1),
-                      r.attendanceDeficit.toStringAsFixed(0),
-                      r.foodAllowance.toStringAsFixed(0),
-                      r.transportationAllowance.toStringAsFixed(0),
-                      r.otherAllowance.toStringAsFixed(0),
-                      r.monthlyPenalties.toStringAsFixed(0),
-                      r.incrementalSalary.toStringAsFixed(0),
-                      r.decrementalSalary.toStringAsFixed(0),
-                      r.netEarnings.toStringAsFixed(0),
-                      r.currency,
-                    ],
-                  )
-                  .toList(),
+              data: tableData,
               headerStyle: pw.TextStyle(
                 fontWeight: pw.FontWeight.bold,
                 fontSize: 8,
