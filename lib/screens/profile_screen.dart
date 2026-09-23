@@ -15,12 +15,6 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<AttendanceProvider>(context);
-    final currentUser = provider.currentEmployee;
-    final bool isHrOrAdmin = currentUser != null && (
-      currentUser.role == 'hr' ||
-      currentUser.role == 'admin' ||
-      currentUser.email == 'admin@company.com'
-    );
 
     return Directionality(
       textDirection: provider.currentLanguageDirection,
@@ -128,33 +122,31 @@ class ProfileScreen extends StatelessWidget {
                         _buildSecurityCard(context, provider),
                         SizedBox(height: 24),
 
-                        if (isHrOrAdmin) ...[
-                          // User Management Section
-                          Text(
-                            'User & Access Management',
-                            style: TextStyle(
-                              color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.7)),
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                            ),
+                        // User Management Section
+                        Text(
+                          'User & Access Management',
+                          style: TextStyle(
+                            color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.7)),
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
                           ),
-                          SizedBox(height: 12),
-                          _buildUserManagementCard(provider, context),
-                          SizedBox(height: 24),
+                        ),
+                        SizedBox(height: 12),
+                        _buildUserManagementCard(provider, context),
+                        SizedBox(height: 24),
 
-                          // Account Switcher Section (Testing Only)
-                          Text(
-                            provider.translate('switch_account'),
-                            style: TextStyle(
-                              color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.7)),
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                            ),
+                        // Account Switcher Section (Testing Only)
+                        Text(
+                          provider.translate('switch_account'),
+                          style: TextStyle(
+                            color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.7)),
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
                           ),
-                          SizedBox(height: 12),
-                          _buildAccountSwitcherCard(provider, context),
-                          SizedBox(height: 24),
-                        ],
+                        ),
+                        SizedBox(height: 12),
+                        _buildAccountSwitcherCard(provider, context),
+                        SizedBox(height: 24),
 
                         // Sign Out Section
                         _buildLogoutCard(provider, context),
