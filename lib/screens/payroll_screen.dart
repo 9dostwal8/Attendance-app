@@ -8,8 +8,44 @@ import '../models/hr_models.dart';
 import '../services/export_service.dart';
 import '../widgets/payroll_adjustment_dialog.dart';
 
-class PayrollScreen extends StatelessWidget {
+class PayrollScreen extends StatefulWidget {
   const PayrollScreen({super.key});
+
+  @override
+  State<PayrollScreen> createState() => _PayrollScreenState();
+}
+
+class _PayrollScreenState extends State<PayrollScreen> {
+  String? _selectedStructureId;
+
+  bool _matchesStructure(
+    String? empStructureId,
+    String? targetStructureId,
+    List<OrgStructure> structures,
+  ) {
+    if (targetStructureId == null || targetStructureId == 'all') {
+      return true;
+    }
+    if (empStructureId == null || empStructureId.isEmpty) {
+      return false;
+    }
+    if (empStructureId.trim().toLowerCase() == targetStructureId.trim().toLowerCase()) {
+      return true;
+    }
+    // Check if empStructureId is a descendant/sub-branch of targetStructureId
+    String? currentId = empStructureId;
+    final visited = <String>{};
+    while (currentId != null && !visited.contains(currentId)) {
+      visited.add(currentId);
+      final struct = structures.where((s) => s.id == currentId).firstOrNull;
+      if (struct == null) break;
+      if (struct.parentId == targetStructureId) {
+        return true;
+      }
+      currentId = struct.parentId;
+    }
+    return false;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -76,14 +112,21 @@ class PayrollScreen extends StatelessWidget {
                         Expanded(
                           child: Align(
                             alignment: AlignmentDirectional.centerStart,
-                            child: Text(
-                              provider.translate('payroll_details'),
-                              style: TextStyle(
-                                color: textColor,
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: -0.5,
-                              ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  provider.translate('payroll_details'),
+                                  style: TextStyle(
+                                    color: textColor,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                _buildStructureFilter(context, provider),
+                              ],
                             ),
                           ),
                         ),
@@ -128,8 +171,15 @@ class PayrollScreen extends StatelessWidget {
                           child: _buildMonthSelector(context, provider),
                         ),
                         const SizedBox(height: 12),
-                        Center(
-                          child: _buildAdjustmentButtons(context, provider),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          alignment: WrapAlignment.center,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            _buildStructureFilter(context, provider),
+                            _buildAdjustmentButtons(context, provider),
+                          ],
                         ),
                       ],
                     );
@@ -478,12 +528,20 @@ class PayrollScreen extends StatelessWidget {
     final payrollEmployees = visibleEmployees
         .where((emp) => emp.basicSalary > 0 || emp.salaryHistory.isNotEmpty)
         .toList();
-    final targetEmployees = payrollEmployees.isNotEmpty ? payrollEmployees : visibleEmployees;
+    final allPayrollEmployees = payrollEmployees.isNotEmpty ? payrollEmployees : visibleEmployees;
+    final targetEmployees = allPayrollEmployees
+        .where((emp) => _matchesStructure(emp.structureId, _selectedStructureId, provider.structures))
+        .toList();
     final reports = targetEmployees
         .map((emp) => provider.generatePayrollReport(emp, provider.selectedMonth))
         .toList();
 
     if (reports.isEmpty) {
+      final selectedStruct = provider.structures
+          .where((s) => s.id == _selectedStructureId)
+          .firstOrNull;
+      final structName = selectedStruct?.name;
+
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 48.0),
         child: Center(
@@ -491,13 +549,15 @@ class PayrollScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                Icons.monetization_on_outlined,
+                structName != null ? Icons.apartment_rounded : Icons.monetization_on_outlined,
                 size: 48,
                 color: (Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.3),
               ),
               const SizedBox(height: 12),
               Text(
-                'No Payroll Records Found',
+                structName != null
+                    ? 'No Payroll Records for "$structName"'
+                    : 'No Payroll Records Found',
                 style: TextStyle(
                   color: (Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black),
                   fontSize: 16,
@@ -506,12 +566,27 @@ class PayrollScreen extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'No employees have a configured salary or salary history for this period.',
+                structName != null
+                    ? 'No employees in "$structName" have payroll records for this period.'
+                    : 'No employees have a configured salary or salary history for this period.',
                 style: TextStyle(
                   color: (Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.5),
                   fontSize: 13,
                 ),
               ),
+              if (structName != null) ...[
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () => setState(() => _selectedStructureId = null),
+                  icon: const Icon(Icons.clear_all_rounded, size: 16, color: Colors.white),
+                  label: const Text('Show All Branches', style: TextStyle(color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2E65FF),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -936,7 +1011,10 @@ class PayrollScreen extends StatelessWidget {
               final payrollEmployees = visibleEmployees
                   .where((emp) => emp.basicSalary > 0 || emp.salaryHistory.isNotEmpty)
                   .toList();
-              final targetEmployees = payrollEmployees.isNotEmpty ? payrollEmployees : visibleEmployees;
+              final allPayrollEmployees = payrollEmployees.isNotEmpty ? payrollEmployees : visibleEmployees;
+              final targetEmployees = allPayrollEmployees
+                  .where((emp) => _matchesStructure(emp.structureId, _selectedStructureId, provider.structures))
+                  .toList();
               final reports = targetEmployees
                   .map((emp) => provider.generatePayrollReport(emp, provider.selectedMonth))
                   .toList();
@@ -1199,6 +1277,105 @@ class PayrollScreen extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildStructureFilter(BuildContext context, AttendanceProvider provider) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final structures = provider.structures;
+    final isFiltered = _selectedStructureId != null && _selectedStructureId != 'all';
+
+    return Container(
+      height: 38,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isFiltered
+              ? const Color(0xFF2E65FF)
+              : (isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFCBD5E1)),
+          width: isFiltered ? 1.5 : 1.0,
+        ),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: (isFiltered && structures.any((s) => s.id == _selectedStructureId))
+              ? _selectedStructureId
+              : 'all',
+          icon: const Icon(Icons.arrow_drop_down, size: 20),
+          dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          style: TextStyle(
+            color: textColor,
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+          ),
+          items: [
+            DropdownMenuItem<String>(
+              value: 'all',
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.business_outlined,
+                    size: 16,
+                    color: !isFiltered
+                        ? const Color(0xFF2E65FF)
+                        : (isDark ? Colors.white60 : Colors.black54),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text('All Branches / Offices'),
+                ],
+              ),
+            ),
+            ...structures.map((s) {
+              final count = provider.employees
+                  .where((e) => _matchesStructure(e.structureId, s.id, structures))
+                  .length;
+              return DropdownMenuItem<String>(
+                value: s.id,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.apartment_rounded,
+                      size: 16,
+                      color: _selectedStructureId == s.id
+                          ? const Color(0xFF2E65FF)
+                          : (isDark ? Colors.white60 : Colors.black54),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(s.name),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        '$count',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white70 : Colors.black54,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+          onChanged: (val) {
+            setState(() {
+              _selectedStructureId = (val == 'all') ? null : val;
+            });
+          },
+        ),
+      ),
     );
   }
 }
