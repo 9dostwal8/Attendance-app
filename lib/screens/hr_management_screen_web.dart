@@ -931,6 +931,11 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
       icon: isEditing ? Icons.edit_rounded : Icons.add_rounded,
       content: StatefulBuilder(
         builder: (context, setDialogState) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+          final subtextColor = isDark ? Colors.white70 : const Color(0xFF475569);
+          final mutedColor = isDark ? Colors.white54 : const Color(0xFF64748B);
+
           void updateAutoDuration() {
             final diff = calculateMinutesDifference(
               breakStartController.text,
@@ -989,12 +994,12 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.05),
+                    color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: selectedLatitude != null
                           ? const Color(0xFF10B981).withValues(alpha: 0.4)
-                          : Colors.white10,
+                          : (isDark ? Colors.white10 : Colors.black12),
                     ),
                   ),
                   child: Column(
@@ -1005,13 +1010,13 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                           Icon(
                             Icons.my_location_rounded,
                             size: 16,
-                            color: selectedLatitude != null ? const Color(0xFF10B981) : Colors.white70,
+                            color: selectedLatitude != null ? const Color(0xFF10B981) : mutedColor,
                           ),
                           const SizedBox(width: 6),
-                          const Text(
+                          Text(
                             'GPS Geofencing Settings',
                             style: TextStyle(
-                              color: Colors.white,
+                              color: textColor,
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
                             ),
@@ -1028,7 +1033,7 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                                   ? 'Lat: ${selectedLatitude!.toStringAsFixed(4)}, Lng: ${selectedLongitude!.toStringAsFixed(4)}\nRadius: ${selectedRadius?.round() ?? 0}m'
                                   : 'No Location Set',
                               style: TextStyle(
-                                color: selectedLatitude != null ? const Color(0xFF10B981) : Colors.white54,
+                                color: selectedLatitude != null ? const Color(0xFF10B981) : mutedColor,
                                 fontSize: 13,
                               ),
                             ),
@@ -1144,13 +1149,20 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                 ),
                 const SizedBox(height: 16),
                 SwitchListTile(
-                  title: const Text(
+                  title: Text(
                     'Is Weekly Rotation Shift?',
-                    style: TextStyle(color: Colors.white, fontSize: 14),
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                  subtitle: const Text(
+                  subtitle: Text(
                     'Configure different times for each day of the week',
-                    style: TextStyle(color: Colors.white54, fontSize: 12),
+                    style: TextStyle(
+                      color: mutedColor,
+                      fontSize: 12,
+                    ),
                   ),
                   value: isRotationValue,
                   activeThumbColor: const Color(0xFFC084FC),
@@ -1218,17 +1230,17 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                                   style: TextStyle(
                                     color: isSelected
                                         ? Colors.white
-                                        : Colors.white70,
+                                        : (isDark ? Colors.white70 : const Color(0xFF334155)),
                                     fontWeight: isSelected
                                         ? FontWeight.bold
-                                        : FontWeight.normal,
+                                        : FontWeight.w600,
                                   ),
                                 ),
                                 selected: isSelected,
                                 selectedColor: const Color(0xFF2E65FF),
-                                backgroundColor: Colors.white.withValues(
-                                  alpha: 0.1,
-                                ),
+                                backgroundColor: isDark
+                                    ? Colors.white.withValues(alpha: 0.1)
+                                    : const Color(0xFFE2E8F0),
                                 checkmarkColor: Colors.white,
                                 onSelected: (bool selected) {
                                   setDialogState(() {
@@ -1272,8 +1284,8 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                                   width: 90,
                                   child: Text(
                                     dayLabel,
-                                    style: const TextStyle(
-                                      color: Colors.white,
+                                    style: TextStyle(
+                                      color: textColor,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -1296,10 +1308,10 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                                     });
                                   },
                                 ),
-                                const Text(
+                                Text(
                                   'Work Day',
                                   style: TextStyle(
-                                    color: Colors.white70,
+                                    color: subtextColor,
                                     fontSize: 12,
                                   ),
                                 ),
@@ -1360,16 +1372,24 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                                           vertical: 12,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: Colors.white.withValues(
-                                            alpha: 0.05,
-                                          ),
+                                          color: isDark
+                                              ? Colors.white.withValues(
+                                                  alpha: 0.05,
+                                                )
+                                              : Colors.black.withValues(
+                                                  alpha: 0.03,
+                                                ),
                                           borderRadius: BorderRadius.circular(
                                             8,
                                           ),
                                           border: Border.all(
-                                            color: Colors.white.withValues(
-                                              alpha: 0.1,
-                                            ),
+                                            color: isDark
+                                                ? Colors.white.withValues(
+                                                    alpha: 0.1,
+                                                  )
+                                                : Colors.black.withValues(
+                                                    alpha: 0.1,
+                                                  ),
                                           ),
                                         ),
                                         child: Row(
@@ -1379,15 +1399,15 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                                             Flexible(
                                               child: Text(
                                                 config.startTime,
-                                                style: const TextStyle(
-                                                  color: Colors.white,
+                                                style: TextStyle(
+                                                  color: textColor,
                                                 ),
                                                 overflow: TextOverflow.ellipsis,
                                               ),
                                             ),
-                                            const Icon(
+                                            Icon(
                                               Icons.access_time,
-                                              color: Colors.white54,
+                                              color: mutedColor,
                                               size: 16,
                                             ),
                                           ],
@@ -1396,9 +1416,9 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-                                  const Text(
+                                  Text(
                                     'to',
-                                    style: TextStyle(color: Colors.white54),
+                                    style: TextStyle(color: mutedColor),
                                   ),
                                   const SizedBox(width: 8),
                                   Expanded(
@@ -1453,16 +1473,24 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                                           vertical: 12,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: Colors.white.withValues(
-                                            alpha: 0.05,
-                                          ),
+                                          color: isDark
+                                              ? Colors.white.withValues(
+                                                  alpha: 0.05,
+                                                )
+                                              : Colors.black.withValues(
+                                                  alpha: 0.03,
+                                                ),
                                           borderRadius: BorderRadius.circular(
                                             8,
                                           ),
                                           border: Border.all(
-                                            color: Colors.white.withValues(
-                                              alpha: 0.1,
-                                            ),
+                                            color: isDark
+                                                ? Colors.white.withValues(
+                                                    alpha: 0.1,
+                                                  )
+                                                : Colors.black.withValues(
+                                                    alpha: 0.1,
+                                                  ),
                                           ),
                                         ),
                                         child: Row(
@@ -1472,15 +1500,15 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                                             Flexible(
                                               child: Text(
                                                 config.endTime,
-                                                style: const TextStyle(
-                                                  color: Colors.white,
+                                                style: TextStyle(
+                                                  color: textColor,
                                                 ),
                                                 overflow: TextOverflow.ellipsis,
                                               ),
                                             ),
-                                            const Icon(
+                                            Icon(
                                               Icons.access_time,
-                                              color: Colors.white54,
+                                              color: mutedColor,
                                               size: 16,
                                             ),
                                           ],
@@ -1493,10 +1521,10 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                               const SizedBox(height: 8),
                               Row(
                                 children: [
-                                  const Text(
+                                  Text(
                                     'Break:',
                                     style: TextStyle(
-                                      color: Colors.white70,
+                                      color: subtextColor,
                                       fontSize: 12,
                                     ),
                                   ),
@@ -1566,16 +1594,24 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                                           vertical: 8,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: Colors.white.withValues(
-                                            alpha: 0.05,
-                                          ),
+                                          color: isDark
+                                              ? Colors.white.withValues(
+                                                  alpha: 0.05,
+                                                )
+                                              : Colors.black.withValues(
+                                                  alpha: 0.03,
+                                                ),
                                           borderRadius: BorderRadius.circular(
                                             8,
                                           ),
                                           border: Border.all(
-                                            color: Colors.white.withValues(
-                                              alpha: 0.1,
-                                            ),
+                                            color: isDark
+                                                ? Colors.white.withValues(
+                                                    alpha: 0.1,
+                                                  )
+                                                : Colors.black.withValues(
+                                                    alpha: 0.1,
+                                                  ),
                                           ),
                                         ),
                                         child: Row(
@@ -1587,16 +1623,16 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                                                 config.breakStart.isEmpty
                                                     ? '--:--'
                                                     : config.breakStart,
-                                                style: const TextStyle(
-                                                  color: Colors.white,
+                                                style: TextStyle(
+                                                  color: textColor,
                                                   fontSize: 12,
                                                 ),
                                                 overflow: TextOverflow.ellipsis,
                                               ),
                                             ),
-                                            const Icon(
+                                            Icon(
                                               Icons.access_time,
-                                              color: Colors.white54,
+                                              color: mutedColor,
                                               size: 14,
                                             ),
                                           ],
@@ -1605,10 +1641,10 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-                                  const Text(
+                                  Text(
                                     'to',
                                     style: TextStyle(
-                                      color: Colors.white54,
+                                      color: mutedColor,
                                       fontSize: 12,
                                     ),
                                   ),
@@ -1678,16 +1714,24 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                                           vertical: 8,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: Colors.white.withValues(
-                                            alpha: 0.05,
-                                          ),
+                                          color: isDark
+                                              ? Colors.white.withValues(
+                                                  alpha: 0.05,
+                                                )
+                                              : Colors.black.withValues(
+                                                  alpha: 0.03,
+                                                ),
                                           borderRadius: BorderRadius.circular(
                                             8,
                                           ),
                                           border: Border.all(
-                                            color: Colors.white.withValues(
-                                              alpha: 0.1,
-                                            ),
+                                            color: isDark
+                                                ? Colors.white.withValues(
+                                                    alpha: 0.1,
+                                                  )
+                                                : Colors.black.withValues(
+                                                    alpha: 0.1,
+                                                  ),
                                           ),
                                         ),
                                         child: Row(
@@ -1699,16 +1743,16 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                                                 config.breakEnd.isEmpty
                                                     ? '--:--'
                                                     : config.breakEnd,
-                                                style: const TextStyle(
-                                                  color: Colors.white,
+                                                style: TextStyle(
+                                                  color: textColor,
                                                   fontSize: 12,
                                                 ),
                                                 overflow: TextOverflow.ellipsis,
                                               ),
                                             ),
-                                            const Icon(
+                                            Icon(
                                               Icons.access_time,
-                                              color: Colors.white54,
+                                              color: mutedColor,
                                               size: 14,
                                             ),
                                           ],
@@ -1736,22 +1780,22 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                                               controller: controller,
                                               keyboardType:
                                                   TextInputType.number,
-                                              style: const TextStyle(
-                                                color: Colors.white,
+                                              style: TextStyle(
+                                                color: textColor,
                                               ),
-                                              decoration: const InputDecoration(
+                                              decoration: InputDecoration(
                                                 hintText: 'e.g. 30',
                                                 hintStyle: TextStyle(
-                                                  color: Colors.white54,
+                                                  color: mutedColor,
                                                 ),
                                                 enabledBorder:
                                                     OutlineInputBorder(
                                                       borderSide: BorderSide(
-                                                        color: Colors.white24,
+                                                        color: isDark ? Colors.white24 : Colors.black26,
                                                       ),
                                                     ),
                                                 focusedBorder:
-                                                    OutlineInputBorder(
+                                                    const OutlineInputBorder(
                                                       borderSide: BorderSide(
                                                         color: Color(
                                                           0xFFC084FC,
@@ -1768,10 +1812,10 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                                                 TextButton(
                                                   onPressed: () =>
                                                       Navigator.pop(context),
-                                                  child: const Text(
+                                                  child: Text(
                                                     'Cancel',
                                                     style: TextStyle(
-                                                      color: Colors.white70,
+                                                      color: subtextColor,
                                                     ),
                                                   ),
                                                 ),
@@ -1831,15 +1875,15 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                                         vertical: 4,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: Colors.white.withValues(
-                                          alpha: 0.1,
-                                        ),
+                                        color: isDark
+                                            ? Colors.white.withValues(alpha: 0.1)
+                                            : Colors.black.withValues(alpha: 0.05),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                       child: Text(
                                         '${config.breakDurationMinutes}m',
-                                        style: const TextStyle(
-                                          color: Colors.white,
+                                        style: TextStyle(
+                                          color: textColor,
                                           fontSize: 12,
                                           fontWeight: FontWeight.w500,
                                         ),
@@ -1850,7 +1894,10 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                               ),
                             ],
                             if (dayIndex != 5)
-                              const Divider(color: Colors.white24, height: 24),
+                              Divider(
+                                color: isDark ? Colors.white24 : Colors.black12,
+                                height: 24,
+                              ),
                           ],
                         );
                       }),
@@ -2027,10 +2074,10 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
+                        Text(
                           'Overtime Allowed',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: textColor,
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                           ),
@@ -2050,10 +2097,10 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
+                        Text(
                           'Can Edit Company Info',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: textColor,
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                           ),
@@ -2071,12 +2118,12 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                     ),
                     if (overtimeAllowedValue) ...[
                       const SizedBox(height: 12),
-                      const Divider(color: Colors.white10),
+                      Divider(color: isDark ? Colors.white10 : Colors.black12),
                       const SizedBox(height: 8),
-                      const Text(
+                      Text(
                         'Overtime Settings',
                         style: TextStyle(
-                          color: Colors.white70,
+                          color: subtextColor,
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
@@ -2133,10 +2180,10 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
+                        Text(
                           'Enable Delay Penalties',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: textColor,
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                           ),
@@ -2154,12 +2201,12 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                     ),
                     if (delayPenaltiesEnabledValue) ...[
                       const SizedBox(height: 12),
-                      const Divider(color: Colors.white10),
+                      Divider(color: isDark ? Colors.white10 : Colors.black12),
                       const SizedBox(height: 8),
-                      const Text(
+                      Text(
                         'Level 1 Penalty',
                         style: TextStyle(
-                          color: Colors.white70,
+                          color: subtextColor,
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
@@ -2193,12 +2240,12 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      const Divider(color: Colors.white10),
+                      Divider(color: isDark ? Colors.white10 : Colors.black12),
                       const SizedBox(height: 8),
-                      const Text(
+                      Text(
                         'Level 2 Penalty',
                         style: TextStyle(
-                          color: Colors.white70,
+                          color: subtextColor,
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
@@ -2232,12 +2279,12 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      const Divider(color: Colors.white10),
+                      Divider(color: isDark ? Colors.white10 : Colors.black12),
                       const SizedBox(height: 8),
-                      const Text(
+                      Text(
                         'Level 3 Penalty',
                         style: TextStyle(
-                          color: Colors.white70,
+                          color: subtextColor,
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
@@ -2253,23 +2300,23 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          const Expanded(
+                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   'Max min',
                                   style: TextStyle(
-                                    color: Colors.white60,
+                                    color: mutedColor,
                                     fontSize: 12,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
-                                SizedBox(height: 10),
+                                const SizedBox(height: 10),
                                 Text(
                                   'and more',
                                   style: TextStyle(
-                                    color: Colors.white70,
+                                    color: subtextColor,
                                     fontSize: 14,
                                   ),
                                 ),
@@ -2296,10 +2343,10 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
+                        Text(
                           'Enable Early Exit Penalties',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: textColor,
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                           ),
@@ -2317,12 +2364,12 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                     ),
                     if (earlyExitPenaltiesEnabledValue) ...[
                       const SizedBox(height: 12),
-                      const Divider(color: Colors.white10),
+                      Divider(color: isDark ? Colors.white10 : Colors.black12),
                       const SizedBox(height: 8),
-                      const Text(
+                      Text(
                         'Level 1 Penalty',
                         style: TextStyle(
-                          color: Colors.white70,
+                          color: subtextColor,
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
@@ -2356,12 +2403,12 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      const Divider(color: Colors.white10),
+                      Divider(color: isDark ? Colors.white10 : Colors.black12),
                       const SizedBox(height: 8),
-                      const Text(
+                      Text(
                         'Level 2 Penalty',
                         style: TextStyle(
-                          color: Colors.white70,
+                          color: subtextColor,
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
@@ -2395,12 +2442,12 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      const Divider(color: Colors.white10),
+                      Divider(color: isDark ? Colors.white10 : Colors.black12),
                       const SizedBox(height: 8),
-                      const Text(
+                      Text(
                         'Level 3 Penalty',
                         style: TextStyle(
-                          color: Colors.white70,
+                          color: subtextColor,
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
@@ -2416,23 +2463,23 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          const Expanded(
+                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   'Max min',
                                   style: TextStyle(
-                                    color: Colors.white60,
+                                    color: mutedColor,
                                     fontSize: 12,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
-                                SizedBox(height: 10),
+                                const SizedBox(height: 10),
                                 Text(
                                   'and more',
                                   style: TextStyle(
-                                    color: Colors.white70,
+                                    color: subtextColor,
                                     fontSize: 14,
                                   ),
                                 ),
@@ -2515,19 +2562,19 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                 ),
 
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   'Group History',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: textColor,
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 8),
                 if (tempGroupHistory.isEmpty)
-                  const Text(
+                  Text(
                     'No group history recorded.',
-                    style: TextStyle(color: Colors.white54, fontSize: 12),
+                    style: TextStyle(color: mutedColor, fontSize: 12),
                   )
                 else
                   Column(
@@ -2569,9 +2616,9 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                         margin: const EdgeInsets.only(bottom: 8),
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.05),
+                          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.white12),
+                          border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
                         ),
                         child: Row(
                           children: [
@@ -2581,16 +2628,16 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                                 children: [
                                   Text(
                                     hGroup.name,
-                                    style: const TextStyle(
-                                      color: Colors.white,
+                                    style: TextStyle(
+                                      color: textColor,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 12,
                                     ),
                                   ),
                                   Text(
                                     '${h.startDate} to ${h.endDate.isEmpty ? 'Ongoing' : h.endDate}',
-                                    style: const TextStyle(
-                                      color: Colors.white70,
+                                    style: TextStyle(
+                                      color: subtextColor,
                                       fontSize: 11,
                                     ),
                                   ),
@@ -2763,9 +2810,9 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                 _buildGroupedContainer(
                   title: 'Applies to Groups',
                   children: [
-                    const Text(
+                    Text(
                       'Select groups or leave empty to apply to all groups.',
-                      style: TextStyle(color: Colors.white54, fontSize: 12),
+                      style: TextStyle(color: mutedColor, fontSize: 12),
                     ),
                     const SizedBox(height: 12),
                     Wrap(
@@ -2779,13 +2826,17 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                           label: Text(
                             g.name,
                             style: TextStyle(
-                              color: isSelected ? Colors.white : Colors.white70,
+                              color: isSelected
+                                  ? Colors.white
+                                  : (isDark ? Colors.white70 : const Color(0xFF334155)),
                               fontSize: 12,
                             ),
                           ),
                           selected: isSelected,
                           selectedColor: const Color(0xFF2E65FF),
-                          backgroundColor: Colors.white.withValues(alpha: 0.1),
+                          backgroundColor: isDark
+                              ? Colors.white.withValues(alpha: 0.1)
+                              : const Color(0xFFE2E8F0),
                           checkmarkColor: Colors.white,
                           onSelected: (selected) {
                             setDialogState(() {
@@ -2873,7 +2924,7 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                   Text(
                     'Selected Radius: ${selectedRadius!.round()} meters',
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.7),
+                      color: subtextColor,
                       fontSize: 12,
                     ),
                   ),
@@ -2882,9 +2933,9 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                 _buildGroupedContainer(
                   title: 'Assigned to Groups',
                   children: [
-                    const Text(
+                    Text(
                       'Select which groups can clock in/out at this location.',
-                      style: TextStyle(color: Colors.white54, fontSize: 12),
+                      style: TextStyle(color: mutedColor, fontSize: 12),
                     ),
                     const SizedBox(height: 12),
                     Wrap(
@@ -2898,13 +2949,17 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                           label: Text(
                             g.name,
                             style: TextStyle(
-                              color: isSelected ? Colors.white : Colors.white70,
+                              color: isSelected
+                                  ? Colors.white
+                                  : (isDark ? Colors.white70 : const Color(0xFF334155)),
                               fontSize: 12,
                             ),
                           ),
                           selected: isSelected,
                           selectedColor: const Color(0xFF2E65FF),
-                          backgroundColor: Colors.white.withValues(alpha: 0.1),
+                          backgroundColor: isDark
+                              ? Colors.white.withValues(alpha: 0.1)
+                              : const Color(0xFFE2E8F0),
                           checkmarkColor: Colors.white,
                           onSelected: (selected) {
                             setDialogState(() {
@@ -2959,9 +3014,11 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                 children: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text(
+                    child: Text(
                       'Cancel',
-                      style: TextStyle(color: Colors.white60),
+                      style: TextStyle(
+                        color: isDark ? Colors.white60 : Colors.black54,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -3588,13 +3645,14 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
     ValueChanged<String>? onChanged,
     bool readOnly = false,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.8),
+            color: isDark ? Colors.white.withValues(alpha: 0.8) : const Color(0xFF334155),
             fontSize: 13,
             fontWeight: FontWeight.w600,
           ),
@@ -3605,21 +3663,32 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
           keyboardType: keyboardType,
           onChanged: onChanged,
           readOnly: readOnly,
-          style: const TextStyle(color: Colors.white, fontSize: 15),
+          style: TextStyle(
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+            fontSize: 15,
+          ),
           decoration: InputDecoration(
             isDense: true,
             filled: true,
-            fillColor: Colors.white.withValues(alpha: 0.05),
+            fillColor: isDark
+                ? Colors.white.withValues(alpha: 0.05)
+                : Colors.black.withValues(alpha: 0.04),
             hintText: hintText,
             hintStyle: TextStyle(
-              color: Colors.white.withValues(alpha: 0.3),
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.3)
+                  : Colors.black.withValues(alpha: 0.35),
               fontSize: 14,
             ),
             contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
             suffixIcon: suffixIcon != null
                 ? InkWell(
                     onTap: onSuffixTap,
-                    child: Icon(suffixIcon, color: Colors.white60, size: 18),
+                    child: Icon(
+                      suffixIcon,
+                      color: isDark ? Colors.white60 : Colors.black54,
+                      size: 18,
+                    ),
                   )
                 : null,
             focusedBorder: OutlineInputBorder(
@@ -3628,7 +3697,11 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+              borderSide: BorderSide(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : Colors.black.withValues(alpha: 0.12),
+              ),
             ),
           ),
         ),
@@ -3642,6 +3715,7 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
     required List<DropdownMenuItem<T>> items,
     required ValueChanged<T?> onChanged,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     // 1. De-duplicate items by item.value
     final seen = <T?>{};
     final cleanItems = <DropdownMenuItem<T>>[];
@@ -3670,7 +3744,7 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
         Text(
           label,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.8),
+            color: isDark ? Colors.white.withValues(alpha: 0.8) : const Color(0xFF334155),
             fontSize: 13,
             fontWeight: FontWeight.w600,
           ),
@@ -3680,9 +3754,7 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
           data: Theme.of(
             context,
           ).copyWith(
-            canvasColor: Theme.of(context).brightness == Brightness.dark
-                ? const Color(0xFF1E293B)
-                : Colors.white,
+            canvasColor: isDark ? const Color(0xFF1E293B) : Colors.white,
           ),
           child: DropdownButtonFormField<T>(
             key: ValueKey(effectiveValue),
@@ -3690,11 +3762,16 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
             items: cleanItems,
             onChanged: onChanged,
             isExpanded: true,
-            icon: const Icon(Icons.arrow_drop_down, color: Colors.white60),
+            icon: Icon(
+              Icons.arrow_drop_down,
+              color: isDark ? Colors.white60 : Colors.black54,
+            ),
             decoration: InputDecoration(
               isDense: true,
               filled: true,
-              fillColor: Colors.white.withValues(alpha: 0.05),
+              fillColor: isDark
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.black.withValues(alpha: 0.04),
               contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -3702,10 +3779,17 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+                borderSide: BorderSide(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.black.withValues(alpha: 0.12),
+                ),
               ),
             ),
-            style: const TextStyle(color: Colors.white, fontSize: 15),
+            style: TextStyle(
+              color: isDark ? Colors.white : const Color(0xFF0F172A),
+              fontSize: 15,
+            ),
           ),
         ),
       ],
@@ -3717,6 +3801,7 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
     required double currentValue,
     required ValueChanged<double> onChanged,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final values = [1.0, 1.5, 2.0, 3.0];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -3724,7 +3809,7 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
         Text(
           label,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.6),
+            color: isDark ? Colors.white.withValues(alpha: 0.6) : const Color(0xFF64748B),
             fontSize: 12,
             fontWeight: FontWeight.w500,
           ),
@@ -3745,12 +3830,16 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                   decoration: BoxDecoration(
                     color: isSelected
                         ? const Color(0xFF2E65FF)
-                        : Colors.white.withValues(alpha: 0.08),
+                        : (isDark
+                            ? Colors.white.withValues(alpha: 0.08)
+                            : const Color(0xFFE2E8F0)),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                       color: isSelected
                           ? const Color(0xFF2E65FF)
-                          : Colors.white.withValues(alpha: 0.15),
+                          : (isDark
+                              ? Colors.white.withValues(alpha: 0.15)
+                              : Colors.black.withValues(alpha: 0.08)),
                       width: 1,
                     ),
                   ),
@@ -3759,7 +3848,9 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                     style: TextStyle(
                       color: isSelected
                           ? Colors.white
-                          : Colors.white.withValues(alpha: 0.7),
+                          : (isDark
+                              ? Colors.white.withValues(alpha: 0.7)
+                              : const Color(0xFF334155)),
                       fontSize: 13,
                       fontWeight: isSelected
                           ? FontWeight.bold
@@ -3779,14 +3870,19 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
     required String title,
     required List<Widget> children,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.04)
+            : Colors.black.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.1),
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.1)
+              : Colors.black.withValues(alpha: 0.08),
           width: 1.0,
         ),
       ),
@@ -3795,8 +3891,8 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
         children: [
           Text(
             title,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: isDark ? Colors.white : const Color(0xFF1E293B),
               fontSize: 14,
               fontWeight: FontWeight.bold,
             ),
