@@ -239,137 +239,135 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
     AttendanceProvider provider,
     bool isDark,
   ) {
-    return GlassContainer(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          // Filter Icon
-          Icon(
-            Icons.filter_list_rounded,
-            size: 20,
-            color: isDark ? Colors.white70 : const Color(0xFF334155),
-          ),
-          const SizedBox(width: 12),
-
-          // Role Filter Dropdown
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              child: Row(
-                children: [
-                  _buildDropdownFilter(
-                    label: 'Role',
-                    value: _selectedRoleFilter,
-                    isDark: isDark,
-                    items: const [
-                      DropdownMenuItem(value: 'all', child: Text('All Roles')),
-                      DropdownMenuItem(value: 'hr', child: Text('HR / Admin')),
-                      DropdownMenuItem(value: 'supervisor', child: Text('Supervisor')),
-                      DropdownMenuItem(value: 'employee', child: Text('Employee')),
-                    ],
-                    onChanged: (val) {
-                      if (val != null) {
-                        setState(() => _selectedRoleFilter = val);
-                      }
-                    },
-                  ),
-                  const SizedBox(width: 10),
-
-                  // Status Filter Dropdown
-                  _buildDropdownFilter(
-                    label: 'Status',
-                    value: _selectedStatusFilter,
-                    isDark: isDark,
-                    items: const [
-                      DropdownMenuItem(value: 'all', child: Text('All Status')),
-                      DropdownMenuItem(value: 'active', child: Text('Active Only')),
-                      DropdownMenuItem(value: 'disabled', child: Text('Suspended')),
-                    ],
-                    onChanged: (val) {
-                      if (val != null) {
-                        setState(() => _selectedStatusFilter = val);
-                      }
-                    },
-                  ),
-                  const SizedBox(width: 10),
-
-                  // Structure / Department Filter Dropdown
-                  _buildDropdownFilter(
-                    label: 'Department',
-                    value: _selectedStructureFilter,
-                    isDark: isDark,
-                    items: [
-                      const DropdownMenuItem(value: 'all', child: Text('All Structures')),
-                      ...provider.structures.map(
-                        (s) => DropdownMenuItem(
-                          value: s.id,
-                          child: Text(s.name),
-                        ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 650;
+        return Flex(
+          direction: isMobile ? Axis.vertical : Axis.horizontal,
+          crossAxisAlignment: isMobile
+              ? CrossAxisAlignment.stretch
+              : CrossAxisAlignment.center,
+          children: [
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                _buildDropdownFilter(
+                  context: context,
+                  isDark: isDark,
+                  value: _selectedRoleFilter,
+                  items: const [
+                    DropdownMenuItem(value: 'all', child: Text('All Roles')),
+                    DropdownMenuItem(value: 'hr', child: Text('HR / Admin')),
+                    DropdownMenuItem(value: 'supervisor', child: Text('Supervisor')),
+                    DropdownMenuItem(value: 'employee', child: Text('Employee')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) setState(() => _selectedRoleFilter = val);
+                  },
+                ),
+                _buildDropdownFilter(
+                  context: context,
+                  isDark: isDark,
+                  value: _selectedStatusFilter,
+                  items: const [
+                    DropdownMenuItem(value: 'all', child: Text('All Status')),
+                    DropdownMenuItem(value: 'active', child: Text('Active Only')),
+                    DropdownMenuItem(value: 'disabled', child: Text('Suspended')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) setState(() => _selectedStatusFilter = val);
+                  },
+                ),
+                _buildDropdownFilter(
+                  context: context,
+                  isDark: isDark,
+                  value: _selectedStructureFilter,
+                  items: [
+                    const DropdownMenuItem(value: 'all', child: Text('All Structures')),
+                    ...provider.structures.map(
+                      (s) => DropdownMenuItem(
+                        value: s.id,
+                        child: Text(s.name),
                       ),
-                    ],
-                    onChanged: (val) {
-                      if (val != null) {
-                        setState(() => _selectedStructureFilter = val);
-                      }
-                    },
+                    ),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) setState(() => _selectedStructureFilter = val);
+                  },
+                ),
+              ],
+            ),
+            if (!isMobile) const Spacer() else const SizedBox(height: 12),
+            SizedBox(
+              height: 38,
+              child: ElevatedButton.icon(
+                onPressed: () => _showUserFormDialog(context: context, provider: provider),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2E65FF),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                ],
+                ),
+                icon: const Icon(Icons.person_add_alt_1_rounded, size: 16, color: Colors.white),
+                label: const Text(
+                  'Add User',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: Colors.white),
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 10),
-
-          // Add User Quick Action Button
-          ElevatedButton.icon(
-            onPressed: () => _showUserFormDialog(context: context, provider: provider),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2E65FF),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
-            label: const Text(
-              'Add User',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-            ),
-          ),
-        ],
-      ),
+          ],
+        );
+      },
     );
   }
 
   Widget _buildDropdownFilter({
-    required String label,
-    required String value,
+    required BuildContext context,
     required bool isDark,
+    required String value,
     required List<DropdownMenuItem<String>> items,
     required ValueChanged<String?> onChanged,
   }) {
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final isFiltered = value != 'all';
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+      height: 38,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
+          color: isFiltered
+              ? const Color(0xFF2E65FF)
+              : (isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFCBD5E1)),
+          width: isFiltered ? 1.5 : 1.0,
         ),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: value,
-          isDense: true,
-          dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: isDark ? Colors.white : const Color(0xFF1E293B),
-          ),
           items: items,
           onChanged: onChanged,
+          dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          style: TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+            color: textColor,
+          ),
+          icon: Icon(
+            Icons.arrow_drop_down,
+            color: isFiltered
+                ? const Color(0xFF2E65FF)
+                : (isDark ? Colors.white60 : Colors.black54),
+            size: 20,
+          ),
         ),
       ),
     );
@@ -385,230 +383,303 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
       return _buildEmptyState(context, isDark);
     }
 
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final dividerColor = (isDark ? Colors.white : Colors.black).withValues(alpha: 0.08);
+
     return GlassContainer(
-      padding: const EdgeInsets.all(0),
+      padding: EdgeInsets.zero,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         child: LayoutBuilder(
           builder: (context, constraints) {
             return SingleChildScrollView(
               scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
               child: ConstrainedBox(
                 constraints: BoxConstraints(minWidth: constraints.maxWidth),
-                child: DataTable(
-                  headingRowColor: WidgetStateProperty.all(
-                    isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+                child: Theme(
+                  data: (isDark ? ThemeData.dark() : ThemeData.light()).copyWith(
+                    dividerColor: dividerColor,
                   ),
-                  dataRowMaxHeight: 65,
-                  dataRowMinHeight: 65,
-                  columnSpacing: 30,
-                  horizontalMargin: 24,
-                  columns: [
-                    DataColumn(label: Text('Employee', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : Colors.black87))),
-                    DataColumn(label: Text('Job Details', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : Colors.black87))),
-                    DataColumn(label: Text('Role & Access', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : Colors.black87))),
-                    DataColumn(label: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : Colors.black87))),
-                  ],
-                  rows: employees.map((employee) {
-                    final structure = provider.structures.firstWhere(
-                      (s) => s.id == employee.structureId,
-                      orElse: () => OrgStructure(id: '', name: 'Unassigned', location: '', capacity: 0),
-                    );
+                  child: DataTable(
+                    headingRowColor: WidgetStateProperty.all(
+                      isDark
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : const Color(0xFFF1F5F9),
+                    ),
+                    headingRowHeight: 46,
+                    dataRowMaxHeight: 62,
+                    dataRowMinHeight: 52,
+                    columnSpacing: 24,
+                    horizontalMargin: 20,
+                    columns: [
+                      DataColumn(
+                        label: Text(
+                          'Employee',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: textColor,
+                          ),
+                        ),
+                      ),
+                      DataColumn(
+                        label: Text(
+                          'Job Details',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: textColor,
+                          ),
+                        ),
+                      ),
+                      DataColumn(
+                        label: Text(
+                          'Role & Access',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: textColor,
+                          ),
+                        ),
+                      ),
+                      DataColumn(
+                        label: Text(
+                          'Actions',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: textColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                    rows: employees.map((employee) {
+                      final structure = provider.structures.firstWhere(
+                        (s) => s.id == employee.structureId,
+                        orElse: () => OrgStructure(id: '', name: 'Unassigned', location: '', capacity: 0),
+                      );
 
-                    final isUserDisabled = employee.disabled;
-                    final roleColor = employee.role == 'hr' || employee.role == 'admin'
-                        ? const Color(0xFF8B5CF6)
-                        : employee.role == 'supervisor'
-                            ? const Color(0xFF2E65FF)
-                            : const Color(0xFF10B981);
+                      final isUserDisabled = employee.disabled;
+                      final roleColor = employee.role == 'hr' || employee.role == 'admin'
+                          ? const Color(0xFF8B5CF6)
+                          : employee.role == 'supervisor'
+                              ? const Color(0xFF2E65FF)
+                              : const Color(0xFF10B981);
 
-                    return DataRow(
-                      color: WidgetStateProperty.all(isUserDisabled ? Colors.red.withValues(alpha: 0.05) : Colors.transparent),
-                      cells: [
-                        // Employee Info
-                        DataCell(
-                          Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 18,
-                                backgroundColor: roleColor.withValues(alpha: 0.15),
-                                child: Text(
-                                  employee.name.isNotEmpty ? employee.name[0].toUpperCase() : 'U',
-                                  style: TextStyle(
-                                    color: roleColor,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Text(
-                                        employee.name,
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                          color: isDark ? Colors.white : const Color(0xFF0F172A),
-                                        ),
-                                      ),
-                                      if (isUserDisabled)
-                                        Container(
-                                          margin: const EdgeInsets.only(left: 6),
-                                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: Colors.red.withValues(alpha: 0.15),
-                                            borderRadius: BorderRadius.circular(4),
-                                          ),
-                                          child: const Text(
-                                            'SUSPENDED',
-                                            style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.redAccent),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                  Text(
-                                    employee.email,
+                      return DataRow(
+                        color: WidgetStateProperty.all(isUserDisabled ? Colors.red.withValues(alpha: 0.05) : Colors.transparent),
+                        cells: [
+                          // Employee Info
+                          DataCell(
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 18,
+                                  backgroundColor: roleColor.withValues(alpha: 0.15),
+                                  child: Text(
+                                    employee.name.isNotEmpty ? employee.name[0].toUpperCase() : 'U',
                                     style: TextStyle(
-                                      fontSize: 11,
-                                      color: isDark ? Colors.white60 : Colors.black54,
+                                      color: roleColor,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
                                     ),
                                   ),
-                                ],
-                              ),
-                            ],
+                                ),
+                                const SizedBox(width: 12),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          employee.name,
+                                          style: TextStyle(
+                                            fontSize: 13.5,
+                                            fontWeight: FontWeight.bold,
+                                            color: textColor,
+                                          ),
+                                        ),
+                                        if (isUserDisabled)
+                                          Container(
+                                            margin: const EdgeInsets.only(left: 6),
+                                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                            decoration: BoxDecoration(
+                                              color: Colors.red.withValues(alpha: 0.15),
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: const Text(
+                                              'SUSPENDED',
+                                              style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: Colors.redAccent),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    Text(
+                                      employee.email,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: isDark ? Colors.white60 : Colors.black54,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
 
-                        // Job Details
-                        DataCell(
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                employee.position.isNotEmpty ? employee.position : 'Team Member',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: isDark ? Colors.white : const Color(0xFF0F172A),
-                                ),
-                              ),
-                              Text(
-                                'Dept: ${structure.name}',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: isDark ? Colors.white60 : Colors.black54,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // Role & Access
-                        DataCell(
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: roleColor.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  employee.role.toUpperCase(),
-                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: roleColor),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Icon(
-                                    employee.faceEmbedding != null ? Icons.face_retouching_natural : Icons.face_outlined,
-                                    size: 12,
-                                    color: employee.faceEmbedding != null ? const Color(0xFF10B981) : Colors.grey,
+                          // Job Details
+                          DataCell(
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  employee.position.isNotEmpty ? employee.position : 'Team Member',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: textColor,
                                   ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    employee.faceEmbedding != null ? 'Face Verified' : 'No Face ID',
-                                    style: TextStyle(
-                                      fontSize: 11,
+                                ),
+                                Text(
+                                  'Dept: ${structure.name}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: isDark ? Colors.white60 : Colors.black54,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Role & Access
+                          DataCell(
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: roleColor.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    employee.role.toUpperCase(),
+                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: roleColor),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      employee.faceEmbedding != null ? Icons.face_retouching_natural : Icons.face_outlined,
+                                      size: 13,
                                       color: employee.faceEmbedding != null ? const Color(0xFF10B981) : Colors.grey,
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // Actions
-                        DataCell(
-                          Row(
-                            children: [
-                              IconButton(
-                                onPressed: () => _showUserDetailsDialog(context, employee, provider, isDark),
-                                icon: const Icon(Icons.visibility_outlined, size: 16),
-                                tooltip: 'View Profile',
-                                color: isDark ? Colors.white70 : Colors.black87,
-                              ),
-                              IconButton(
-                                onPressed: () {
-                                  if (widget.onEdit != null) {
-                                    widget.onEdit!(employee);
-                                  } else {
-                                    _showUserFormDialog(context: context, provider: provider, employee: employee);
-                                  }
-                                },
-                                icon: const Icon(Icons.edit_outlined, size: 16),
-                                tooltip: 'Edit User',
-                                color: isDark ? Colors.white70 : Colors.black87,
-                              ),
-                              IconButton(
-                                onPressed: () {
-                                  final updated = employee.copyWith(disabled: !employee.disabled);
-                                  provider.updateEmployee(updated);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        employee.disabled
-                                            ? '${employee.name}\'s account activated.'
-                                            : '${employee.name}\'s account suspended.',
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      employee.faceEmbedding != null ? 'Face Verified' : 'No Face ID',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: employee.faceEmbedding != null ? const Color(0xFF10B981) : Colors.grey,
                                       ),
                                     ),
-                                  );
-                                },
-                                icon: Icon(
-                                  employee.disabled ? Icons.check_circle_outline : Icons.block_outlined,
-                                  size: 16,
-                                  color: employee.disabled ? Colors.green : Colors.orange,
+                                  ],
                                 ),
-                                tooltip: employee.disabled ? 'Activate User' : 'Suspend User',
-                              ),
-                              IconButton(
-                                onPressed: () {
-                                  if (widget.onDelete != null) {
-                                    widget.onDelete!(employee.id);
-                                  } else {
-                                    _showDeleteConfirm(context, employee, provider);
-                                  }
-                                },
-                                icon: const Icon(Icons.delete_outline, size: 16),
-                                tooltip: 'Delete User',
-                                color: Colors.redAccent,
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
-                    );
-                  }).toList(),
+
+                          // Actions
+                          DataCell(
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Tooltip(
+                                  message: 'View Profile',
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(6),
+                                    onTap: () => _showUserDetailsDialog(context, employee, provider, isDark),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(5),
+                                      child: Icon(Icons.visibility_outlined, size: 18, color: isDark ? Colors.white70 : Colors.black54),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Tooltip(
+                                  message: 'Edit User',
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(6),
+                                    onTap: () {
+                                      if (widget.onEdit != null) {
+                                        widget.onEdit!(employee);
+                                      } else {
+                                        _showUserFormDialog(context: context, provider: provider, employee: employee);
+                                      }
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(5),
+                                      child: Icon(Icons.edit_outlined, size: 18, color: isDark ? Colors.white70 : Colors.black54),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Tooltip(
+                                  message: employee.disabled ? 'Activate User' : 'Suspend User',
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(6),
+                                    onTap: () {
+                                      final updated = employee.copyWith(disabled: !employee.disabled);
+                                      provider.updateEmployee(updated);
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            employee.disabled
+                                                ? '${employee.name}\'s account activated.'
+                                                : '${employee.name}\'s account suspended.',
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(5),
+                                      child: Icon(
+                                        employee.disabled ? Icons.check_circle_outline : Icons.block_outlined,
+                                        size: 18,
+                                        color: employee.disabled ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Tooltip(
+                                  message: 'Delete User',
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(6),
+                                    onTap: () {
+                                      if (widget.onDelete != null) {
+                                        widget.onDelete!(employee.id);
+                                      } else {
+                                        _showDeleteConfirm(context, employee, provider);
+                                      }
+                                    },
+                                    child: const Padding(
+                                      padding: EdgeInsets.all(5),
+                                      child: Icon(Icons.delete_outline, size: 18, color: Color(0xFFEF4444)),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                  ),
                 ),
               ),
             );

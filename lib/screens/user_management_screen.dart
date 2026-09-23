@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../providers/attendance_provider.dart';
 import '../widgets/hr/hr_employees_tab.dart';
 import '../widgets/hr/system_users_tab.dart';
-import '../widgets/glass_container.dart';
 
 class UserManagementScreen extends StatefulWidget {
   final bool isEmbedded;
@@ -103,12 +102,19 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
                   child: Container(
+                    height: 44,
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
                       color: isDark
-                          ? Colors.white.withValues(alpha: 0.06)
-                          : const Color(0xFFE2E8F0),
-                      borderRadius: BorderRadius.circular(14),
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.1)
+                            : const Color(0xFFCBD5E1),
+                        width: 1.0,
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -132,40 +138,60 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 // Search Bar Field
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  child: GlassContainer(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-                    child: TextField(
-                      controller: _searchController,
-                      onChanged: (val) {
-                        setState(() {});
-                      },
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  child: Container(
+                    height: 42,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.1)
+                            : const Color(0xFFCBD5E1),
+                        width: 1.0,
                       ),
-                      decoration: InputDecoration(
-                        hintText: _activeSubTab == 0
-                            ? 'Search system users by name, login email, or role...'
-                            : 'Search employees by name, position, or structure...',
-                        hintStyle: TextStyle(
-                          fontSize: 13,
-                          color: isDark ? Colors.white38 : Colors.black38,
+                    ),
+                    child: Center(
+                      child: TextField(
+                        controller: _searchController,
+                        onChanged: (val) {
+                          setState(() {});
+                        },
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
                         ),
-                        prefixIcon: Icon(
-                          Icons.search_rounded,
-                          color: isDark ? Colors.white54 : Colors.black45,
-                          size: 20,
+                        decoration: InputDecoration(
+                          hintText: _activeSubTab == 0
+                              ? 'Search system users by name, login email, or role...'
+                              : 'Search employees by name, position, or structure...',
+                          hintStyle: TextStyle(
+                            fontSize: 13,
+                            color: isDark ? Colors.white38 : Colors.black38,
+                          ),
+                          prefixIcon: Icon(
+                            Icons.search_rounded,
+                            color: isDark ? Colors.white54 : Colors.black45,
+                            size: 19,
+                          ),
+                          prefixIconConstraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear, size: 16),
+                                  splashRadius: 16,
+                                  padding: EdgeInsets.zero,
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() {});
+                                  },
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 10),
                         ),
-                        suffixIcon: _searchController.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear, size: 18),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setState(() {});
-                                },
-                              )
-                            : null,
-                        border: InputBorder.none,
                       ),
                     ),
                   ),
@@ -215,17 +241,17 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          alignment: Alignment.center,
           decoration: BoxDecoration(
             color: isSelected
-                ? (isDark ? const Color(0xFF3B82F6) : Colors.white)
+                ? const Color(0xFF2E65FF)
                 : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: isSelected && !isDark
+            borderRadius: BorderRadius.circular(9),
+            boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
-                      blurRadius: 4,
+                      color: const Color(0xFF2E65FF).withValues(alpha: 0.3),
+                      blurRadius: 8,
                       offset: const Offset(0, 2),
                     )
                   ]
@@ -236,9 +262,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             children: [
               Icon(
                 icon,
-                size: 18,
+                size: 17,
                 color: isSelected
-                    ? (isDark ? Colors.white : const Color(0xFF3B82F6))
+                    ? Colors.white
                     : (isDark ? Colors.white60 : Colors.black54),
               ),
               const SizedBox(width: 8),
@@ -248,8 +274,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   fontSize: 13,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                   color: isSelected
-                      ? (isDark ? Colors.white : const Color(0xFF0F172A))
-                      : (isDark ? Colors.white60 : Colors.black54),
+                      ? Colors.white
+                      : (isDark ? Colors.white70 : const Color(0xFF334155)),
                 ),
               ),
             ],
