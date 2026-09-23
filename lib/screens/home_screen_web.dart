@@ -115,9 +115,10 @@ class _HomeScreenWebState extends State<HomeScreenWeb> {
     final presentIds = provider.allCompanyRecords
         .where(
           (r) =>
-              r.checkIn.year == now.year &&
-              r.checkIn.month == now.month &&
-              r.checkIn.day == now.day &&
+              ((r.checkIn.year == now.year &&
+                r.checkIn.month == now.month &&
+                r.checkIn.day == now.day) ||
+               (r.checkOut == null && now.difference(r.checkIn).inHours.abs() < 24)) &&
               r.employeeId != null,
         )
         .map((r) => r.employeeId!)

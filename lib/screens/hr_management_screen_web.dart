@@ -622,6 +622,8 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
 
     // Rotation Shift properties
     bool isRotationValue = false;
+    bool isOvernightValue = false;
+    final crossMidnightCutoffController = TextEditingController();
     Map<int, DayShiftConfig> weeklyScheduleValue = {
       6: DayShiftConfig(
         isWorkingDay: true,
@@ -730,6 +732,8 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
             : '';
         selectedWorkingDays = List<int>.from(shift.workingDays);
         isRotationValue = shift.isRotation;
+        isOvernightValue = shift.isOvernight || WorkShift.isTimeCrossMidnight(shift.startTime, shift.endTime);
+        crossMidnightCutoffController.text = shift.crossMidnightCutoff;
         if (shift.weeklySchedule.isNotEmpty) {
           weeklyScheduleValue = Map.from(shift.weeklySchedule);
         }
@@ -847,6 +851,8 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
         breakStartController.text = '12:00';
         breakEndController.text = '14:00';
         breakDurationController.text = '60';
+        isOvernightValue = false;
+        crossMidnightCutoffController.text = '';
       } else if (_activeTab == HrTab.groups) {
         if (provider.shifts.isNotEmpty) {
           selectedShiftId = provider.shifts.first.id;
@@ -1185,7 +1191,16 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                               extraController1,
                               suffixIcon: Icons.access_time,
                               onSuffixTap: () =>
-                                  _selectTime(context, extraController1, null),
+                                  _selectTime(context, extraController1, () {
+                                    setDialogState(() {
+                                      if (WorkShift.isTimeCrossMidnight(extraController1.text, extraController2.text)) {
+                                        isOvernightValue = true;
+                                        if (crossMidnightCutoffController.text.isEmpty) {
+                                          crossMidnightCutoffController.text = '03:00';
+                                        }
+                                      }
+                                    });
+                                  }),
                               hintText: '--:--',
                             ),
                           ),
@@ -1196,12 +1211,73 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                               extraController2,
                               suffixIcon: Icons.access_time,
                               onSuffixTap: () =>
-                                  _selectTime(context, extraController2, null),
+                                  _selectTime(context, extraController2, () {
+                                    setDialogState(() {
+                                      if (WorkShift.isTimeCrossMidnight(extraController1.text, extraController2.text)) {
+                                        isOvernightValue = true;
+                                        if (crossMidnightCutoffController.text.isEmpty) {
+                                          crossMidnightCutoffController.text = '03:00';
+                                        }
+                                      }
+                                    });
+                                  }),
                               hintText: '--:--',
                             ),
                           ),
                         ],
                       ),
+                      const SizedBox(height: 12),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          'Overnight Shift (Crosses Midnight)',
+                          style: TextStyle(
+                            color: textColor,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        subtitle: Text(
+                          'Starts on one day and finishes past 00:00 next day',
+                          style: TextStyle(
+                            color: mutedColor,
+                            fontSize: 11,
+                          ),
+                        ),
+                        value: isOvernightValue,
+                        activeThumbColor: const Color(0xFF8B5CF6),
+                        onChanged: (val) {
+                          setDialogState(() {
+                            isOvernightValue = val;
+                            if (val && crossMidnightCutoffController.text.isEmpty) {
+                              crossMidnightCutoffController.text = '03:00';
+                            }
+                          });
+                        },
+                      ),
+                      if (isOvernightValue) ...[
+                        const SizedBox(height: 10),
+                        _buildDialogField(
+                          'Next-Day Attribution Cutoff',
+                          crossMidnightCutoffController,
+                          suffixIcon: Icons.access_time,
+                          onSuffixTap: () => _selectTime(
+                            context,
+                            crossMidnightCutoffController,
+                            null,
+                          ),
+                          hintText: '03:00',
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Checkouts and punches before this time next morning calculate towards yesterday\'s date.',
+                          style: TextStyle(
+                            color: mutedColor,
+                            fontSize: 11,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -3099,6 +3175,8 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                               workingDays: selectedWorkingDays,
                               isRotation: isRotationValue,
                               weeklySchedule: weeklyScheduleValue,
+                              isOvernight: isOvernightValue || WorkShift.isTimeCrossMidnight(extraController1.text.trim(), extraController2.text.trim()),
+                              crossMidnightCutoff: crossMidnightCutoffController.text.trim(),
                             ),
                           );
                           _showSuccessSnackBar('Shift updated successfully');
@@ -3117,6 +3195,8 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                               workingDays: selectedWorkingDays,
                               isRotation: isRotationValue,
                               weeklySchedule: weeklyScheduleValue,
+                              isOvernight: isOvernightValue || WorkShift.isTimeCrossMidnight(extraController1.text.trim(), extraController2.text.trim()),
+                              crossMidnightCutoff: crossMidnightCutoffController.text.trim(),
                             ),
                           );
                           _showSuccessSnackBar('Shift added successfully');

@@ -1390,15 +1390,21 @@ class _CustomCalendarState extends State<CustomCalendar> {
                   isToday && attendanceProvider.isClockedIn;
 
               // Find all attendance records for this date
-              final List<AttendanceRecord> dayRecords = attendanceProvider
-                  .records
-                  .where(
-                    (rec) =>
-                        rec.checkIn.year == date.year &&
-                        rec.checkIn.month == date.month &&
-                        rec.checkIn.day == date.day,
-                  )
-                  .toList();
+              final emp = attendanceProvider.currentEmployee;
+              final List<AttendanceRecord> dayRecords = emp != null
+                  ? attendanceProvider.getRecordsForDate(
+                      date,
+                      emp: emp,
+                      recordsPool: attendanceProvider.records,
+                    )
+                  : attendanceProvider.records
+                      .where(
+                        (rec) =>
+                            rec.checkIn.year == date.year &&
+                            rec.checkIn.month == date.month &&
+                            rec.checkIn.day == date.day,
+                      )
+                      .toList();
 
               if (isActiveToday && attendanceProvider.activeRecord != null) {
                 final alreadyHasActive = dayRecords.any(

@@ -253,14 +253,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
             ? int.parse(partsEnd[0]) * 60 + int.parse(partsEnd[1])
             : 1020; // Default 17:00
 
-        final dateRecords = recordsToCompile
-            .where(
-              (rec) =>
-                  rec.checkIn.year == date.year &&
-                  rec.checkIn.month == date.month &&
-                  rec.checkIn.day == date.day,
-            )
-            .toList();
+        final dateRecords = provider.getRecordsForDate(
+          date,
+          emp: emp,
+          recordsPool: recordsToCompile,
+        );
 
         int totalActualMinutes = 0;
         int dutyMinutes = 0;
@@ -497,7 +494,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               shiftEndMinutes ~/ 60,
               shiftEndMinutes % 60,
             );
-            if (shiftEnd.isBefore(shiftStart)) {
+            if (shiftEnd.isBefore(shiftStart) || shift.isOvernightForDate(date)) {
               shiftEnd = shiftEnd.add(const Duration(days: 1));
             }
 
@@ -548,9 +545,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
             final firstRec = sortedRecords.first;
             final isMissedCheckIn = firstRec.checkIn == firstRec.checkOut;
             if (!isMissedCheckIn && !hasOnlyOnePunch) {
-              final checkInMinutes =
-                  firstRec.checkIn.hour * 60 + firstRec.checkIn.minute;
-              final delay = checkInMinutes - shiftStartMinutes;
+              final shiftStart = DateTime(
+                date.year,
+                date.month,
+                date.day,
+                shiftStartMinutes ~/ 60,
+                shiftStartMinutes % 60,
+              );
+              final delay = firstRec.checkIn.difference(shiftStart).inMinutes;
               if (delay > shift.forgivenessOfDelay) {
                 delayMinutes = delay;
               }
@@ -559,9 +561,24 @@ class _HistoryScreenState extends State<HistoryScreen> {
             // 4. Early Exit Minutes (leaving early on the last completed session)
             final lastRec = sortedRecords.last;
             if (lastRec.checkOut != null && !hasOnlyOnePunch) {
-              final checkOutMinutes =
-                  lastRec.checkOut!.hour * 60 + lastRec.checkOut!.minute;
-              final earlyExit = shiftEndMinutes - checkOutMinutes;
+              final shiftStart = DateTime(
+                date.year,
+                date.month,
+                date.day,
+                shiftStartMinutes ~/ 60,
+                shiftStartMinutes % 60,
+              );
+              var shiftEnd = DateTime(
+                date.year,
+                date.month,
+                date.day,
+                shiftEndMinutes ~/ 60,
+                shiftEndMinutes % 60,
+              );
+              if (shiftEnd.isBefore(shiftStart) || shift.isOvernightForDate(date)) {
+                shiftEnd = shiftEnd.add(const Duration(days: 1));
+              }
+              final earlyExit = shiftEnd.difference(lastRec.checkOut!).inMinutes;
               if (earlyExit > shift.earlyExit) {
                 earlyExitMinutes = earlyExit;
               }

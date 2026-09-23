@@ -134,6 +134,8 @@ class DayShiftConfig {
   final String breakStart;
   final String breakEnd;
   final int breakDurationMinutes;
+  final bool isOvernight;
+  final String crossMidnightCutoff; // "HH:mm" e.g., "03:00"
 
   DayShiftConfig({
     required this.isWorkingDay,
@@ -142,6 +144,8 @@ class DayShiftConfig {
     this.breakStart = '',
     this.breakEnd = '',
     this.breakDurationMinutes = 0,
+    this.isOvernight = false,
+    this.crossMidnightCutoff = '',
   });
 
   Map<String, dynamic> toMap() {
@@ -152,17 +156,24 @@ class DayShiftConfig {
       'breakStart': breakStart,
       'breakEnd': breakEnd,
       'breakDurationMinutes': breakDurationMinutes,
+      'isOvernight': isOvernight,
+      'crossMidnightCutoff': crossMidnightCutoff,
     };
   }
 
   factory DayShiftConfig.fromMap(Map<String, dynamic> map) {
+    final start = map['startTime'] ?? '09:00';
+    final end = map['endTime'] ?? '17:00';
+    final autoOvernight = WorkShift.isTimeCrossMidnight(start, end);
     return DayShiftConfig(
       isWorkingDay: map['isWorkingDay'] ?? true,
-      startTime: map['startTime'] ?? '09:00',
-      endTime: map['endTime'] ?? '17:00',
+      startTime: start,
+      endTime: end,
       breakStart: map['breakStart'] ?? '',
       breakEnd: map['breakEnd'] ?? '',
       breakDurationMinutes: (map['breakDurationMinutes'] as num?)?.toInt() ?? 0,
+      isOvernight: map['isOvernight'] ?? autoOvernight,
+      crossMidnightCutoff: map['crossMidnightCutoff'] ?? '',
     );
   }
 }
@@ -181,6 +192,8 @@ class WorkShift {
   
   final bool isRotation;
   final Map<int, DayShiftConfig> weeklySchedule; // 1 (Mon) to 7 (Sun)
+  final bool isOvernight;
+  final String crossMidnightCutoff; // "HH:mm" e.g., "03:00" (Checkouts up to this cutoff calculate to previous date)
 
   WorkShift({
     required this.id,
@@ -195,7 +208,54 @@ class WorkShift {
     this.workingDays = const [1, 2, 3, 4, 5],
     this.isRotation = false,
     this.weeklySchedule = const {},
+    this.isOvernight = false,
+    this.crossMidnightCutoff = '',
   });
+
+  static bool isTimeCrossMidnight(String start, String end) {
+    final sParts = start.trim().split(':');
+    final eParts = end.trim().split(':');
+    if (sParts.length >= 2 && eParts.length >= 2) {
+      final sMins = (int.tryParse(sParts[0]) ?? 0) * 60 + (int.tryParse(sParts[1]) ?? 0);
+      final eMins = (int.tryParse(eParts[0]) ?? 0) * 60 + (int.tryParse(eParts[1]) ?? 0);
+      return eMins < sMins;
+    }
+    return false;
+  }
+
+  bool isOvernightForDate(DateTime date) {
+    if (isRotation) {
+      final config = weeklySchedule[date.weekday];
+      if (config != null) {
+        return config.isOvernight || isTimeCrossMidnight(config.startTime, config.endTime);
+      }
+    }
+    return isOvernight || isTimeCrossMidnight(startTime, endTime);
+  }
+
+  String getCrossMidnightCutoffForDate(DateTime date) {
+    if (isRotation) {
+      final config = weeklySchedule[date.weekday];
+      if (config != null && config.crossMidnightCutoff.isNotEmpty) {
+        return config.crossMidnightCutoff;
+      }
+    }
+    if (crossMidnightCutoff.isNotEmpty) {
+      return crossMidnightCutoff;
+    }
+    // Default fallback: 1 hour after end time if cross-midnight, or '03:00'
+    final endStr = getEndTimeForDate(date);
+    final eParts = endStr.trim().split(':');
+    if (eParts.length >= 2) {
+      final eH = int.tryParse(eParts[0]) ?? 2;
+      final eM = int.tryParse(eParts[1]) ?? 0;
+      final cutoffMins = eH * 60 + eM + 60;
+      final cH = (cutoffMins ~/ 60) % 24;
+      final cM = cutoffMins % 60;
+      return '${cH.toString().padLeft(2, '0')}:${cM.toString().padLeft(2, '0')}';
+    }
+    return '03:00';
+  }
 
   bool isWorkingDay(DateTime date) {
     if (!isRotation) {
@@ -256,6 +316,8 @@ class WorkShift {
     List<int>? workingDays,
     bool? isRotation,
     Map<int, DayShiftConfig>? weeklySchedule,
+    bool? isOvernight,
+    String? crossMidnightCutoff,
   }) {
     return WorkShift(
       id: id ?? this.id,
@@ -270,6 +332,8 @@ class WorkShift {
       workingDays: workingDays ?? this.workingDays,
       isRotation: isRotation ?? this.isRotation,
       weeklySchedule: weeklySchedule ?? this.weeklySchedule,
+      isOvernight: isOvernight ?? this.isOvernight,
+      crossMidnightCutoff: crossMidnightCutoff ?? this.crossMidnightCutoff,
     );
   }
 
@@ -287,6 +351,8 @@ class WorkShift {
       'workingDays': workingDays,
       'isRotation': isRotation,
       'weeklySchedule': weeklySchedule.map((key, value) => MapEntry(key.toString(), value.toMap())),
+      'isOvernight': isOvernight,
+      'crossMidnightCutoff': crossMidnightCutoff,
     };
   }
 
@@ -299,11 +365,15 @@ class WorkShift {
       });
     }
 
+    final start = map['startTime'] ?? '';
+    final end = map['endTime'] ?? '';
+    final autoOvernight = isTimeCrossMidnight(start, end);
+
     return WorkShift(
       id: map['id'] ?? docId,
       name: map['name'] ?? '',
-      startTime: map['startTime'] ?? '',
-      endTime: map['endTime'] ?? '',
+      startTime: start,
+      endTime: end,
       forgivenessOfDelay: (map['forgivenessOfDelay'] as num?)?.toInt() ?? 0,
       earlyExit: (map['earlyExit'] as num?)?.toInt() ?? 0,
       breakStart: map['breakStart'] ?? '',
@@ -312,6 +382,8 @@ class WorkShift {
       workingDays: List<int>.from(map['workingDays'] ?? [1, 2, 3, 4, 5]),
       isRotation: map['isRotation'] ?? false,
       weeklySchedule: parsedWeeklySchedule,
+      isOvernight: map['isOvernight'] ?? autoOvernight,
+      crossMidnightCutoff: map['crossMidnightCutoff'] ?? '',
     );
   }
 }

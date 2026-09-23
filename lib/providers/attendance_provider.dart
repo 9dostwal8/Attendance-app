@@ -913,9 +913,8 @@ class AttendanceProvider with ChangeNotifier {
       final active = _records.firstWhere(
         (r) =>
             r.checkOut == null &&
-            r.checkIn.year == now.year &&
-            r.checkIn.month == now.month &&
-            r.checkIn.day == now.day,
+            now.difference(r.checkIn).inHours.abs() < 24 &&
+            r.checkIn.isBefore(now.add(const Duration(minutes: 5))),
       );
       _isClockedIn = true;
       _activeRecord = active;
@@ -968,6 +967,74 @@ class AttendanceProvider with ChangeNotifier {
       transportationAllowance: emp.transportationAllowance,
       otherAllowance: emp.otherAllowance,
     );
+  }
+
+  WorkShift getShiftForDate(CompanyEmployee emp, DateTime date) {
+    final activeGroupId = getGroupIdForDate(emp, date);
+    final group = _groups.firstWhere(
+      (g) => g.id == activeGroupId,
+      orElse: () => EmployeeGroup(
+        id: '',
+        name: 'None',
+        shiftId: '',
+        overtimeAllowed: false,
+        minOvertimeMinutes: 0,
+        maxOvertimeMinutes: 0,
+      ),
+    );
+    return _shifts.firstWhere(
+      (s) => s.id == group.shiftId,
+      orElse: () => WorkShift(
+        id: '',
+        name: 'Default Shift',
+        startTime: '09:00',
+        endTime: '17:00',
+      ),
+    );
+  }
+
+  DateTime getEffectiveDateForRecord(AttendanceRecord rec, CompanyEmployee emp) {
+    final checkIn = rec.checkIn;
+    final dayOfCheckIn = DateTime(checkIn.year, checkIn.month, checkIn.day);
+    final prevDay = dayOfCheckIn.subtract(const Duration(days: 1));
+    final prevShift = getShiftForDate(emp, prevDay);
+    if (prevShift.isOvernightForDate(prevDay)) {
+      final cutoffStr = prevShift.getCrossMidnightCutoffForDate(prevDay);
+      final cParts = cutoffStr.split(':');
+      if (cParts.length >= 2) {
+        final cH = int.tryParse(cParts[0]) ?? 3;
+        final cM = int.tryParse(cParts[1]) ?? 0;
+        final cutoffDateTime = DateTime(dayOfCheckIn.year, dayOfCheckIn.month, dayOfCheckIn.day, cH, cM);
+        if (checkIn.isBefore(cutoffDateTime)) {
+          return prevDay;
+        }
+      }
+    }
+    return dayOfCheckIn;
+  }
+
+  List<AttendanceRecord> getRecordsForDate(
+    DateTime date, {
+    required CompanyEmployee emp,
+    List<AttendanceRecord>? recordsPool,
+  }) {
+    final pool = recordsPool ??
+        ((emp.id == _employeeId)
+            ? _records
+            : _allCompanyRecords
+                .where((r) =>
+                    r.employeeId != null &&
+                    (r.employeeId!.trim().toLowerCase() == emp.id.trim().toLowerCase() ||
+                     r.employeeId!.trim().toLowerCase() == emp.name.trim().toLowerCase() ||
+                     r.employeeId!.trim().toLowerCase() == emp.email.trim().toLowerCase()))
+                .toList());
+
+    return pool.where((rec) {
+      final effDate = getEffectiveDateForRecord(rec, emp);
+      return effDate.year == date.year &&
+          effDate.month == date.month &&
+          effDate.day == date.day;
+    }).toList();
   }
 
   PayrollReport generatePayrollReport(
@@ -1052,14 +1119,11 @@ class AttendanceProvider with ChangeNotifier {
       final isWorkingDay = shift.isWorkingDay(date);
 
       // Get records on this day
-      final dayRecords = employeeRecords
-          .where(
-            (r) =>
-                r.checkIn.year == date.year &&
-                r.checkIn.month == date.month &&
-                r.checkIn.day == date.day,
-          )
-          .toList();
+      final dayRecords = getRecordsForDate(
+        date,
+        emp: emp,
+        recordsPool: employeeRecords,
+      );
 
       final hasRecord = dayRecords.isNotEmpty;
 
@@ -1125,6 +1189,24 @@ class AttendanceProvider with ChangeNotifier {
             ? int.parse(eParts[0]) * 60 + int.parse(eParts[1])
             : 1020;
 
+        final shiftStart = DateTime(
+          date.year,
+          date.month,
+          date.day,
+          shiftStartMins ~/ 60,
+          shiftStartMins % 60,
+        );
+        var shiftEnd = DateTime(
+          date.year,
+          date.month,
+          date.day,
+          shiftEndMins ~/ 60,
+          shiftEndMins % 60,
+        );
+        if (shiftEnd.isBefore(shiftStart) || shift.isOvernightForDate(date)) {
+          shiftEnd = shiftEnd.add(const Duration(days: 1));
+        }
+
         for (var rec in dayRecords) {
           final rawIn = rec.checkIn;
           final rawOut = rec.checkOut ?? rawIn;
@@ -1142,24 +1224,6 @@ class AttendanceProvider with ChangeNotifier {
             rawOut.hour,
             rawOut.minute,
           );
-
-          final shiftStart = DateTime(
-            date.year,
-            date.month,
-            date.day,
-            shiftStartMins ~/ 60,
-            shiftStartMins % 60,
-          );
-          var shiftEnd = DateTime(
-            date.year,
-            date.month,
-            date.day,
-            shiftEndMins ~/ 60,
-            shiftEndMins % 60,
-          );
-          if (shiftEnd.isBefore(shiftStart)) {
-            shiftEnd = shiftEnd.add(const Duration(days: 1));
-          }
 
           final intStart = cIn.isAfter(shiftStart) ? cIn : shiftStart;
           final intEnd = cOut.isBefore(shiftEnd) ? cOut : shiftEnd;
@@ -1191,18 +1255,14 @@ class AttendanceProvider with ChangeNotifier {
           final sorted = List<AttendanceRecord>.from(dayRecords)
             ..sort((a, b) => a.checkIn.compareTo(b.checkIn));
           final firstRec = sorted.first;
-          final checkInMins =
-              firstRec.checkIn.hour * 60 + firstRec.checkIn.minute;
-          final delay = checkInMins - shiftStartMins;
+          final delay = firstRec.checkIn.difference(shiftStart).inMinutes;
           if (delay > shift.forgivenessOfDelay) {
             dayDelay = delay;
           }
 
           final lastRec = sorted.last;
           if (lastRec.checkOut != null) {
-            final checkOutMins =
-                lastRec.checkOut!.hour * 60 + lastRec.checkOut!.minute;
-            final earlyExit = shiftEndMins - checkOutMins;
+            final earlyExit = shiftEnd.difference(lastRec.checkOut!).inMinutes;
             if (earlyExit > shift.earlyExit) {
               dayEarlyExit = earlyExit;
             }

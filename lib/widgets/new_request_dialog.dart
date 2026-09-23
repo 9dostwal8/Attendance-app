@@ -964,14 +964,11 @@ Future<void> showNewRequestDialog({
 
                         final records = await provider.firebaseService
                             .getUserRecords(selectedEmployee.id);
-                        final dayRecords = records
-                            .where(
-                              (r) =>
-                                  r.checkIn.year == reqDate.year &&
-                                  r.checkIn.month == reqDate.month &&
-                                  r.checkIn.day == reqDate.day,
-                            )
-                            .toList();
+                        final dayRecords = provider.getRecordsForDate(
+                          reqDate,
+                          emp: selectedEmployee,
+                          recordsPool: records,
+                        );
 
                         if (dayRecords.isEmpty) {
                           setDialogState(

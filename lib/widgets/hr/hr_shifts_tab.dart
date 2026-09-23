@@ -164,6 +164,36 @@ class _HrShiftsTabState extends State<HrShiftsTab> {
                             ),
                           ),
                         ),
+                        if (shift.isOvernight || (!shift.isRotation && WorkShift.isTimeCrossMidnight(shift.startTime, shift.endTime))) ...[
+                          const SizedBox(width: 5),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF6366F1).withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: const Color(0xFF6366F1).withValues(alpha: 0.35),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.nightlight_round, size: 10, color: Color(0xFF818CF8)),
+                                const SizedBox(width: 3),
+                                Text(
+                                  shift.crossMidnightCutoff.isNotEmpty
+                                      ? 'Overnight (${shift.crossMidnightCutoff})'
+                                      : 'Overnight',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF818CF8),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                         if (!shift.isRotation) ...[
                           const SizedBox(width: 6),
                           Expanded(
@@ -535,6 +565,8 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
       : [6, 7, 1, 2, 3, 4, 5];
 
   bool isRotation = shift?.isRotation ?? false;
+  bool isOvernight = shift?.isOvernight ?? false;
+  final crossMidnightCutoffController = TextEditingController(text: shift?.crossMidnightCutoff ?? '');
   Map<int, DayShiftConfig> weeklySchedule = shift != null && shift.weeklySchedule.isNotEmpty
       ? Map.from(shift.weeklySchedule)
       : {
@@ -680,7 +712,14 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                           suffixIcon: Icon(Icons.access_time_rounded),
                         ),
                         onTap: () => selectTime(context, startController, () {
-                          setDialogState(() {});
+                          setDialogState(() {
+                            if (WorkShift.isTimeCrossMidnight(startController.text, endController.text)) {
+                              isOvernight = true;
+                              if (crossMidnightCutoffController.text.isEmpty) {
+                                crossMidnightCutoffController.text = '03:00';
+                              }
+                            }
+                          });
                         }),
                       ),
                     ),
@@ -695,12 +734,50 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                           suffixIcon: Icon(Icons.access_time_rounded),
                         ),
                         onTap: () => selectTime(context, endController, () {
-                          setDialogState(() {});
+                          setDialogState(() {
+                            if (WorkShift.isTimeCrossMidnight(startController.text, endController.text)) {
+                              isOvernight = true;
+                              if (crossMidnightCutoffController.text.isEmpty) {
+                                crossMidnightCutoffController.text = '03:00';
+                              }
+                            }
+                          });
                         }),
                       ),
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Overnight Shift (Crosses Midnight)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Checkouts up to cutoff calculate to previous date', style: TextStyle(fontSize: 11)),
+                  value: isOvernight,
+                  activeThumbColor: const Color(0xFF8B5CF6),
+                  onChanged: (val) {
+                    setDialogState(() {
+                      isOvernight = val;
+                      if (val && crossMidnightCutoffController.text.isEmpty) {
+                        crossMidnightCutoffController.text = '03:00';
+                      }
+                    });
+                  },
+                ),
+                if (isOvernight) ...[
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: crossMidnightCutoffController,
+                    readOnly: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Next-Day Attribution Cutoff (e.g. 03:00)',
+                      border: OutlineInputBorder(),
+                      suffixIcon: Icon(Icons.access_time_rounded),
+                    ),
+                    onTap: () => selectTime(context, crossMidnightCutoffController, () {
+                      setDialogState(() {});
+                    }),
+                  ),
+                ],
                 const SizedBox(height: 16),
 
                 // Working Days
@@ -1004,6 +1081,8 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
             workingDays: workingDays,
             isRotation: isRotation,
             weeklySchedule: weeklySchedule,
+            isOvernight: isOvernight || WorkShift.isTimeCrossMidnight(startController.text.trim(), endController.text.trim()),
+            crossMidnightCutoff: crossMidnightCutoffController.text.trim(),
           );
 
           if (isEditing) {
