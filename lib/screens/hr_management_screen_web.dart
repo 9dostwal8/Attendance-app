@@ -489,7 +489,7 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
         if (provider.employees.isEmpty) return _buildEmptyState('employees');
         return _buildPayrollList(provider);
       case HrTab.dailyReport:
-        return const HrDailyReportTab();
+        return HrDailyReportTab(searchQuery: _searchQuery);
     }
   }
 

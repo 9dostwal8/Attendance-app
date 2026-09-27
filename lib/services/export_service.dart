@@ -567,4 +567,229 @@ class ExportService {
       );
     }
   }
+
+  static Future<void> exportDailyReportToPdf({
+    required List<Map<String, dynamic>> records,
+    required DateTime date,
+    required CompanyProfile? profile,
+  }) async {
+    final pdf = pw.Document();
+
+    final headers = [
+      'Employee',
+      'Branch/Structure',
+      'Shift',
+      'Group',
+      'Clock Time',
+      'Attendance',
+      'Duty',
+      'Delay',
+      'Early Exit',
+      'Overtime',
+      'Status',
+    ];
+
+    String formatMins(int mins) {
+      if (mins <= 0) return '-';
+      final h = mins ~/ 60;
+      final m = mins % 60;
+      return h > 0 ? '${h}h ${m}m' : '${m}m';
+    }
+
+    final dateFormatted = DateFormat('EEEE, MMMM d, yyyy').format(date);
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4.landscape.copyWith(
+          marginLeft: 16,
+          marginRight: 16,
+          marginTop: 14,
+          marginBottom: 14,
+        ),
+        build: (pw.Context context) {
+          pw.Widget? logoWidget;
+          if (profile?.logoBase64 != null && profile!.logoBase64!.isNotEmpty) {
+            try {
+              final image = pw.MemoryImage(base64Decode(profile.logoBase64!));
+              logoWidget = pw.Image(image, width: 40, height: 40);
+            } catch (e) {
+              debugPrint('Could not decode pdf logo: $e');
+            }
+          }
+
+          return [
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
+              children: [
+                pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
+                  children: [
+                    if (logoWidget != null) ...[
+                      logoWidget,
+                      pw.SizedBox(width: 10),
+                    ],
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          profile?.name ?? 'Company',
+                          style: pw.TextStyle(
+                            fontSize: 16,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                        if (profile != null && profile.address.isNotEmpty)
+                          pw.Text(
+                            profile.address,
+                            style: const pw.TextStyle(
+                              fontSize: 9,
+                              color: PdfColors.grey700,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    pw.Text(
+                      'DAILY ATTENDANCE REPORT',
+                      style: pw.TextStyle(
+                        fontSize: 14,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.blue800,
+                      ),
+                    ),
+                    pw.SizedBox(height: 2),
+                    pw.Text(
+                      dateFormatted,
+                      style: const pw.TextStyle(
+                        fontSize: 10,
+                        color: PdfColors.grey800,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 10),
+            pw.Divider(thickness: 0.8, color: PdfColors.grey400),
+            pw.SizedBox(height: 6),
+            pw.TableHelper.fromTextArray(
+              headers: headers,
+              data: records.map((r) {
+                final emp = r['employee'] as CompanyEmployee;
+                return [
+                  '${emp.name}\n(${emp.position})',
+                  r['structureName']?.toString() ?? '-',
+                  r['shiftName']?.toString() ?? '-',
+                  r['groupName']?.toString() ?? '-',
+                  r['clockTime']?.toString().replaceAll('\n', ' / ') ?? '-',
+                  formatMins(r['attendance'] as int? ?? 0),
+                  formatMins(r['duty'] as int? ?? 0),
+                  formatMins(r['delay'] as int? ?? 0),
+                  formatMins(r['earlyExit'] as int? ?? 0),
+                  formatMins(r['overtime'] as int? ?? 0),
+                  r['status']?.toString() ?? '-',
+                ];
+              }).toList(),
+              headerStyle: pw.TextStyle(
+                fontWeight: pw.FontWeight.bold,
+                fontSize: 8,
+              ),
+              cellStyle: const pw.TextStyle(fontSize: 7.5),
+              headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
+              cellPadding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3.5),
+              cellAlignment: pw.Alignment.center,
+            ),
+          ];
+        },
+      ),
+    );
+
+    final bytes = await pdf.save();
+    final fileName = 'Daily_Report_${DateFormat('yyyy_MM_dd').format(date)}.pdf';
+
+    await FileSaver.instance.saveFile(
+      name: fileName,
+      bytes: bytes,
+      fileExtension: 'pdf',
+      mimeType: MimeType.pdf,
+    );
+  }
+
+  static Future<void> exportDailyReportToExcel({
+    required List<Map<String, dynamic>> records,
+    required DateTime date,
+    required CompanyProfile? profile,
+  }) async {
+    final xlsio.Workbook workbook = xlsio.Workbook();
+    final xlsio.Worksheet sheet = workbook.worksheets[0];
+    sheet.name = 'Daily ${DateFormat('yyyy_MM_dd').format(date)}';
+
+    int row = 1;
+    if (profile != null) {
+      sheet.getRangeByIndex(row, 1).setText(profile.name);
+      sheet.getRangeByIndex(row, 1).cellStyle.bold = true;
+      sheet.getRangeByIndex(row, 1).cellStyle.fontSize = 13;
+      row++;
+    }
+
+    sheet.getRangeByIndex(row, 1).setText('Daily Attendance Report - ${DateFormat('yyyy-MM-dd').format(date)}');
+    sheet.getRangeByIndex(row, 1).cellStyle.bold = true;
+    sheet.getRangeByIndex(row, 1).cellStyle.fontSize = 11;
+    row += 2;
+
+    final headers = [
+      'Employee Name',
+      'Position',
+      'Structure',
+      'Shift',
+      'Group',
+      'Clock Time',
+      'Attendance (Minutes)',
+      'Duty (Minutes)',
+      'Delay (Minutes)',
+      'Early Exit (Minutes)',
+      'Overtime (Minutes)',
+      'Status',
+    ];
+
+    for (int col = 0; col < headers.length; col++) {
+      final cell = sheet.getRangeByIndex(row, col + 1);
+      cell.setText(headers[col]);
+      cell.cellStyle.bold = true;
+    }
+    row++;
+
+    for (var r in records) {
+      final emp = r['employee'] as CompanyEmployee;
+      sheet.getRangeByIndex(row, 1).setText(emp.name);
+      sheet.getRangeByIndex(row, 2).setText(emp.position);
+      sheet.getRangeByIndex(row, 3).setText(r['structureName']?.toString() ?? '-');
+      sheet.getRangeByIndex(row, 4).setText(r['shiftName']?.toString() ?? '-');
+      sheet.getRangeByIndex(row, 5).setText(r['groupName']?.toString() ?? '-');
+      sheet.getRangeByIndex(row, 6).setText(r['clockTime']?.toString().replaceAll('\n', ' / ') ?? '-');
+      sheet.getRangeByIndex(row, 7).setNumber((r['attendance'] as int? ?? 0).toDouble());
+      sheet.getRangeByIndex(row, 8).setNumber((r['duty'] as int? ?? 0).toDouble());
+      sheet.getRangeByIndex(row, 9).setNumber((r['delay'] as int? ?? 0).toDouble());
+      sheet.getRangeByIndex(row, 10).setNumber((r['earlyExit'] as int? ?? 0).toDouble());
+      sheet.getRangeByIndex(row, 11).setNumber((r['overtime'] as int? ?? 0).toDouble());
+      sheet.getRangeByIndex(row, 12).setText(r['status']?.toString() ?? '-');
+      row++;
+    }
+
+    final List<int> bytes = workbook.saveAsStream();
+    workbook.dispose();
+
+    final fileName = 'Daily_Report_${DateFormat('yyyy_MM_dd').format(date)}.xlsx';
+    await FileSaver.instance.saveFile(
+      name: fileName,
+      bytes: Uint8List.fromList(bytes),
+      fileExtension: 'xlsx',
+      mimeType: MimeType.microsoftExcel,
+    );
+  }
 }
