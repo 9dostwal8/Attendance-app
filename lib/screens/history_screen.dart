@@ -10,6 +10,7 @@ import '../models/request_model.dart';
 import '../widgets/glass_container.dart';
 import '../services/export_service.dart';
 import '../widgets/new_request_dialog.dart';
+import '../widgets/neu_button.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -1836,33 +1837,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   Widget _buildAddRequestButton(AttendanceProvider provider) {
-    return SizedBox(
-      height: 44,
-      child: ElevatedButton.icon(
-        onPressed: () {
-          showNewRequestDialog(
-            context: context,
-            provider: provider,
-          );
-        },
-        icon: const Icon(Icons.add, size: 20, color: Colors.white),
-        label: Text(
-          provider.translate('new_request'),
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            letterSpacing: -0.2,
-          ),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFFF5C38),
-          foregroundColor: Colors.white,
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 22),
-          shape: const StadiumBorder(),
-        ),
-      ),
+    return NeuButton(
+      onPressed: () {
+        showNewRequestDialog(
+          context: context,
+          provider: provider,
+        );
+      },
+      icon: const Icon(Icons.add),
+      label: provider.translate('new_request'),
     );
   }
 
@@ -2282,7 +2265,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 20),
-                                ElevatedButton.icon(
+                                NeuButton(
                                   onPressed: () {
                                     Navigator.of(ctx).pop();
                                     showNewRequestDialog(
@@ -2290,20 +2273,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                       provider: provider,
                                     );
                                   },
-                                  icon: const Icon(Icons.add, size: 18),
-                                  label: Text(
-                                    provider.translate('new_request'),
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFFFF5C38),
-                                    foregroundColor: Colors.white,
-                                    shape: const StadiumBorder(),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 20,
-                                      vertical: 10,
-                                    ),
-                                    elevation: 0,
-                                  ),
+                                  icon: const Icon(Icons.add),
+                                  label: provider.translate('new_request'),
+                                  height: 40,
+                                  fontSize: 13,
+                                  padding: const EdgeInsets.symmetric(horizontal: 20),
                                 ),
                               ],
                             ),

@@ -7,6 +7,7 @@ import '../providers/attendance_provider.dart';
 import '../models/hr_models.dart';
 import '../models/request_model.dart';
 import '../widgets/avatar_image_helper.dart';
+import '../widgets/neu_button.dart';
 import 'package:intl/intl.dart';
 
 class RequestsScreen extends StatefulWidget {
@@ -1344,39 +1345,13 @@ class _RequestsScreenState extends State<RequestsScreen> {
   }
 
   Widget _buildAddButton(AttendanceProvider provider) {
-    return GestureDetector(
-      onTap: () => _showNewRequestDialog(provider),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)
-              .withValues(alpha: 0.12)),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white24),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.add,
-              color:
-                  ((Theme.of(context).textTheme.bodyLarge?.color ??
-                  Colors.black)),
-              size: 16,
-            ),
-            SizedBox(width: 4),
-            Text(
-              provider.translate('new_request'),
-              style: TextStyle(
-                color:
-                    ((Theme.of(context).textTheme.bodyLarge?.color ??
-                    Colors.black)),
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return NeuButton(
+      onPressed: () => _showNewRequestDialog(provider),
+      icon: const Icon(Icons.add),
+      label: provider.translate('new_request'),
+      height: 38,
+      fontSize: 12,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
     );
   }
 
