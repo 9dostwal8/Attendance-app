@@ -342,9 +342,53 @@ class HomeScreenMobile extends StatelessWidget {
               Widget buildButton({
                 required String label,
                 required bool isActive,
-                required Color color,
+                required bool isClockIn,
                 required Future<void> Function() onTap,
               }) {
+                final isDark = Theme.of(context).brightness == Brightness.dark;
+
+                late final Gradient bgGradient;
+                late final Color txtColor;
+                late final Color glow;
+                late final Color border;
+
+                if (isActive) {
+                  if (isClockIn) {
+                    bgGradient = LinearGradient(
+                      colors: isDark
+                          ? const [Color(0xFF00F0D8), Color(0xFF00CBB4)]
+                          : const [Color(0xFF00E5CE), Color(0xFF00BFA5)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    );
+                    txtColor = const Color(0xFF0A2342);
+                    glow = isDark
+                        ? const Color(0xFF00F0D8).withValues(alpha: 0.38)
+                        : const Color(0xFF00E5CE).withValues(alpha: 0.32);
+                    border = const Color(0xFF80FFF3).withValues(alpha: isDark ? 0.6 : 0.45);
+                  } else {
+                    bgGradient = const LinearGradient(
+                      colors: [Color(0xFFFF4B4B), Color(0xFFE11D48)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    );
+                    txtColor = Colors.white;
+                    glow = const Color(0xFFEF4444).withValues(alpha: 0.38);
+                    border = const Color(0xFFFDA4AF).withValues(alpha: 0.35);
+                  }
+                } else {
+                  bgGradient = LinearGradient(
+                    colors: isDark
+                        ? [const Color(0xFF1E293B), const Color(0xFF161F2E)]
+                        : [const Color(0xFFE2E8F0), const Color(0xFFCBD5E1)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  );
+                  txtColor = isDark ? Colors.white38 : Colors.black38;
+                  glow = Colors.transparent;
+                  border = isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1);
+                }
+
                 return Expanded(
                   child: GestureDetector(
                     onTap: (isActive && !isProcessing)
@@ -363,42 +407,45 @@ class HomeScreenMobile extends StatelessWidget {
                             }
                           }
                         : null,
-                    child: Container(
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
                       height: 52,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: isActive
-                            ? (isProcessing
-                                ? color.withValues(alpha: 0.5)
-                                : color)
-                            : ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.1)),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          if (isActive && !isProcessing)
-                            BoxShadow(
-                              color: color.withValues(alpha: 0.3),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                        ],
+                        gradient: bgGradient,
+                        borderRadius: BorderRadius.circular(50),
+                        border: Border.all(color: border, width: 1.2),
+                        boxShadow: (isActive && !isProcessing)
+                            ? [
+                                BoxShadow(
+                                  color: glow,
+                                  blurRadius: 14,
+                                  offset: const Offset(0, 5),
+                                ),
+                                BoxShadow(
+                                  color: Colors.white.withValues(alpha: isClockIn ? 0.3 : 0.15),
+                                  blurRadius: 2,
+                                  offset: const Offset(0, -1),
+                                ),
+                              ]
+                            : const [],
                       ),
                       child: isProcessing && isActive
                           ? SizedBox(
-                              height: 24,
-                              width: 24,
+                              height: 22,
+                              width: 22,
                               child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black))),
+                                strokeWidth: 2.2,
+                                valueColor: AlwaysStoppedAnimation<Color>(txtColor),
                               ),
                             )
                           : Text(
                               label,
                               style: TextStyle(
-                                color: isActive
-                                    ? ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black))
-                                    : ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.3)),
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
+                                color: txtColor,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.3,
                               ),
                             ),
                     ),
@@ -413,7 +460,7 @@ class HomeScreenMobile extends StatelessWidget {
                   buildButton(
                     label: provider.translate('clock_in_btn'),
                     isActive: !hasClockedIn,
-                    color: const Color(0xFF1AD579), // Green
+                    isClockIn: true,
                     onTap: () async {
                       final locError = await provider.verifyLocation();
                       if (locError != null && context.mounted) {
@@ -476,7 +523,7 @@ class HomeScreenMobile extends StatelessWidget {
                   buildButton(
                     label: provider.translate('clock_out_btn'),
                     isActive: true, // Always active so they can clock out if they forgot check in
-                    color: const Color(0xFFFF4B4B), // Red
+                    isClockIn: false,
                     onTap: () async {
                       final locError = await provider.verifyLocation();
                       if (locError != null && context.mounted) {

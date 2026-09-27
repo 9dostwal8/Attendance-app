@@ -618,66 +618,198 @@ class _ClockScreenState extends State<ClockScreen> {
 
   Widget _buildClockButtons(AttendanceProvider provider) {
     final bool isClockedIn = provider.isClockedIn;
-    
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final canClockIn = !_isLoadingLocation && !isClockedIn;
+    final canClockOut = !_isLoadingLocation && isClockedIn;
     return Row(
       children: [
-        // Clock In
+        // Clock In (Vibrant Aqua Cyan capsule hero button)
         Expanded(
-          child: GestureDetector(
-            onTap: (_isLoadingLocation || isClockedIn) ? null : () => _handleAction(provider, true),
-            child: Container(
-              height: 120,
-              decoration: BoxDecoration(
-                color: isClockedIn ? const Color(0xFF1AD579).withValues(alpha: 0.4) : const Color(0xFF1AD579),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Icon(Icons.login_rounded, color: Colors.white, size: 28),
+          child: MouseRegion(
+            cursor: canClockIn ? SystemMouseCursors.click : SystemMouseCursors.basic,
+            child: GestureDetector(
+              onTap: canClockIn ? () => _handleAction(provider, true) : null,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                height: 120,
+                decoration: BoxDecoration(
+                  gradient: canClockIn
+                      ? LinearGradient(
+                          colors: isDark
+                              ? const [Color(0xFF00F0D8), Color(0xFF00CBB4)]
+                              : const [Color(0xFF00E5CE), Color(0xFF00BFA5)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        )
+                      : LinearGradient(
+                          colors: isDark
+                              ? [const Color(0xFF1E293B), const Color(0xFF161F2E)]
+                              : [const Color(0xFFE2E8F0), const Color(0xFFCBD5E1)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(
+                    color: canClockIn
+                        ? const Color(0xFF80FFF3).withValues(alpha: isDark ? 0.6 : 0.45)
+                        : (isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+                    width: 1.5,
                   ),
-                  const SizedBox(height: 8),
-                  const Text('Clock In', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  Text('Start shift', style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 12)),
-                ],
+                  boxShadow: canClockIn
+                      ? [
+                          BoxShadow(
+                            color: isDark
+                                ? const Color(0xFF00F0D8).withValues(alpha: 0.38)
+                                : const Color(0xFF00E5CE).withValues(alpha: 0.32),
+                            blurRadius: 18,
+                            offset: const Offset(0, 7),
+                          ),
+                          BoxShadow(
+                            color: Colors.white.withValues(alpha: 0.3),
+                            blurRadius: 2,
+                            offset: const Offset(0, -1),
+                          ),
+                        ]
+                      : const [],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: canClockIn
+                            ? const Color(0xFF0A2342).withValues(alpha: 0.12)
+                            : (isDark ? Colors.white10 : Colors.black12),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Icon(
+                        Icons.login_rounded,
+                        color: canClockIn
+                            ? const Color(0xFF0A2342)
+                            : (isDark ? Colors.white38 : Colors.black38),
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Clock In',
+                      style: TextStyle(
+                        color: canClockIn
+                            ? const Color(0xFF0A2342)
+                            : (isDark ? Colors.white38 : Colors.black38),
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Start shift',
+                      style: TextStyle(
+                        color: canClockIn
+                            ? const Color(0xFF0A2342).withValues(alpha: 0.75)
+                            : (isDark ? Colors.white24 : Colors.black26),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
         ),
         const SizedBox(width: 16),
-        // Clock Out
+        // Clock Out (Vibrant Coral Red capsule hero button)
         Expanded(
-          child: GestureDetector(
-            onTap: _isLoadingLocation ? null : () => _handleAction(provider, false),
-            child: Container(
-              height: 120,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFF4B4B),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Icon(Icons.logout_rounded, color: Colors.white, size: 28),
+          child: MouseRegion(
+            cursor: canClockOut ? SystemMouseCursors.click : SystemMouseCursors.basic,
+            child: GestureDetector(
+              onTap: canClockOut ? () => _handleAction(provider, false) : null,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                height: 120,
+                decoration: BoxDecoration(
+                  gradient: canClockOut
+                      ? const LinearGradient(
+                          colors: [Color(0xFFFF4B4B), Color(0xFFE11D48)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        )
+                      : LinearGradient(
+                          colors: isDark
+                              ? [const Color(0xFF1E293B), const Color(0xFF161F2E)]
+                              : [const Color(0xFFE2E8F0), const Color(0xFFCBD5E1)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(
+                    color: canClockOut
+                        ? const Color(0xFFFDA4AF).withValues(alpha: 0.4)
+                        : (isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+                    width: 1.5,
                   ),
-                  const SizedBox(height: 8),
-                  const Text('Clock Out', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  Text('End shift', style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 12)),
-                ],
+                  boxShadow: canClockOut
+                      ? [
+                          BoxShadow(
+                            color: const Color(0xFFEF4444).withValues(alpha: 0.38),
+                            blurRadius: 18,
+                            offset: const Offset(0, 7),
+                          ),
+                          BoxShadow(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            blurRadius: 2,
+                            offset: const Offset(0, -1),
+                          ),
+                        ]
+                      : const [],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: canClockOut
+                            ? Colors.white.withValues(alpha: 0.22)
+                            : (isDark ? Colors.white10 : Colors.black12),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Icon(
+                        Icons.logout_rounded,
+                        color: canClockOut
+                            ? Colors.white
+                            : (isDark ? Colors.white38 : Colors.black38),
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Clock Out',
+                      style: TextStyle(
+                        color: canClockOut
+                            ? Colors.white
+                            : (isDark ? Colors.white38 : Colors.black38),
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'End shift',
+                      style: TextStyle(
+                        color: canClockOut
+                            ? Colors.white.withValues(alpha: 0.85)
+                            : (isDark ? Colors.white24 : Colors.black26),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

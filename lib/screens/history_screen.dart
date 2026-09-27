@@ -968,13 +968,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        IconButton(
-          icon: const Icon(Icons.chevron_left),
-          color: textColor,
-          iconSize: 22,
-          splashRadius: 20,
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+        NeuIconButton(
+          size: 36,
+          variant: NeuButtonVariant.whitePill,
+          icon: const Icon(Icons.chevron_left_rounded, size: 22),
           onPressed: () {
             setState(() {
               _reportMonth = DateTime(
@@ -985,24 +982,35 @@ class _HistoryScreenState extends State<HistoryScreen> {
             });
           },
         ),
-        const SizedBox(width: 20),
-        Text(
-          monthStr,
-          style: TextStyle(
-            color: textColor,
-            fontSize: 17,
-            fontWeight: FontWeight.w600,
-            letterSpacing: -0.2,
+        const SizedBox(width: 14),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          decoration: BoxDecoration(
+            color: isDark
+                ? const Color(0xFF1E293B).withValues(alpha: 0.7)
+                : Colors.white.withValues(alpha: 0.8),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isDark
+                  ? const Color(0xFF334155)
+                  : const Color(0xFFE2E8F0),
+            ),
+          ),
+          child: Text(
+            monthStr,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.2,
+            ),
           ),
         ),
-        const SizedBox(width: 20),
-        IconButton(
-          icon: const Icon(Icons.chevron_right),
-          color: textColor,
-          iconSize: 22,
-          splashRadius: 20,
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+        const SizedBox(width: 14),
+        NeuIconButton(
+          size: 36,
+          variant: NeuButtonVariant.whitePill,
+          icon: const Icon(Icons.chevron_right_rounded, size: 22),
           onPressed: () {
             setState(() {
               _reportMonth = DateTime(
@@ -1853,52 +1861,30 @@ class _HistoryScreenState extends State<HistoryScreen> {
     AttendanceProvider provider,
     List<Map<String, dynamic>> records,
   ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.06),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        shape: const CircleBorder(),
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: () async {
-            final employee = _selectedEmployeeId != null
-                ? provider.employees.firstWhere(
-                    (e) => e.id == _selectedEmployeeId,
-                    orElse: () => provider.currentEmployee!,
-                  )
-                : provider.currentEmployee!;
+    return NeuIconButton(
+      size: 44,
+      variant: NeuButtonVariant.whitePill,
+      tooltip: 'Export PDF',
+      icon: const Icon(Icons.file_download_outlined, size: 20),
+      onPressed: () async {
+        final employee = _selectedEmployeeId != null
+            ? provider.employees.firstWhere(
+                (e) => e.id == _selectedEmployeeId,
+                orElse: () => provider.currentEmployee!,
+              )
+            : provider.currentEmployee!;
 
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Exporting attendance history...')),
-            );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Exporting attendance history...')),
+        );
 
-            await ExportService.exportHistoryToPdf(
-              records: records,
-              employee: employee,
-              month: _reportMonth,
-              profile: provider.companyProfile,
-            );
-          },
-          child: Icon(
-            Icons.file_download_outlined,
-            color: isDark ? Colors.white70 : const Color(0xFF64748B),
-            size: 20,
-          ),
-        ),
-      ),
+        await ExportService.exportHistoryToPdf(
+          records: records,
+          employee: employee,
+          month: _reportMonth,
+          profile: provider.companyProfile,
+        );
+      },
     );
   }
 
@@ -1926,30 +1912,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final count = requests.length;
 
     if (isCompact) {
-      return Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: isSelected
-              ? const Color(0xFF2E65FF)
-              : (isDark ? const Color(0xFF1E293B) : Colors.white),
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: isSelected
-                  ? const Color(0xFF2E65FF).withValues(alpha: 0.35)
-                  : Colors.black.withValues(alpha: isDark ? 0.25 : 0.06),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          shape: const CircleBorder(),
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: () {
+      return Stack(
+        clipBehavior: Clip.none,
+        children: [
+          NeuIconButton(
+            size: 44,
+            variant: isSelected ? NeuButtonVariant.navy : NeuButtonVariant.whitePill,
+            tooltip: 'Day Requests',
+            icon: const Icon(Icons.assignment_outlined, size: 20),
+            onPressed: () {
               if (isSelected && selectedRow != null) {
                 _showDayRequestsDialog(context, provider, selectedRow);
               } else {
@@ -1961,124 +1932,73 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 );
               }
             },
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Icon(
-                  Icons.assignment_outlined,
-                  color: isSelected
-                      ? Colors.white
-                      : (isDark
-                          ? Colors.white38
-                          : const Color(0xFF64748B).withValues(alpha: 0.4)),
-                  size: 20,
-                ),
-                if (isSelected && count > 0)
-                  Positioned(
-                    top: 6,
-                    right: 6,
-                    child: Container(
-                      padding: const EdgeInsets.all(3),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFF5C38),
-                        shape: BoxShape.circle,
-                      ),
-                      constraints: const BoxConstraints(
-                        minWidth: 14,
-                        minHeight: 14,
-                      ),
-                      child: Text(
-                        '$count',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
           ),
-        ),
+          if (isSelected && count > 0)
+            Positioned(
+              top: -2,
+              right: -2,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFF4B4B),
+                  shape: BoxShape.circle,
+                ),
+                constraints: const BoxConstraints(
+                  minWidth: 16,
+                  minHeight: 16,
+                ),
+                child: Text(
+                  '$count',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+        ],
       );
     }
 
     if (!isSelected) {
       return Tooltip(
         message: 'Click on any day row in the table to view its requests',
-        child: SizedBox(
-          height: 44,
-          child: OutlinedButton.icon(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Click on any day row in the table first.'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
-            icon: Icon(
-              Icons.assignment_outlined,
-              size: 18,
-              color: isDark
-                  ? Colors.white38
-                  : const Color(0xFF64748B).withValues(alpha: 0.5),
-            ),
-            label: Text(
-              provider.translate('requests'),
-              style: TextStyle(
-                color: isDark
-                    ? Colors.white38
-                    : const Color(0xFF64748B).withValues(alpha: 0.5),
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
+        child: NeuButton(
+          onPressed: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Click on any day row in the table first.'),
+                duration: Duration(seconds: 2),
               ),
-            ),
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(
-                color: (Theme.of(context).textTheme.bodyLarge?.color ??
-                        Colors.black)
-                    .withValues(alpha: 0.12),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 18),
-              shape: const StadiumBorder(),
-            ),
+            );
+          },
+          icon: Icon(
+            Icons.assignment_outlined,
+            color: isDark ? Colors.white38 : const Color(0xFF64748B).withValues(alpha: 0.5),
           ),
+          label: provider.translate('requests'),
+          variant: NeuButtonVariant.whitePill,
+          height: 44,
+          fontSize: 13,
         ),
       );
     }
 
-    return SizedBox(
+    return NeuButton(
+      onPressed: () {
+        if (selectedRow != null) {
+          _showDayRequestsDialog(context, provider, selectedRow);
+        }
+      },
+      icon: const Icon(Icons.assignment_outlined),
+      label: count > 0
+          ? '${provider.translate('requests')} ($count)'
+          : provider.translate('requests'),
+      variant: NeuButtonVariant.navy,
       height: 44,
-      child: ElevatedButton.icon(
-        onPressed: () {
-          if (selectedRow != null) {
-            _showDayRequestsDialog(context, provider, selectedRow);
-          }
-        },
-        icon: const Icon(Icons.assignment_outlined, size: 18, color: Colors.white),
-        label: Text(
-          count > 0
-              ? '${provider.translate('requests')} ($count)'
-              : provider.translate('requests'),
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            letterSpacing: -0.2,
-          ),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF2E65FF),
-          foregroundColor: Colors.white,
-          elevation: 2,
-          shadowColor: const Color(0xFF2E65FF).withValues(alpha: 0.4),
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          shape: const StadiumBorder(),
-        ),
-      ),
+      fontSize: 13,
     );
   }
 

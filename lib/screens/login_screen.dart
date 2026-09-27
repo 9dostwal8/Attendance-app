@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/attendance_provider.dart';
+import '../widgets/neu_button.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -415,74 +416,31 @@ class _LoginScreenState extends State<LoginScreen> {
                                   const SizedBox(height: 28),
 
                                   // Primary Sign In Button
-                                  Container(
+                                  SizedBox(
                                     width: double.infinity,
-                                    height: 52,
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        colors: [Color(0xFF2E65FF), Color(0xFF4F46E5)],
-                                        begin: Alignment.centerLeft,
-                                        end: Alignment.centerRight,
-                                      ),
-                                      borderRadius: BorderRadius.circular(16),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: const Color(0xFF2E65FF).withValues(alpha: 0.35),
-                                          blurRadius: 16,
-                                          offset: const Offset(0, 6),
-                                        ),
-                                      ],
-                                    ),
-                                    child: ElevatedButton(
+                                    child: NeuButton(
                                       onPressed: _isLoggingIn ? null : _handleLogin,
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.transparent,
-                                        shadowColor: Colors.transparent,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(16),
-                                        ),
-                                      ),
-                                      child: _isLoggingIn
-                                          ? const SizedBox(
-                                              height: 22,
-                                              width: 22,
-                                              child: CircularProgressIndicator(
-                                                color: Colors.white,
-                                                strokeWidth: 2.5,
-                                              ),
-                                            )
-                                          : const Text(
-                                              'Sign In',
-                                              style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.white,
-                                              ),
-                                            ),
+                                      label: 'Sign In',
+                                      variant: NeuButtonVariant.primary,
+                                      height: 52,
+                                      borderRadius: 50,
+                                      fontSize: 16,
+                                      isLoading: _isLoggingIn,
                                     ),
                                   ),
                                   const SizedBox(height: 14),
 
                                   // Secondary Face ID Button
-                                  OutlinedButton.icon(
-                                    onPressed: _simulateFaceAuth,
-                                    style: OutlinedButton.styleFrom(
-                                      minimumSize: const Size(double.infinity, 50),
-                                      side: BorderSide(
-                                        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.12),
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                    ),
-                                    icon: const Icon(Icons.face_rounded, color: Color(0xFF2E65FF), size: 22),
-                                    label: Text(
-                                      'Sign In with Face ID',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: isDark ? Colors.white : const Color(0xFF0F172A),
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: NeuButton(
+                                      onPressed: _simulateFaceAuth,
+                                      icon: const Icon(Icons.face_rounded),
+                                      label: 'Sign In with Face ID',
+                                      variant: NeuButtonVariant.whitePill,
+                                      height: 50,
+                                      borderRadius: 50,
+                                      fontSize: 14,
                                     ),
                                   ),
                                 ],

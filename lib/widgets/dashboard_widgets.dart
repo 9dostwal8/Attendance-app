@@ -1,3 +1,4 @@
+import 'neu_button.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:provider/provider.dart';
@@ -904,8 +905,8 @@ class PendingApprovalsCard extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               // Reject Button
-              InkWell(
-                onTap: () async {
+              NeuButton(
+                onPressed: () async {
                   await provider.updateRequestStatus(
                     emp.id,
                     req.id,
@@ -914,42 +915,23 @@ class PendingApprovalsCard extends StatelessWidget {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('${emp.name}\'s request was rejected.'),
+                        content: Text("${emp.name}'s request was rejected."),
                         backgroundColor: Colors.redAccent,
                       ),
                     );
                   }
                 },
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEF4444).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: const Color(0xFFEF4444).withValues(alpha: 0.25),
-                    ),
-                  ),
-                  child: Row(
-                    children: const [
-                      Icon(Icons.close, size: 14, color: Color(0xFFEF4444)),
-                      SizedBox(width: 4),
-                      Text(
-                        'Reject',
-                        style: TextStyle(
-                          color: Color(0xFFEF4444),
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                icon: const Icon(Icons.close, size: 14),
+                label: 'Reject',
+                variant: NeuButtonVariant.danger,
+                height: 32,
+                fontSize: 12,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
               ),
               const SizedBox(width: 8),
               // Approve Button
-              InkWell(
-                onTap: () async {
+              NeuButton(
+                onPressed: () async {
                   final isSuper = provider.currentEmployee?.role == 'supervisor' &&
                       provider.currentEmployee?.role != 'hr' &&
                       provider.currentEmployee?.role != 'admin' &&
@@ -968,43 +950,20 @@ class PendingApprovalsCard extends StatelessWidget {
                       SnackBar(
                         content: Text(
                           shouldMoveToHR
-                              ? '${emp.name}\'s request was approved and forwarded to HR.'
-                              : '${emp.name}\'s request was approved.',
+                              ? "${emp.name}'s request was approved and forwarded to HR."
+                              : "${emp.name}'s request was approved.",
                         ),
                         backgroundColor: const Color(0xFF10B981),
                       ),
                     );
                   }
                 },
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF10B981),
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF10B981).withValues(alpha: 0.3),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: const [
-                      Icon(Icons.check, size: 14, color: Colors.white),
-                      SizedBox(width: 4),
-                      Text(
-                        'Approve',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                icon: const Icon(Icons.check, size: 14),
+                label: 'Approve',
+                variant: NeuButtonVariant.primary,
+                height: 32,
+                fontSize: 12,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
               ),
             ],
           ),
