@@ -536,50 +536,53 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
       return true;
     }).toList();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Top Toolbar: Date navigation & Filters
-        _buildTopToolbar(context, provider),
-        const SizedBox(height: 14),
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20.0, 0, 20.0, kIsWeb ? 20.0 : 80.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Top Toolbar: Date navigation & Filters
+          _buildTopToolbar(context, provider),
+          const SizedBox(height: 14),
 
-        // Summary KPI Cards (interactive: tapping a card toggles status filter)
-        _buildKpiCards(
-          context: context,
-          totalWorkforce: totalWorkforce,
-          presentCount: presentCount,
-          lateCount: lateCount,
-          absentCount: absentCount,
-          leaveCount: leaveCount,
-          totalLateMinutes: totalLateMinutes,
-          totalWorkedMinutes: totalWorkedMinutes,
-        ),
-        const SizedBox(height: 16),
+          // Summary KPI Cards (interactive: tapping a card toggles status filter)
+          _buildKpiCards(
+            context: context,
+            totalWorkforce: totalWorkforce,
+            presentCount: presentCount,
+            lateCount: lateCount,
+            absentCount: absentCount,
+            leaveCount: leaveCount,
+            totalLateMinutes: totalLateMinutes,
+            totalWorkedMinutes: totalWorkedMinutes,
+          ),
+          const SizedBox(height: 16),
 
-        // Search & Filter Capsule Chips
-        _buildFilterBar(
-          context: context,
-          provider: provider,
-          structures: structures,
-          shifts: shifts,
-          groups: groups,
-          totalMatching: totalWorkforce,
-          presentCount: presentCount,
-          lateCount: lateCount,
-          absentCount: absentCount,
-          leaveCount: leaveCount,
-        ),
-        const SizedBox(height: 16),
+          // Search & Filter Capsule Chips
+          _buildFilterBar(
+            context: context,
+            provider: provider,
+            structures: structures,
+            shifts: shifts,
+            groups: groups,
+            totalMatching: totalWorkforce,
+            presentCount: presentCount,
+            lateCount: lateCount,
+            absentCount: absentCount,
+            leaveCount: leaveCount,
+          ),
+          const SizedBox(height: 16),
 
-        // Main Report Content: Web Table or Mobile Card List
-        Expanded(
-          child: displayedRows.isEmpty
-              ? _buildEmptyState(context, isDark, textColor)
-              : (kIsWeb || MediaQuery.of(context).size.width >= 900)
-                  ? _buildWebReportTable(context, displayedRows, isDark, textColor)
-                  : _buildMobileReportList(context, displayedRows, isDark, textColor),
-        ),
-      ],
+          // Main Report Content: Web Table or Mobile Card List
+          Expanded(
+            child: displayedRows.isEmpty
+                ? _buildEmptyState(context, isDark, textColor)
+                : (kIsWeb || MediaQuery.of(context).size.width >= 900)
+                    ? _buildWebReportTable(context, displayedRows, isDark, textColor)
+                    : _buildMobileReportList(context, displayedRows, isDark, textColor),
+          ),
+        ],
+      ),
     );
   }
 
