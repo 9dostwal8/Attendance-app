@@ -543,7 +543,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
         children: [
           // Top Toolbar: Date navigation & Filters
           _buildTopToolbar(context, provider),
-          const SizedBox(height: 14),
+          const SizedBox(height: 8),
 
           // Summary KPI Cards (interactive: tapping a card toggles status filter)
           _buildKpiCards(
@@ -556,7 +556,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
             totalLateMinutes: totalLateMinutes,
             totalWorkedMinutes: totalWorkedMinutes,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
 
           // Search & Filter Capsule Chips
           _buildFilterBar(
@@ -571,7 +571,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
             absentCount: absentCount,
             leaveCount: leaveCount,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
 
           // Main Report Content: Web Table or Mobile Card List
           Expanded(
@@ -601,9 +601,9 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
           mainAxisSize: MainAxisSize.min,
           children: [
             NeuIconButton(
-              size: 38,
+              size: 34,
               variant: NeuButtonVariant.whitePill,
-              icon: const Icon(Icons.chevron_left_rounded, size: 22),
+              icon: const Icon(Icons.chevron_left_rounded, size: 20),
               onPressed: () {
                 setState(() {
                   _selectedDate = _selectedDate.subtract(const Duration(days: 1));
@@ -642,7 +642,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                 }
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
                 decoration: BoxDecoration(
                   gradient: isDark
                       ? const LinearGradient(
@@ -675,23 +675,23 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                   children: [
                     Icon(
                       Icons.calendar_month_rounded,
-                      size: 18,
+                      size: 16,
                       color: isDark ? const Color(0xFF00F0D8) : const Color(0xFF0A2342),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 7),
                     Text(
                       formattedDate,
                       style: TextStyle(
                         color: textColor,
-                        fontSize: 13,
+                        fontSize: 12.5,
                         fontWeight: FontWeight.w700,
                         letterSpacing: -0.2,
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 5),
                     Icon(
                       Icons.arrow_drop_down_rounded,
-                      size: 18,
+                      size: 17,
                       color: textColor.withValues(alpha: 0.6),
                     ),
                   ],
@@ -701,9 +701,9 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
             const SizedBox(width: 8),
 
             NeuIconButton(
-              size: 38,
+              size: 34,
               variant: NeuButtonVariant.whitePill,
-              icon: const Icon(Icons.chevron_right_rounded, size: 22),
+              icon: const Icon(Icons.chevron_right_rounded, size: 20),
               onPressed: () {
                 setState(() {
                   _selectedDate = _selectedDate.add(const Duration(days: 1));
@@ -713,13 +713,13 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
             ),
 
             if (!isToday) ...[
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               NeuButton(
                 label: 'Today',
                 variant: NeuButtonVariant.primary,
-                height: 36,
-                fontSize: 12,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
+                height: 32,
+                fontSize: 11,
+                padding: const EdgeInsets.symmetric(horizontal: 11),
                 onPressed: () {
                   setState(() {
                     _selectedDate = DateTime.now();
@@ -736,21 +736,21 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
           children: [
             NeuButton(
               label: 'PDF',
-              icon: const Icon(Icons.picture_as_pdf_outlined, size: 16),
+              icon: const Icon(Icons.picture_as_pdf_outlined, size: 15),
               variant: NeuButtonVariant.navy,
-              height: 38,
-              fontSize: 12,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              height: 32,
+              fontSize: 11.5,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               onPressed: () => _exportReport(context, provider, isPdf: true),
             ),
             const SizedBox(width: 8),
             NeuButton(
               label: 'Excel',
-              icon: const Icon(Icons.table_view_outlined, size: 16),
+              icon: const Icon(Icons.table_view_outlined, size: 15),
               variant: NeuButtonVariant.whitePill,
-              height: 38,
-              fontSize: 12,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              height: 32,
+              fontSize: 11.5,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               onPressed: () => _exportReport(context, provider, isPdf: false),
             ),
           ],
@@ -849,7 +849,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
           return Row(
             children: [
               for (int i = 0; i < cards.length; i++) ...[
-                if (i > 0) const SizedBox(width: 10),
+                if (i > 0) const SizedBox(width: 8),
                 Expanded(child: cards[i]),
               ],
             ],
@@ -861,8 +861,8 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
             child: Row(
               children: [
                 for (int i = 0; i < cards.length; i++) ...[
-                  if (i > 0) const SizedBox(width: 10),
-                  SizedBox(width: 160, child: cards[i]),
+                  if (i > 0) const SizedBox(width: 8),
+                  SizedBox(width: 170, child: cards[i]),
                 ],
               ],
             ),
@@ -887,10 +887,10 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
           decoration: BoxDecoration(
             color: isDark
                 ? (isActive
@@ -898,8 +898,8 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                     : const Color(0xFF1E293B).withValues(alpha: 0.7))
                 : (isActive
                     ? color.withValues(alpha: 0.12)
-                    : Colors.white.withValues(alpha: 0.85)),
-            borderRadius: BorderRadius.circular(16),
+                    : Colors.white.withValues(alpha: 0.9)),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isActive
                   ? color
@@ -909,57 +909,70 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
             boxShadow: [
               BoxShadow(
                 color: isActive
-                    ? color.withValues(alpha: 0.25)
-                    : Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-                blurRadius: isActive ? 12 : 8,
-                offset: const Offset(0, 3),
+                    ? color.withValues(alpha: 0.2)
+                    : Colors.black.withValues(alpha: isDark ? 0.15 : 0.03),
+                blurRadius: isActive ? 8 : 4,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white60 : const Color(0xFF64748B),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.15),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(icon, size: 14, color: color),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : const Color(0xFF0F172A),
-                  letterSpacing: -0.5,
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(7),
                 ),
+                child: Icon(icon, size: 15, color: color),
               ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                  color: isActive ? color : (isDark ? Colors.white38 : const Color(0xFF94A3B8)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Text(
+                          value,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w500,
+                        color: isActive
+                            ? color
+                            : (isDark ? Colors.white38 : const Color(0xFF94A3B8)),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -1065,8 +1078,8 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
 
         // Search Input Capsule
         Container(
-          width: 220,
-          height: 38,
+          width: 200,
+          height: 32,
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF1E283C) : Colors.white,
             borderRadius: BorderRadius.circular(50),
@@ -1074,20 +1087,20 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
               color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
             ),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
           child: Row(
             children: [
-              Icon(Icons.search, size: 16, color: isDark ? Colors.white54 : Colors.grey),
-              const SizedBox(width: 6),
+              Icon(Icons.search, size: 15, color: isDark ? Colors.white54 : Colors.grey),
+              const SizedBox(width: 5),
               Expanded(
                 child: TextField(
                   controller: _searchController,
                   onChanged: (val) => setState(() {}),
-                  style: TextStyle(fontSize: 12, color: textColor),
+                  style: TextStyle(fontSize: 11.5, color: textColor),
                   decoration: InputDecoration(
                     hintText: 'Search user...',
                     hintStyle: TextStyle(
-                      fontSize: 12,
+                      fontSize: 11.5,
                       color: isDark ? Colors.white38 : Colors.grey,
                     ),
                     border: InputBorder.none,
@@ -1111,11 +1124,11 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
         if (hasActiveFilter)
           NeuButton(
             label: 'Clear Filters',
-            icon: const Icon(Icons.clear_all_rounded, size: 16),
+            icon: const Icon(Icons.clear_all_rounded, size: 15),
             variant: NeuButtonVariant.danger,
-            height: 36,
+            height: 32,
             fontSize: 11,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 10),
             onPressed: () {
               setState(() {
                 _selectedStructureId = null;
@@ -1142,8 +1155,8 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
     final isFiltered = value != 'all';
 
     return Container(
-      height: 38,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      height: 32,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E283C) : Colors.white,
         borderRadius: BorderRadius.circular(50),
@@ -1170,7 +1183,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
           borderRadius: BorderRadius.circular(16),
           style: TextStyle(
             color: textColor,
-            fontSize: 12,
+            fontSize: 11.5,
             fontWeight: FontWeight.w600,
           ),
           items: items,
@@ -1314,11 +1327,11 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                                     wrapCell(
                                       Padding(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 8),
+                                            horizontal: 10, vertical: 5),
                                         child: Row(
                                           children: [
                                             CircleAvatar(
-                                              radius: 16,
+                                              radius: 14,
                                               backgroundColor: const Color(0xFF00E5CE)
                                                   .withValues(alpha: 0.15),
                                               child: Text(
@@ -1342,7 +1355,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                                                     emp.name,
                                                     style: TextStyle(
                                                       fontWeight: FontWeight.w700,
-                                                      fontSize: 13,
+                                                      fontSize: 12,
                                                       color: textColor,
                                                     ),
                                                     maxLines: 1,
@@ -1351,7 +1364,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                                                   Text(
                                                     emp.position,
                                                     style: TextStyle(
-                                                      fontSize: 11,
+                                                      fontSize: 10,
                                                       color: textColor.withValues(alpha: 0.5),
                                                     ),
                                                     maxLines: 1,
@@ -1369,7 +1382,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                                     wrapCell(
                                       Padding(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 8),
+                                            horizontal: 10, vertical: 5),
                                         child: Text(
                                           row['structureName'] as String,
                                           style: TextStyle(fontSize: 12, color: textColor),
@@ -1383,7 +1396,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                                     wrapCell(
                                       Padding(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 8),
+                                            horizontal: 10, vertical: 5),
                                         child: Text(
                                           row['shiftName'] as String,
                                           style: TextStyle(
@@ -1401,7 +1414,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                                     wrapCell(
                                       Padding(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 8),
+                                            horizontal: 10, vertical: 5),
                                         child: Text(
                                           row['groupName'] as String,
                                           style: TextStyle(fontSize: 12, color: textColor),
@@ -1415,7 +1428,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                                     wrapCell(
                                       Padding(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 8),
+                                            horizontal: 10, vertical: 5),
                                         child: Text(
                                           row['clockTime'] as String,
                                           style: const TextStyle(
@@ -1432,7 +1445,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                                     wrapCell(
                                       Padding(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 8),
+                                            horizontal: 10, vertical: 5),
                                         child: Text(
                                           _formatMinutes(row['attendance'] as int),
                                           style: TextStyle(fontSize: 12, color: textColor),
@@ -1444,7 +1457,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                                     wrapCell(
                                       Padding(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 8),
+                                            horizontal: 10, vertical: 5),
                                         child: Text(
                                           _formatMinutes(row['rest'] as int),
                                           style: const TextStyle(
@@ -1459,7 +1472,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                                     wrapCell(
                                       Padding(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 8),
+                                            horizontal: 10, vertical: 5),
                                         child: Text(
                                           _formatMinutes(row['duty'] as int),
                                           style: TextStyle(fontSize: 12, color: textColor),
@@ -1471,7 +1484,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                                     wrapCell(
                                       Padding(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 8),
+                                            horizontal: 10, vertical: 5),
                                         child: Text(
                                           delayMins > 0 ? '${delayMins}m' : '-',
                                           style: TextStyle(
@@ -1489,7 +1502,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                                     wrapCell(
                                       Padding(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 8),
+                                            horizontal: 10, vertical: 5),
                                         child: Text(
                                           earlyExitMins > 0 ? '${earlyExitMins}m' : '-',
                                           style: TextStyle(
@@ -1507,7 +1520,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                                     wrapCell(
                                       Padding(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 8),
+                                            horizontal: 10, vertical: 5),
                                         child: Text(
                                           overtimeMins > 0 ? _formatMinutes(overtimeMins) : '-',
                                           style: TextStyle(
@@ -1525,7 +1538,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                                     wrapCell(
                                       Padding(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 6),
+                                            horizontal: 8, vertical: 4),
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
@@ -1580,11 +1593,11 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
 
   Widget _buildHeaderCell(String text, {Color? color}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       child: Text(
         text,
         style: TextStyle(
-          fontSize: 12,
+          fontSize: 11.5,
           fontWeight: FontWeight.bold,
           color: color ?? Colors.white70,
         ),
