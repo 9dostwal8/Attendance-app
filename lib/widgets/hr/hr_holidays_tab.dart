@@ -4,6 +4,7 @@ import '../../providers/attendance_provider.dart';
 import '../../models/hr_models.dart';
 import '../glass_container.dart';
 import '../glass_dialog.dart';
+import '../neu_button.dart';
 
 class HrHolidaysTab extends StatefulWidget {
   final String searchQuery;
@@ -178,13 +179,15 @@ class _HrHolidaysTabState extends State<HrHolidaysTab> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+        NeuButton(
+          label: 'Delete',
+          variant: NeuButtonVariant.danger,
+          height: 36,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           onPressed: () {
             provider.deleteHoliday(id);
             Navigator.pop(context);
           },
-          child: const Text('Delete', style: TextStyle(color: Colors.white)),
         ),
       ],
     );
@@ -235,7 +238,11 @@ void showHolidayDialog(BuildContext context, {Holiday? holiday}) {
         onPressed: () => Navigator.pop(context),
         child: const Text('Cancel'),
       ),
-      ElevatedButton(
+      NeuButton(
+        label: 'Save',
+        variant: NeuButtonVariant.primary,
+        height: 38,
+        padding: const EdgeInsets.symmetric(horizontal: 18),
         onPressed: () {
           if (nameController.text.trim().isEmpty) return;
           final newHoliday = Holiday(
@@ -251,7 +258,6 @@ void showHolidayDialog(BuildContext context, {Holiday? holiday}) {
           }
           Navigator.pop(context);
         },
-        child: const Text('Save'),
       ),
     ],
   );

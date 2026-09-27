@@ -4,6 +4,7 @@ import '../../providers/attendance_provider.dart';
 import '../../models/hr_models.dart';
 import '../glass_container.dart';
 import '../glass_dialog.dart';
+import '../neu_button.dart';
 
 class HrShiftsTab extends StatefulWidget {
   final String searchQuery;
@@ -525,13 +526,15 @@ class _HrShiftsTabState extends State<HrShiftsTab> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
+        NeuButton(
           onPressed: () {
             provider.deleteShift(shift.id);
             Navigator.pop(context);
           },
-          child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          variant: NeuButtonVariant.danger,
+          label: 'Delete',
+          height: 36,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
         ),
       ],
     );
@@ -1055,11 +1058,11 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
         onPressed: () => Navigator.pop(context),
         child: const Text('Cancel'),
       ),
-      ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF2E65FF),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
+      NeuButton(
+        label: isEditing ? 'Save Changes' : 'Create Shift',
+        variant: NeuButtonVariant.primary,
+        height: 38,
+        padding: const EdgeInsets.symmetric(horizontal: 18),
         onPressed: () {
           final name = nameController.text.trim();
           if (name.isEmpty) return;
@@ -1092,10 +1095,6 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
           }
           Navigator.pop(context);
         },
-        child: Text(
-          isEditing ? 'Save Changes' : 'Create Shift',
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
       ),
     ],
   );

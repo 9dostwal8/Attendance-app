@@ -4,6 +4,7 @@ import '../../providers/attendance_provider.dart';
 import '../../models/hr_models.dart';
 import '../glass_container.dart';
 import '../glass_dialog.dart';
+import '../neu_button.dart';
 
 class HrEmployeesTab extends StatefulWidget {
   final String searchQuery;
@@ -300,25 +301,14 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
               ],
             ),
             if (!isMobile) const Spacer() else const SizedBox(height: 12),
-            SizedBox(
+            NeuButton(
+              onPressed: () => _showUserFormDialog(context: context, provider: provider),
+              icon: const Icon(Icons.person_add_alt_1_rounded, size: 16),
+              label: 'Add User',
+              variant: NeuButtonVariant.primary,
               height: 38,
-              child: ElevatedButton.icon(
-                onPressed: () => _showUserFormDialog(context: context, provider: provider),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2E65FF),
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                icon: const Icon(Icons.person_add_alt_1_rounded, size: 16, color: Colors.white),
-                label: const Text(
-                  'Add User',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: Colors.white),
-                ),
-              ),
+              fontSize: 13,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
             ),
           ],
         );
@@ -947,8 +937,11 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
         ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2E65FF)),
+        NeuButton(
+          label: isEditing ? 'Save Changes' : 'Create User',
+          variant: NeuButtonVariant.primary,
+          height: 38,
+          padding: const EdgeInsets.symmetric(horizontal: 18),
           onPressed: () {
             final name = nameController.text.trim();
             final email = emailController.text.trim();
@@ -992,7 +985,6 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
               ),
             );
           },
-          child: Text(isEditing ? 'Save Changes' : 'Create User', style: const TextStyle(color: Colors.white)),
         ),
       ],
     );
@@ -1010,8 +1002,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
         ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+        NeuButton(
           onPressed: () {
             provider.deleteEmployee(employee.id);
             Navigator.pop(context);
@@ -1022,7 +1013,10 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
               ),
             );
           },
-          child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          variant: NeuButtonVariant.danger,
+          label: 'Delete',
+          height: 36,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
         ),
       ],
     );

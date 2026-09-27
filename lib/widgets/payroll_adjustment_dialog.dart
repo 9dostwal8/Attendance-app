@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/hr_models.dart';
 import '../providers/attendance_provider.dart';
+import '../widgets/neu_button.dart';
 
 Future<void> showPayrollAdjustmentDialog({
   required BuildContext context,
@@ -325,45 +326,53 @@ class _PayrollAdjustmentDialogContentState
                                 ],
                               ),
                             ),
-                            IconButton(
+                            NeuIconButton(
                               onPressed: () => Navigator.of(context).pop(),
-                              icon: Icon(
-                                Icons.close_rounded,
-                                color: isDark ? Colors.white60 : Colors.black45,
-                              ),
+                              icon: const Icon(Icons.close_rounded, size: 16),
+                              size: 34,
+                              variant: NeuButtonVariant.whitePill,
                             ),
                           ],
                         ),
                         const SizedBox(height: 20),
 
-                        // Type Switcher Tabs (Addition vs Deduction)
+                        // Type Switcher Tabs (Addition vs Deduction - Stadium Capsule)
                         Container(
                           padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
                             color: isDark
-                                ? Colors.white.withValues(alpha: 0.05)
+                                ? const Color(0xFF161F2E)
                                 : const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(50),
+                            border: Border.all(
+                              color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                              width: 1,
+                            ),
                           ),
                           child: Row(
                             children: [
                               Expanded(
                                 child: InkWell(
                                   onTap: () => _onTypeChanged('addition'),
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: Container(
+                                  borderRadius: BorderRadius.circular(50),
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 200),
                                     padding: const EdgeInsets.symmetric(vertical: 10),
                                     decoration: BoxDecoration(
-                                      color: isAddition
-                                          ? const Color(0xFF10B981)
-                                          : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(10),
+                                      gradient: isAddition
+                                          ? const LinearGradient(
+                                              colors: [Color(0xFF00F0D8), Color(0xFF00BD96)],
+                                              begin: Alignment.topLeft,
+                                              end: Alignment.bottomRight,
+                                            )
+                                          : null,
+                                      borderRadius: BorderRadius.circular(50),
                                       boxShadow: isAddition
                                           ? [
                                               BoxShadow(
-                                                color: const Color(0xFF10B981).withValues(alpha: 0.35),
-                                                blurRadius: 8,
-                                                offset: const Offset(0, 2),
+                                                color: const Color(0xFF00E5CE).withValues(alpha: 0.35),
+                                                blurRadius: 10,
+                                                offset: const Offset(0, 3),
                                               ),
                                             ]
                                           : null,
@@ -375,7 +384,7 @@ class _PayrollAdjustmentDialogContentState
                                           Icons.add_circle_outline_rounded,
                                           size: 16,
                                           color: isAddition
-                                              ? Colors.white
+                                              ? const Color(0xFF0A2342)
                                               : (isDark ? Colors.white70 : Colors.black87),
                                         ),
                                         const SizedBox(width: 6),
@@ -383,9 +392,9 @@ class _PayrollAdjustmentDialogContentState
                                           'Addition / Bonus',
                                           style: TextStyle(
                                             color: isAddition
-                                                ? Colors.white
+                                                ? const Color(0xFF0A2342)
                                                 : (isDark ? Colors.white70 : Colors.black87),
-                                            fontWeight: FontWeight.bold,
+                                            fontWeight: FontWeight.w800,
                                             fontSize: 13,
                                           ),
                                         ),
@@ -397,20 +406,25 @@ class _PayrollAdjustmentDialogContentState
                               Expanded(
                                 child: InkWell(
                                   onTap: () => _onTypeChanged('deduction'),
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: Container(
+                                  borderRadius: BorderRadius.circular(50),
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 200),
                                     padding: const EdgeInsets.symmetric(vertical: 10),
                                     decoration: BoxDecoration(
-                                      color: !isAddition
-                                          ? const Color(0xFFEF4444)
-                                          : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(10),
+                                      gradient: !isAddition
+                                          ? const LinearGradient(
+                                              colors: [Color(0xFFFF758C), Color(0xFFFF5C5C)],
+                                              begin: Alignment.topLeft,
+                                              end: Alignment.bottomRight,
+                                            )
+                                          : null,
+                                      borderRadius: BorderRadius.circular(50),
                                       boxShadow: !isAddition
                                           ? [
                                               BoxShadow(
-                                                color: const Color(0xFFEF4444).withValues(alpha: 0.35),
-                                                blurRadius: 8,
-                                                offset: const Offset(0, 2),
+                                                color: const Color(0xFFFF5C5C).withValues(alpha: 0.35),
+                                                blurRadius: 10,
+                                                offset: const Offset(0, 3),
                                               ),
                                             ]
                                           : null,
@@ -432,7 +446,7 @@ class _PayrollAdjustmentDialogContentState
                                             color: !isAddition
                                                 ? Colors.white
                                                 : (isDark ? Colors.white70 : Colors.black87),
-                                            fontWeight: FontWeight.bold,
+                                            fontWeight: FontWeight.w800,
                                             fontSize: 13,
                                           ),
                                         ),
@@ -865,7 +879,7 @@ class _PayrollAdjustmentDialogContentState
                               ),
                             ),
                             const SizedBox(width: 12),
-                            ElevatedButton.icon(
+                            NeuButton(
                               onPressed: _isSaving ? null : _submit,
                               icon: _isSaving
                                   ? const SizedBox(
@@ -881,28 +895,12 @@ class _PayrollAdjustmentDialogContentState
                                           ? Icons.add_circle_rounded
                                           : Icons.remove_circle_rounded,
                                       size: 18,
-                                      color: Colors.white,
                                     ),
-                              label: Text(
-                                isAddition ? 'Save Addition' : 'Save Deduction',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13.5,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: accentColor,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 22,
-                                  vertical: 12,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                elevation: 4,
-                                shadowColor: accentColor.withValues(alpha: 0.4),
-                              ),
+                              label: isAddition ? 'Save Addition' : 'Save Deduction',
+                              variant: isAddition ? NeuButtonVariant.primary : NeuButtonVariant.danger,
+                              height: 42,
+                              padding: const EdgeInsets.symmetric(horizontal: 22),
+                              fontSize: 13.5,
                             ),
                           ],
                         ),
@@ -1090,12 +1088,11 @@ class _ManageAdjustmentsDialogContent extends StatelessWidget {
                             ],
                           ),
                         ),
-                        IconButton(
+                        NeuIconButton(
                           onPressed: () => Navigator.of(context).pop(),
-                          icon: Icon(
-                            Icons.close_rounded,
-                            color: isDark ? Colors.white60 : Colors.black45,
-                          ),
+                          icon: const Icon(Icons.close_rounded, size: 16),
+                          size: 34,
+                          variant: NeuButtonVariant.whitePill,
                         ),
                       ],
                     ),
@@ -1269,12 +1266,12 @@ class _ManageAdjustmentsDialogContent extends StatelessWidget {
                                                 onPressed: () => Navigator.of(c).pop(false),
                                                 child: const Text('Cancel'),
                                               ),
-                                              ElevatedButton(
+                                              NeuButton(
                                                 onPressed: () => Navigator.of(c).pop(true),
-                                                style: ElevatedButton.styleFrom(
-                                                  backgroundColor: Colors.red,
-                                                ),
-                                                child: const Text('Delete', style: TextStyle(color: Colors.white)),
+                                                variant: NeuButtonVariant.danger,
+                                                height: 36,
+                                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                                label: 'Delete',
                                               ),
                                             ],
                                           ),
@@ -1306,7 +1303,7 @@ class _ManageAdjustmentsDialogContent extends StatelessWidget {
                             ),
                           ),
                         ),
-                        ElevatedButton.icon(
+                        NeuButton(
                           onPressed: () {
                             Navigator.of(context).pop();
                             showPayrollAdjustmentDialog(
@@ -1315,14 +1312,11 @@ class _ManageAdjustmentsDialogContent extends StatelessWidget {
                               initialMonth: targetMonth,
                             );
                           },
-                          icon: const Icon(Icons.add, size: 18, color: Colors.white),
-                          label: const Text('Add Adjustment', style: TextStyle(color: Colors.white)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF2E65FF),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
+                          icon: const Icon(Icons.add_rounded, size: 18),
+                          label: 'Add Adjustment',
+                          variant: NeuButtonVariant.primary,
+                          height: 40,
+                          padding: const EdgeInsets.symmetric(horizontal: 18),
                         ),
                       ],
                     ),

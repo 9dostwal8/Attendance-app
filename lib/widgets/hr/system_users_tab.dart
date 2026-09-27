@@ -4,6 +4,7 @@ import '../../providers/attendance_provider.dart';
 import '../../models/hr_models.dart';
 import '../glass_container.dart';
 import '../glass_dialog.dart';
+import '../neu_button.dart';
 
 class SystemUsersTab extends StatefulWidget {
   final String searchQuery;
@@ -342,53 +343,38 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
                     icon: const Icon(
                       Icons.admin_panel_settings_rounded,
                       size: 16,
-                      color: Color(0xFF8B5CF6),
+                      color: Color(0xFF00E5CE),
                     ),
                     label: const Text(
                       'Restore Super Admin',
                       style: TextStyle(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w700,
                         fontSize: 12.5,
-                        color: Color(0xFF8B5CF6),
+                        color: Color(0xFF00E5CE),
                       ),
                     ),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       side: const BorderSide(
-                        color: Color(0xFF8B5CF6),
+                        color: Color(0xFF00E5CE),
                         width: 1.2,
                       ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(50),
                       ),
                     ),
                   ),
                 ),
 
                 // Add New System User Button
-                SizedBox(
+                NeuButton(
+                  onPressed: () => _showAddSystemUserDialog(context, provider),
+                  icon: const Icon(Icons.person_add_alt_1_rounded, size: 16),
+                  label: 'Add System Account',
+                  variant: NeuButtonVariant.primary,
                   height: 38,
-                  child: ElevatedButton.icon(
-                    onPressed: () => _showAddSystemUserDialog(context, provider),
-                    icon: const Icon(Icons.person_add_alt_1_rounded, size: 16, color: Colors.white),
-                    label: const Text(
-                      'Add System Account',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12.5,
-                        color: Colors.white,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2E65FF),
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                  ),
+                  fontSize: 12.5,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                 ),
               ],
             ),
@@ -901,7 +887,7 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
-        ElevatedButton(
+        NeuButton(
           onPressed: () {
             final updatedUser = user.copyWith(role: selectedRole);
             provider.updateEmployee(updatedUser);
@@ -915,11 +901,10 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
               ),
             );
           },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF3B82F6),
-            foregroundColor: Colors.white,
-          ),
-          child: const Text('Save Changes'),
+          variant: NeuButtonVariant.primary,
+          label: 'Save Changes',
+          height: 38,
+          padding: const EdgeInsets.symmetric(horizontal: 18),
         ),
       ],
     );
@@ -960,7 +945,7 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
-        ElevatedButton(
+        NeuButton(
           onPressed: () {
             if (passCtrl.text.trim().isEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -981,11 +966,10 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
               ),
             );
           },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF3B82F6),
-            foregroundColor: Colors.white,
-          ),
-          child: const Text('Save Password'),
+          variant: NeuButtonVariant.primary,
+          label: 'Save Password',
+          height: 38,
+          padding: const EdgeInsets.symmetric(horizontal: 18),
         ),
       ],
     );
@@ -1080,7 +1064,7 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
-        ElevatedButton(
+        NeuButton(
           onPressed: () {
             if (nameCtrl.text.trim().isEmpty || emailCtrl.text.trim().isEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -1119,11 +1103,10 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
               ),
             );
           },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF3B82F6),
-            foregroundColor: Colors.white,
-          ),
-          child: const Text('Create Account'),
+          variant: NeuButtonVariant.primary,
+          label: 'Create Account',
+          height: 38,
+          padding: const EdgeInsets.symmetric(horizontal: 18),
         ),
       ],
     );

@@ -6,6 +6,7 @@ import '../providers/attendance_provider.dart';
 import '../models/hr_models.dart';
 import '../widgets/glass_dialog.dart';
 import '../widgets/glass_container.dart';
+import '../widgets/neu_button.dart';
 import 'map_picker_screen.dart';
 
 import 'hr_management_screen.dart';
@@ -217,21 +218,11 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
   }
 
   Widget _buildBackButton() {
-    return GestureDetector(
-      onTap: () => Navigator.pop(context),
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Colors.white.withValues(alpha: 0.08),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.2),
-            width: 1,
-          ),
-        ),
-        child: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
-      ),
+    return NeuIconButton(
+      onPressed: () => Navigator.pop(context),
+      icon: const Icon(Icons.arrow_back, size: 20),
+      size: 44,
+      variant: NeuButtonVariant.whitePill,
     );
   }
 
@@ -332,29 +323,14 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
         break;
     }
 
-    return SizedBox(
+    return NeuButton(
+      onPressed: () => _showAddEditDialog(),
+      icon: const Icon(Icons.add_rounded, size: 16),
+      label: label,
+      variant: NeuButtonVariant.primary,
       height: 38,
-      child: ElevatedButton.icon(
-        onPressed: () => _showAddEditDialog(),
-        icon: const Icon(Icons.add_rounded, size: 16, color: Colors.white),
-        label: Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 12.5,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF2E65FF),
-          foregroundColor: Colors.white,
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      ),
+      fontSize: 13,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
     );
   }
 
@@ -1044,19 +1020,12 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                               ),
                             ),
                           ),
-                          ElevatedButton.icon(
+                          NeuButton(
+                            variant: NeuButtonVariant.navy,
                             icon: const Icon(Icons.map, size: 16),
-                            label: Text(selectedLatitude != null ? 'Change on Map' : 'Pick on Map'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF2E65FF),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
+                            label: selectedLatitude != null ? 'Change on Map' : 'Pick on Map',
+                            height: 36,
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
                             onPressed: () async {
                               final result = await Navigator.push(
                                 context,
@@ -1896,17 +1865,11 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                                                   ),
                                                 ),
                                                 const SizedBox(width: 8),
-                                                ElevatedButton(
-                                                  style: ElevatedButton.styleFrom(
-                                                    backgroundColor:
-                                                        const Color(0xFFC084FC),
-                                                    shape: RoundedRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            12,
-                                                          ),
-                                                    ),
-                                                  ),
+                                                NeuButton(
+                                                  label: 'Save',
+                                                  variant: NeuButtonVariant.primary,
+                                                  height: 36,
+                                                  padding: const EdgeInsets.symmetric(horizontal: 16),
                                                   onPressed: () {
                                                     Navigator.pop(context);
                                                     setDialogState(() {
@@ -1932,12 +1895,6 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                                                           );
                                                     });
                                                   },
-                                                  child: const Text(
-                                                    'Save',
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                    ),
-                                                  ),
                                                 ),
                                               ],
                                             ),
@@ -2961,7 +2918,14 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                ElevatedButton.icon(
+                NeuButton(
+                  variant: NeuButtonVariant.navy,
+                  icon: const Icon(Icons.map, size: 16),
+                  label: selectedLatitude != null
+                      ? 'Update Map Settings'
+                      : 'Pick on Map',
+                  height: 38,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   onPressed: () async {
                     final result = await Navigator.of(context).push(
                       MaterialPageRoute(
@@ -2981,19 +2945,6 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                       });
                     }
                   },
-                  icon: const Icon(Icons.map, color: Colors.white),
-                  label: Text(
-                    selectedLatitude != null
-                        ? 'Update Map Settings'
-                        : 'Pick on Map',
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(
-                      0xFFC084FC,
-                    ).withValues(alpha: 0.3),
-                    foregroundColor: Colors.white,
-                  ),
                 ),
                 if (selectedRadius != null) ...[
                   const SizedBox(height: 8),
@@ -3098,13 +3049,11 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2E65FF),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
+                  NeuButton(
+                    label: isEditing ? 'Save Changes' : 'Create',
+                    variant: NeuButtonVariant.primary,
+                    height: 40,
+                    padding: const EdgeInsets.symmetric(horizontal: 22),
                     onPressed: () {
                       if (nameController.text.trim().isEmpty) {
                         setDialogState(() {
@@ -3538,13 +3487,6 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
 
                       Navigator.pop(context);
                     },
-                    child: const Text(
-                      'Save',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
                   ),
                 ],
               ),
@@ -3650,14 +3592,11 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2E65FF),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
+                  NeuButton(
+                    label: 'Add',
+                    variant: NeuButtonVariant.primary,
+                    height: 40,
+                    padding: const EdgeInsets.symmetric(horizontal: 22),
                     onPressed: () {
                       if (selectedGroupId == null ||
                           startDateController.text.isEmpty) {
@@ -3704,7 +3643,6 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                       });
                       Navigator.pop(context);
                     },
-                    child: const Text('Add'),
                   ),
                 ],
               ),
@@ -4225,16 +4163,12 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Close', style: TextStyle(color: Colors.grey)),
         ),
-        ElevatedButton.icon(
-          icon: const Icon(Icons.add, size: 18),
-          label: const Text('Add'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF2E65FF),
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
+        NeuButton(
+          icon: const Icon(Icons.add_rounded, size: 18),
+          label: 'Add',
+          variant: NeuButtonVariant.primary,
+          height: 38,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           onPressed: () {
             Navigator.pop(context);
             _showPayrollEditDialog(employee, provider, null);
@@ -4630,13 +4564,11 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                       style: TextStyle(color: Colors.grey),
                     ),
                   ),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2E65FF),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
+                  NeuButton(
+                    label: isEditing ? 'Save' : 'Add',
+                    variant: NeuButtonVariant.primary,
+                    height: 40,
+                    padding: const EdgeInsets.symmetric(horizontal: 22),
                     onPressed: () {
                       final double? newSalary = double.tryParse(
                         salaryController.text,
@@ -4718,10 +4650,6 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                         _showPayrollHistoryDialog(updatedEmployee, provider);
                       }
                     },
-                    child: const Text(
-                      'Save',
-                      style: TextStyle(color: Colors.white),
-                    ),
                   ),
                 ],
               ),

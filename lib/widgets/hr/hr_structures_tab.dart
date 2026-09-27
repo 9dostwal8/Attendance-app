@@ -5,6 +5,7 @@ import '../../models/hr_models.dart';
 import '../../screens/map_picker_screen.dart';
 import '../glass_container.dart';
 import '../glass_dialog.dart';
+import '../neu_button.dart';
 
 class HrStructuresTab extends StatefulWidget {
   final String searchQuery;
@@ -346,13 +347,15 @@ class _HrStructuresTabState extends State<HrStructuresTab> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+        NeuButton(
           onPressed: () {
             provider.deleteStructure(id);
             Navigator.pop(context);
           },
-          child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          variant: NeuButtonVariant.danger,
+          label: 'Delete',
+          height: 36,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
         ),
       ],
     );
@@ -505,22 +508,14 @@ void showStructureDialog(BuildContext context, {OrgStructure? structure}) {
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        SizedBox(
+                        NeuButton(
+                          icon: const Icon(Icons.map_rounded, size: 15),
+                          label: selectedLatitude != null ? 'Change on Map' : 'Pick on Map',
+                          variant: NeuButtonVariant.navy,
                           height: 34,
-                          child: ElevatedButton.icon(
-                            icon: const Icon(Icons.map_rounded, size: 15, color: Colors.white),
-                            label: Text(
-                              selectedLatitude != null ? 'Change on Map' : 'Pick on Map',
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF2E65FF),
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            onPressed: () async {
+                          fontSize: 12,
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          onPressed: () async {
                               final result = await Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -541,7 +536,6 @@ void showStructureDialog(BuildContext context, {OrgStructure? structure}) {
                               }
                             },
                           ),
-                        ),
                         if (selectedLatitude != null) ...[
                           const SizedBox(width: 8),
                           TextButton(
@@ -675,43 +669,31 @@ void showStructureDialog(BuildContext context, {OrgStructure? structure}) {
         onPressed: () => Navigator.pop(context),
         child: const Text('Cancel'),
       ),
-      SizedBox(
+      NeuButton(
+        label: 'Save Structure',
+        variant: NeuButtonVariant.primary,
         height: 38,
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF2E65FF),
-            foregroundColor: Colors.white,
-            elevation: 0,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-          onPressed: () {
-            if (nameController.text.trim().isEmpty) return;
-            final newStruct = OrgStructure(
-              id: structure?.id ?? 'struct_${DateTime.now().millisecondsSinceEpoch}',
-              name: nameController.text.trim(),
-              location: locationController.text.trim(),
-              capacity: int.tryParse(capacityController.text) ?? 0,
-              parentId: selectedParentId,
-              supervisorId: selectedSupervisorId,
-              latitude: selectedLatitude,
-              longitude: selectedLongitude,
-              radius: selectedRadius,
-            );
-            if (structure == null) {
-              provider.addStructure(newStruct);
-            } else {
-              provider.updateStructure(newStruct);
-            }
-            Navigator.pop(context);
-          },
-          child: const Text(
-            'Save Structure',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-          ),
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 18),
+        onPressed: () {
+          if (nameController.text.trim().isEmpty) return;
+          final newStruct = OrgStructure(
+            id: structure?.id ?? 'struct_${DateTime.now().millisecondsSinceEpoch}',
+            name: nameController.text.trim(),
+            location: locationController.text.trim(),
+            capacity: int.tryParse(capacityController.text) ?? 0,
+            parentId: selectedParentId,
+            supervisorId: selectedSupervisorId,
+            latitude: selectedLatitude,
+            longitude: selectedLongitude,
+            radius: selectedRadius,
+          );
+          if (structure == null) {
+            provider.addStructure(newStruct);
+          } else {
+            provider.updateStructure(newStruct);
+          }
+          Navigator.pop(context);
+        },
       ),
     ],
   );

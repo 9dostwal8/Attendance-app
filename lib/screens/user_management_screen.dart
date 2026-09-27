@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/attendance_provider.dart';
 import '../widgets/hr/hr_employees_tab.dart';
 import '../widgets/hr/system_users_tab.dart';
+import '../widgets/neu_button.dart';
 
 class UserManagementScreen extends StatefulWidget {
   final bool isEmbedded;
@@ -53,22 +54,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   child: Row(
                     children: [
                       if (!widget.isEmbedded && Navigator.canPop(context)) ...[
-                        GestureDetector(
-                          onTap: () => Navigator.pop(context),
-                          child: Container(
-                            width: 42,
-                            height: 42,
-                            decoration: BoxDecoration(
-                              color: (isDark ? Colors.white : Colors.black)
-                                  .withValues(alpha: 0.06),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.arrow_back,
-                              size: 20,
-                              color: isDark ? Colors.white : const Color(0xFF0F172A),
-                            ),
-                          ),
+                        NeuIconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.arrow_back, size: 20),
+                          size: 42,
+                          variant: NeuButtonVariant.whitePill,
                         ),
                         const SizedBox(width: 14),
                       ],
@@ -102,17 +92,17 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
                   child: Container(
-                    height: 44,
+                    height: 46,
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
                       color: isDark
-                          ? Colors.white.withValues(alpha: 0.05)
+                          ? const Color(0xFF161F2E)
                           : const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(50),
                       border: Border.all(
                         color: isDark
-                            ? Colors.white.withValues(alpha: 0.1)
-                            : const Color(0xFFCBD5E1),
+                            ? const Color(0xFF334155)
+                            : const Color(0xFFE2E8F0),
                         width: 1.0,
                       ),
                     ),
@@ -243,16 +233,20 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           duration: const Duration(milliseconds: 200),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: isSelected
-                ? const Color(0xFF2E65FF)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(9),
+            gradient: isSelected
+                ? const LinearGradient(
+                    colors: [Color(0xFF00F0D8), Color(0xFF00BD96)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
+            borderRadius: BorderRadius.circular(50),
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: const Color(0xFF2E65FF).withValues(alpha: 0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+                      color: const Color(0xFF00E5CE).withValues(alpha: 0.35),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
                     )
                   ]
                 : [],
@@ -264,7 +258,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 icon,
                 size: 17,
                 color: isSelected
-                    ? Colors.white
+                    ? const Color(0xFF0A2342)
                     : (isDark ? Colors.white60 : Colors.black54),
               ),
               const SizedBox(width: 8),
@@ -272,9 +266,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 label,
                 style: TextStyle(
                   fontSize: 13,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                   color: isSelected
-                      ? Colors.white
+                      ? const Color(0xFF0A2342)
                       : (isDark ? Colors.white70 : const Color(0xFF334155)),
                 ),
               ),

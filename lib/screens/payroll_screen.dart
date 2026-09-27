@@ -7,6 +7,7 @@ import '../widgets/glass_container.dart';
 import '../models/hr_models.dart';
 import '../services/export_service.dart';
 import '../widgets/payroll_adjustment_dialog.dart';
+import '../widgets/neu_button.dart';
 
 class PayrollScreen extends StatefulWidget {
   const PayrollScreen({super.key});
@@ -596,15 +597,14 @@ class _PayrollScreenState extends State<PayrollScreen> {
               ),
               if (structName != null) ...[
                 const SizedBox(height: 16),
-                ElevatedButton.icon(
+                NeuButton(
                   onPressed: () => setState(() => _selectedStructureId = null),
-                  icon: const Icon(Icons.clear_all_rounded, size: 16, color: Colors.white),
-                  label: const Text('Show All Branches', style: TextStyle(color: Colors.white)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2E65FF),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
+                  icon: const Icon(Icons.clear_all_rounded, size: 16),
+                  label: 'Show All Branches',
+                  variant: NeuButtonVariant.primary,
+                  height: 38,
+                  fontSize: 13,
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
                 ),
               ],
             ],
@@ -718,50 +718,83 @@ class _PayrollScreenState extends State<PayrollScreen> {
                               children: [
                                 Tooltip(
                                   message: 'Add Addition for ${r.employee.name}',
-                                  child: InkWell(
-                                    borderRadius: BorderRadius.circular(6),
-                                    onTap: () => showPayrollAdjustmentDialog(
-                                      context: context,
-                                      employee: r.employee,
-                                      initialType: 'addition',
-                                      initialMonth: provider.selectedMonth,
-                                    ),
-                                    child: const Padding(
-                                      padding: EdgeInsets.all(4),
-                                      child: Icon(Icons.add_circle_outline_rounded, color: Color(0xFF10B981), size: 18),
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(50),
+                                      onTap: () => showPayrollAdjustmentDialog(
+                                        context: context,
+                                        employee: r.employee,
+                                        initialType: 'addition',
+                                        initialMonth: provider.selectedMonth,
+                                      ),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(5),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: const Color(0xFF00E5CE).withValues(alpha: isDark ? 0.15 : 0.12),
+                                          border: Border.all(
+                                            color: const Color(0xFF00E5CE).withValues(alpha: 0.35),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: const Icon(Icons.add_circle_outline_rounded, color: Color(0xFF00BFA5), size: 16),
+                                      ),
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 4),
+                                const SizedBox(width: 6),
                                 Tooltip(
                                   message: 'Add Deduction for ${r.employee.name}',
-                                  child: InkWell(
-                                    borderRadius: BorderRadius.circular(6),
-                                    onTap: () => showPayrollAdjustmentDialog(
-                                      context: context,
-                                      employee: r.employee,
-                                      initialType: 'deduction',
-                                      initialMonth: provider.selectedMonth,
-                                    ),
-                                    child: const Padding(
-                                      padding: EdgeInsets.all(4),
-                                      child: Icon(Icons.remove_circle_outline_rounded, color: Color(0xFFEF4444), size: 18),
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(50),
+                                      onTap: () => showPayrollAdjustmentDialog(
+                                        context: context,
+                                        employee: r.employee,
+                                        initialType: 'deduction',
+                                        initialMonth: provider.selectedMonth,
+                                      ),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(5),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: const Color(0xFFFF5C5C).withValues(alpha: isDark ? 0.15 : 0.12),
+                                          border: Border.all(
+                                            color: const Color(0xFFFF5C5C).withValues(alpha: 0.35),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: const Icon(Icons.remove_circle_outline_rounded, color: Color(0xFFFF5C5C), size: 16),
+                                      ),
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 4),
+                                const SizedBox(width: 6),
                                 Tooltip(
                                   message: 'View Adjustments for ${r.employee.name}',
-                                  child: InkWell(
-                                    borderRadius: BorderRadius.circular(6),
-                                    onTap: () => showManageAdjustmentsDialog(
-                                      context: context,
-                                      targetMonth: provider.selectedMonth,
-                                      filterEmployee: r.employee,
-                                    ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(4),
-                                      child: Icon(Icons.receipt_long_outlined, color: isDark ? Colors.white70 : Colors.black54, size: 18),
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(50),
+                                      onTap: () => showManageAdjustmentsDialog(
+                                        context: context,
+                                        targetMonth: provider.selectedMonth,
+                                        filterEmployee: r.employee,
+                                      ),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(5),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05),
+                                          border: Border.all(
+                                            color: isDark ? Colors.white12 : Colors.black12,
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: Icon(Icons.receipt_long_outlined, color: isDark ? const Color(0xFF00F0D8) : const Color(0xFF102B94), size: 16),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -944,36 +977,48 @@ class _PayrollScreenState extends State<PayrollScreen> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        IconButton(
-          icon: const Icon(Icons.chevron_left),
-          color: textColor,
-          iconSize: 22,
-          splashRadius: 20,
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+        NeuIconButton(
+          size: 36,
+          variant: NeuButtonVariant.whitePill,
+          icon: const Icon(Icons.chevron_left_rounded, size: 22),
           onPressed: () {
             final current = provider.selectedMonth;
             provider.setSelectedMonth(DateTime(current.year, current.month - 1));
           },
         ),
-        const SizedBox(width: 20),
-        Text(
-          monthStr,
-          style: TextStyle(
-            color: textColor,
-            fontSize: 17,
-            fontWeight: FontWeight.w600,
-            letterSpacing: -0.2,
+        const SizedBox(width: 14),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E293B).withValues(alpha: 0.75) : Colors.white.withValues(alpha: 0.85),
+            borderRadius: BorderRadius.circular(50),
+            border: Border.all(
+              color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Text(
+            monthStr,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.2,
+            ),
           ),
         ),
-        const SizedBox(width: 20),
-        IconButton(
-          icon: const Icon(Icons.chevron_right),
-          color: textColor,
-          iconSize: 22,
-          splashRadius: 20,
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+        const SizedBox(width: 14),
+        NeuIconButton(
+          size: 36,
+          variant: NeuButtonVariant.whitePill,
+          icon: const Icon(Icons.chevron_right_rounded, size: 22),
           onPressed: () {
             final current = provider.selectedMonth;
             provider.setSelectedMonth(DateTime(current.year, current.month + 1));
@@ -987,147 +1032,159 @@ class _PayrollScreenState extends State<PayrollScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
 
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.06),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+    return Theme(
+      data: Theme.of(context).copyWith(
+        hoverColor: isDark ? Colors.white10 : Colors.black12,
       ),
-      child: Material(
-        color: Colors.transparent,
-        shape: const CircleBorder(),
-        child: Theme(
-          data: Theme.of(context).copyWith(
-            hoverColor: isDark ? Colors.white10 : Colors.black12,
-          ),
-          child: PopupMenuButton<String>(
-            tooltip: 'Export Payroll',
-            padding: EdgeInsets.zero,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
+      child: PopupMenuButton<String>(
+        tooltip: 'Export Payroll',
+        padding: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+        ),
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        elevation: 10,
+        child: Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: isDark
+                ? const LinearGradient(
+                    colors: [Color(0xFF1E283C), Color(0xFF161F2E)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : const LinearGradient(
+                    colors: [Colors.white, Color(0xFFF8FAFC)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+            border: Border.all(
+              color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+              width: 1.2,
             ),
-            color: isDark ? const Color(0xFF1E293B) : Colors.white,
-            elevation: 8,
-            icon: Icon(
-              Icons.file_download_outlined,
-              color: isDark ? Colors.white70 : const Color(0xFF64748B),
-              size: 20,
-            ),
-            onSelected: (String value) async {
-              final currentUser = provider.currentEmployee;
-              final bool isHrOrAdmin = currentUser != null && (
-                currentUser.role == 'hr' ||
-                currentUser.role == 'admin' ||
-                currentUser.email == 'admin@company.com'
-              );
-              List<CompanyEmployee> visibleEmployees = [];
-              if (currentUser != null) {
-                if (currentUser.role == 'hr' || currentUser.role == 'admin') {
-                  visibleEmployees = provider.employees;
-                } else if (currentUser.role == 'supervisor') {
-                  visibleEmployees = [currentUser, ...provider.getSubordinates(currentUser)];
-                } else {
-                  visibleEmployees = [currentUser];
-                }
-              }
-              final payrollEmployees = visibleEmployees
-                  .where((emp) => emp.basicSalary > 0 || emp.salaryHistory.isNotEmpty)
-                  .toList();
-              final allPayrollEmployees = payrollEmployees.isNotEmpty ? payrollEmployees : visibleEmployees;
-              final effectiveStructureId = isHrOrAdmin ? _selectedStructureId : null;
-              final targetEmployees = allPayrollEmployees
-                  .where((emp) => _matchesStructure(emp.structureId, effectiveStructureId, provider.structures))
-                  .toList();
-              final reports = targetEmployees
-                  .map((emp) => provider.generatePayrollReport(emp, provider.selectedMonth))
-                  .toList();
-              if (reports.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('No payroll data to export.')),
-                );
-                return;
-              }
-              try {
-                if (value == 'excel') {
-                  await ExportService.exportPayrollToExcel(
-                    reports,
-                    provider.selectedMonth,
-                    provider.companyProfile,
-                  );
-                } else if (value == 'pdf') {
-                  await ExportService.exportPayrollToPdf(
-                    reports,
-                    provider.selectedMonth,
-                    provider.companyProfile,
-                  );
-                }
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Export successful!')),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Export failed: $e')),
-                  );
-                }
-              }
-            },
-            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              PopupMenuItem<String>(
-                value: 'excel',
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.table_chart_outlined,
-                      size: 18,
-                      color: Color(0xFF2EBD96),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      'Export to Excel',
-                      style: TextStyle(
-                        color: textColor,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuItem<String>(
-                value: 'pdf',
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.picture_as_pdf_outlined,
-                      size: 18,
-                      color: Color(0xFFFF5C5C),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      'Export to PDF',
-                      style: TextStyle(
-                        color: textColor,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
+            boxShadow: [
+              BoxShadow(
+                color: isDark ? Colors.black38 : const Color(0xFF0D2275).withValues(alpha: 0.08),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
               ),
             ],
           ),
+          child: Center(
+            child: Icon(
+              Icons.file_download_outlined,
+              color: isDark ? const Color(0xFF00F0D8) : const Color(0xFF102B94),
+              size: 20,
+            ),
+          ),
         ),
+        onSelected: (String value) async {
+          final currentUser = provider.currentEmployee;
+          final bool isHrOrAdmin = currentUser != null && (
+            currentUser.role == 'hr' ||
+            currentUser.role == 'admin' ||
+            currentUser.email == 'admin@company.com'
+          );
+          List<CompanyEmployee> visibleEmployees = [];
+          if (currentUser != null) {
+            if (currentUser.role == 'hr' || currentUser.role == 'admin') {
+              visibleEmployees = provider.employees;
+            } else if (currentUser.role == 'supervisor') {
+              visibleEmployees = [currentUser, ...provider.getSubordinates(currentUser)];
+            } else {
+              visibleEmployees = [currentUser];
+            }
+          }
+          final payrollEmployees = visibleEmployees
+              .where((emp) => emp.basicSalary > 0 || emp.salaryHistory.isNotEmpty)
+              .toList();
+          final allPayrollEmployees = payrollEmployees.isNotEmpty ? payrollEmployees : visibleEmployees;
+          final effectiveStructureId = isHrOrAdmin ? _selectedStructureId : null;
+          final targetEmployees = allPayrollEmployees
+              .where((emp) => _matchesStructure(emp.structureId, effectiveStructureId, provider.structures))
+              .toList();
+          final reports = targetEmployees
+              .map((emp) => provider.generatePayrollReport(emp, provider.selectedMonth))
+              .toList();
+          if (reports.isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('No payroll data to export.')),
+            );
+            return;
+          }
+          try {
+            if (value == 'excel') {
+              await ExportService.exportPayrollToExcel(
+                reports,
+                provider.selectedMonth,
+                provider.companyProfile,
+              );
+            } else if (value == 'pdf') {
+              await ExportService.exportPayrollToPdf(
+                reports,
+                provider.selectedMonth,
+                provider.companyProfile,
+              );
+            }
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Export successful!')),
+              );
+            }
+          } catch (e) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Export failed: $e')),
+              );
+            }
+          }
+        },
+        itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+          PopupMenuItem<String>(
+            value: 'excel',
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.table_chart_outlined,
+                  size: 18,
+                  color: Color(0xFF00E5CE),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'Export to Excel',
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          PopupMenuItem<String>(
+            value: 'pdf',
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.picture_as_pdf_outlined,
+                  size: 18,
+                  color: Color(0xFFFF4B4B),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'Export to PDF',
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1190,7 +1247,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Manage / View adjustments button
+        // Manage / View adjustments button (Sleek pill matching reference)
         Tooltip(
           message: 'Manage Monthly Adjustments ($count)',
           child: Material(
@@ -1200,15 +1257,35 @@ class _PayrollScreenState extends State<PayrollScreen> {
                 context: context,
                 targetMonth: provider.selectedMonth,
               ),
-              borderRadius: BorderRadius.circular(10),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              borderRadius: BorderRadius.circular(50),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                height: 40,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(10),
+                  gradient: isDark
+                      ? const LinearGradient(
+                          colors: [Color(0xFF1E283C), Color(0xFF161F2E)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        )
+                      : const LinearGradient(
+                          colors: [Colors.white, Color(0xFFF8FAFC)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                  borderRadius: BorderRadius.circular(50),
                   border: Border.all(
-                    color: isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFCBD5E1),
+                    color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                    width: 1.2,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: isDark ? Colors.black38 : const Color(0xFF0D2275).withValues(alpha: 0.08),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -1216,31 +1293,34 @@ class _PayrollScreenState extends State<PayrollScreen> {
                     Icon(
                       Icons.tune_rounded,
                       size: 16,
-                      color: isDark ? Colors.white70 : Colors.black87,
+                      color: isDark ? const Color(0xFF00F0D8) : const Color(0xFF102B94),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 8),
                     Text(
                       'Adjustments',
                       style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white70 : Colors.black87,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? const Color(0xFF00F0D8) : const Color(0xFF102B94),
+                        letterSpacing: 0.2,
                       ),
                     ),
                     if (count > 0) ...[
-                      const SizedBox(width: 5),
+                      const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF2E65FF),
-                          borderRadius: BorderRadius.circular(8),
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF1E3DB8), Color(0xFF122684)],
+                          ),
+                          borderRadius: BorderRadius.circular(50),
                         ),
                         child: Text(
                           '$count',
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
                       ),
@@ -1251,60 +1331,42 @@ class _PayrollScreenState extends State<PayrollScreen> {
             ),
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 10),
 
-        // + Addition Button
+        // + Addition Button (Radiant Cyan-Aqua capsule hero button)
         Tooltip(
           message: 'Add Bonus / Addition',
-          child: ElevatedButton.icon(
+          child: NeuButton(
             onPressed: () => showPayrollAdjustmentDialog(
               context: context,
               initialType: 'addition',
               initialMonth: provider.selectedMonth,
             ),
-            icon: const Icon(Icons.add_circle_outline_rounded, size: 16, color: Colors.white),
-            label: const Text(
-              'Addition',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 12.5,
-              ),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF10B981),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              elevation: 0,
-            ),
+            icon: const Icon(Icons.add_circle_outline_rounded, size: 16),
+            label: 'Addition',
+            variant: NeuButtonVariant.primary,
+            height: 40,
+            fontSize: 13,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 10),
 
-        // - Deduction Button
+        // - Deduction Button (Coral Red capsule hero button)
         Tooltip(
           message: 'Add Loan / Fine / Deduction',
-          child: ElevatedButton.icon(
+          child: NeuButton(
             onPressed: () => showPayrollAdjustmentDialog(
               context: context,
               initialType: 'deduction',
               initialMonth: provider.selectedMonth,
             ),
-            icon: const Icon(Icons.remove_circle_outline_rounded, size: 16, color: Colors.white),
-            label: const Text(
-              'Deduction',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 12.5,
-              ),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFEF4444),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              elevation: 0,
-            ),
+            icon: const Icon(Icons.remove_circle_outline_rounded, size: 16),
+            label: 'Deduction',
+            variant: NeuButtonVariant.danger,
+            height: 40,
+            fontSize: 13,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
           ),
         ),
       ],
@@ -1313,35 +1375,54 @@ class _PayrollScreenState extends State<PayrollScreen> {
 
   Widget _buildStructureFilter(BuildContext context, AttendanceProvider provider) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final textColor = isDark ? const Color(0xFF00F0D8) : const Color(0xFF102B94);
     final structures = provider.structures;
     final isFiltered = _selectedStructureId != null && _selectedStructureId != 'all';
 
     return Container(
-      height: 38,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
+      height: 40,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(10),
+        gradient: isDark
+            ? const LinearGradient(
+                colors: [Color(0xFF1E283C), Color(0xFF161F2E)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : const LinearGradient(
+                colors: [Colors.white, Color(0xFFF8FAFC)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+        borderRadius: BorderRadius.circular(50),
         border: Border.all(
           color: isFiltered
-              ? const Color(0xFF2E65FF)
-              : (isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFCBD5E1)),
-          width: isFiltered ? 1.5 : 1.0,
+              ? const Color(0xFF00E5CE)
+              : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+          width: 1.2,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: isFiltered
+                ? const Color(0xFF00E5CE).withValues(alpha: 0.25)
+                : (isDark ? Colors.black38 : const Color(0xFF0D2275).withValues(alpha: 0.08)),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: (isFiltered && structures.any((s) => s.id == _selectedStructureId))
               ? _selectedStructureId
               : 'all',
-          icon: const Icon(Icons.arrow_drop_down, size: 20),
+          icon: Icon(Icons.arrow_drop_down, size: 20, color: textColor),
           dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           style: TextStyle(
             color: textColor,
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
           ),
           items: [
             DropdownMenuItem<String>(
@@ -1353,7 +1434,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
                     Icons.business_outlined,
                     size: 16,
                     color: !isFiltered
-                        ? const Color(0xFF2E65FF)
+                        ? const Color(0xFF00E5CE)
                         : (isDark ? Colors.white60 : Colors.black54),
                   ),
                   const SizedBox(width: 8),
@@ -1374,17 +1455,17 @@ class _PayrollScreenState extends State<PayrollScreen> {
                       Icons.apartment_rounded,
                       size: 16,
                       color: _selectedStructureId == s.id
-                          ? const Color(0xFF2E65FF)
+                          ? const Color(0xFF00E5CE)
                           : (isDark ? Colors.white60 : Colors.black54),
                     ),
                     const SizedBox(width: 8),
                     Text(s.name),
                     const SizedBox(width: 6),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                       decoration: BoxDecoration(
                         color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(50),
                       ),
                       child: Text(
                         '$count',
