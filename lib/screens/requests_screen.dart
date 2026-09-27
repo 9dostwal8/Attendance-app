@@ -472,6 +472,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
         provider.currentEmployee?.role == 'hr' ||
         provider.currentEmployee?.role == 'admin' ||
         provider.canEditCompanyInfo;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -510,139 +511,59 @@ class _RequestsScreenState extends State<RequestsScreen> {
                   ),
                 ),
 
-                // Custom Tab Switcher for Supervisors / HR Managers
+                // Custom Segmented Sub-Tab Switcher (Matching User Management design)
                 if (showTabs) ...[
-                  Center(
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxWidth: kIsWeb ? 400 : double.infinity,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20.0,
+                      vertical: 6.0,
+                    ),
+                    child: Container(
+                      height: 46,
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF161F2E)
+                            : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(50),
+                        border: Border.all(
+                          color: isDark
+                              ? const Color(0xFF334155)
+                              : const Color(0xFFE2E8F0),
+                          width: 1.0,
+                        ),
                       ),
-                      child: Container(
-                        height: 48,
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 20.0,
-                          vertical: 8.0,
-                        ),
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color:
-                              ((Theme.of(context).textTheme.bodyLarge?.color ??
-                                      Colors.black)
-                                  .withValues(alpha: 0.08)),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color:
-                                ((Theme.of(
-                                          context,
-                                        ).textTheme.bodyLarge?.color ??
-                                        Colors.black)
-                                    .withValues(alpha: 0.12)),
+                      child: Row(
+                        children: [
+                          _buildRequestsTabButton(
+                            isSelected: !_showSubordinateRequests,
+                            label: provider.translate('my_requests'),
+                            icon: Icons.assignment_outlined,
+                            isDark: isDark,
+                            onTap: () {
+                              setState(() {
+                                _showSubordinateRequests = false;
+                              });
+                            },
                           ),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    _showSubordinateRequests = false;
-                                  });
-                                },
-                                child: Container(
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    color: !_showSubordinateRequests
-                                        ? const Color(0xFF2E65FF)
-                                        : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Text(
-                                    provider.translate('my_requests'),
-                                    style: TextStyle(
-                                      color:
-                                          ((Theme.of(
-                                            context,
-                                          ).textTheme.bodyLarge?.color ??
-                                          Colors.black)),
-                                      fontWeight: !_showSubordinateRequests
-                                          ? FontWeight.bold
-                                          : FontWeight.w500,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    _showSubordinateRequests = true;
-                                  });
-                                  _loadAllSubordinateRequests(provider);
-                                },
-                                child: Container(
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    color: _showSubordinateRequests
-                                        ? const Color(0xFF2E65FF)
-                                        : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        provider.translate(
-                                          'subordinate_requests',
-                                        ),
-                                        style: TextStyle(
-                                          color:
-                                              ((Theme.of(
-                                                context,
-                                              ).textTheme.bodyLarge?.color ??
-                                              Colors.black)),
-                                          fontWeight: _showSubordinateRequests
-                                              ? FontWeight.bold
-                                              : FontWeight.w500,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                      if (provider.pendingApprovalsCount >
-                                          0) ...[
-                                        const SizedBox(width: 6),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 1,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFFEF4444),
-                                            borderRadius: BorderRadius.circular(
-                                              10,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            '${provider.pendingApprovalsCount}',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                          _buildRequestsTabButton(
+                            isSelected: _showSubordinateRequests,
+                            label: provider.translate('subordinate_requests'),
+                            icon: Icons.people_alt_outlined,
+                            isDark: isDark,
+                            badgeCount: provider.pendingApprovalsCount,
+                            onTap: () {
+                              setState(() {
+                                _showSubordinateRequests = true;
+                              });
+                              _loadAllSubordinateRequests(provider);
+                            },
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                 ],
 
                 // Requests List
@@ -656,6 +577,88 @@ class _RequestsScreenState extends State<RequestsScreen> {
                 if (!kIsWeb) SizedBox(height: 80),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRequestsTabButton({
+    required bool isSelected,
+    required String label,
+    required IconData icon,
+    required bool isDark,
+    required VoidCallback onTap,
+    int badgeCount = 0,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            gradient: isSelected
+                ? const LinearGradient(
+                    colors: [Color(0xFF00F0D8), Color(0xFF00BD96)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
+            borderRadius: BorderRadius.circular(50),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF00E5CE).withValues(alpha: 0.35),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ]
+                : [],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 17,
+                color: isSelected
+                    ? const Color(0xFF0A2342)
+                    : (isDark ? Colors.white60 : Colors.black54),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                  color: isSelected
+                      ? const Color(0xFF0A2342)
+                      : (isDark ? Colors.white70 : const Color(0xFF334155)),
+                ),
+              ),
+              if (badgeCount > 0) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 1,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '$badgeCount',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       ),
