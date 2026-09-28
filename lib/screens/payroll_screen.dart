@@ -322,7 +322,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
                                 ),
                                 SizedBox(height: 4),
                                 Text(
-                                  '${workingHours.toStringAsFixed(1)} hrs',
+                                  '${workingHours.toStringAsFixed(1)} ${provider.translate('unit_hrs')}',
                                   style: TextStyle(
                                     color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
                                     fontSize: 18,
@@ -388,7 +388,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
                                 ),
                                 SizedBox(height: 4),
                                 Text(
-                                  '$daysWorked days',
+                                  '$daysWorked ${provider.translate('unit_days')}',
                                   style: TextStyle(
                                     color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
                                     fontSize: 18,
@@ -427,7 +427,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
                           _buildBreakdownRow(context, 
                             label: provider.translate('overtime'),
                             details:
-                                '${overtimeHours.toStringAsFixed(1)} hrs @ ${formatAmount(hourlyRate)}/hr',
+                                '${overtimeHours.toStringAsFixed(1)} ${provider.translate('unit_hrs')} @ ${formatAmount(hourlyRate)}/${provider.translate('unit_hrs')}',
                             amount:
                                 formatAmount(overtimeValue),
                             color: const Color(0xFF00FF87),
@@ -462,8 +462,8 @@ class _PayrollScreenState extends State<PayrollScreen> {
                           if (currentMonthlyAdditions > 0) ...[
                             Divider(color: (Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.black12), height: 1),
                             _buildBreakdownRow(context, 
-                              label: 'Additions (Bonuses & Incentives)',
-                              details: 'Approved monthly additions',
+                              label: provider.translate('additions_bonuses_desc'),
+                              details: provider.translate('approved_monthly_additions'),
                               amount: '+${formatAmount(currentMonthlyAdditions)}',
                               color: const Color(0xFF10B981),
                             ),
@@ -471,8 +471,8 @@ class _PayrollScreenState extends State<PayrollScreen> {
                           if (currentMonthlyDeductions > 0) ...[
                             Divider(color: (Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.black12), height: 1),
                             _buildBreakdownRow(context, 
-                              label: 'Loans & Other Deductions',
-                              details: 'Approved monthly deductions',
+                              label: provider.translate('loans_deductions_desc'),
+                              details: provider.translate('approved_monthly_deductions'),
                               amount: '-${formatAmount(currentMonthlyDeductions)}',
                               color: const Color(0xFFFF5C5C),
                             ),
@@ -481,7 +481,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
                             Divider(color: (Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.black12), height: 1),
                             _buildBreakdownRow(context, 
                               label: provider.translate('attendance_deficit'),
-                              details: '${provider.attendanceDeficitHours.toStringAsFixed(1)} hrs @ ${formatAmount(hourlyRate)}/hr',
+                              details: '${provider.attendanceDeficitHours.toStringAsFixed(1)} ${provider.translate('unit_hrs')} @ ${formatAmount(hourlyRate)}/${provider.translate('unit_hrs')}',
                               amount: '-${formatAmount(attendanceDeficit)}',
                               color: const Color(0xFFFF5C5C),
                             ),
@@ -577,8 +577,8 @@ class _PayrollScreenState extends State<PayrollScreen> {
               const SizedBox(height: 12),
               Text(
                 structName != null
-                    ? 'No Payroll Records for "$structName"'
-                    : 'No Payroll Records Found',
+                    ? provider.translate('no_payroll_records_for').replaceAll('{name}', structName)
+                    : provider.translate('no_payroll_records_title'),
                 style: TextStyle(
                   color: (Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black),
                   fontSize: 16,
@@ -588,8 +588,8 @@ class _PayrollScreenState extends State<PayrollScreen> {
               const SizedBox(height: 4),
               Text(
                 structName != null
-                    ? 'No employees in "$structName" have payroll records for this period.'
-                    : 'No employees have a configured salary or salary history for this period.',
+                    ? provider.translate('no_payroll_desc_structure').replaceAll('{name}', structName)
+                    : provider.translate('no_payroll_desc_general'),
                 style: TextStyle(
                   color: (Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.5),
                   fontSize: 13,
@@ -600,7 +600,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
                 NeuButton(
                   onPressed: () => setState(() => _selectedStructureId = null),
                   icon: const Icon(Icons.clear_all_rounded, size: 16),
-                  label: 'Show All Branches',
+                  label: provider.translate('show_all_branches'),
                   variant: NeuButtonVariant.primary,
                   height: 38,
                   fontSize: 13,
@@ -668,26 +668,26 @@ class _PayrollScreenState extends State<PayrollScreen> {
                 dataRowMinHeight: 44,
                 dataRowMaxHeight: 64,
                 columns: [
-                  DataColumn(label: Text('Employee', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13))),
-                  DataColumn(label: Text('Basic Salary', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13))),
-                  DataColumn(label: Text('Salary by Day', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF5B9BFF)))),
-                  DataColumn(label: Text('Days Worked', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13))),
-                  DataColumn(label: Text('Working Hrs', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13))),
-                  DataColumn(label: Text('Overtime (Hrs)', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF00FF87)))),
-                  DataColumn(label: Text('Overtime (Val)', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF00FF87)))),
-                  DataColumn(label: Text('Deficit (Hrs)', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFFF5C5C)))),
-                  DataColumn(label: Text('Deficit (Val)', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFFF5C5C)))),
-                  DataColumn(label: Text('Food Allow.', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF5B9BFF)))),
-                  DataColumn(label: Text('Trans. Allow.', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF5B9BFF)))),
-                  DataColumn(label: Text('Other Allow.', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF5B9BFF)))),
-                  DataColumn(label: Text('Additions', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF10B981)))),
-                  DataColumn(label: Text('Penalties', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFFF5C5C)))),
-                  DataColumn(label: Text('Other Deduct.', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFFF5C5C)))),
-                  DataColumn(label: Text('Gross Salary', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2EBD96)))),
-                  DataColumn(label: Text('Deductions', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFFF5C5C)))),
-                  DataColumn(label: Text('Net Earnings', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2EBD96)))),
+                  DataColumn(label: Text(provider.translate('employee'), style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13))),
+                  DataColumn(label: Text(provider.translate('basic_salary'), style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13))),
+                  DataColumn(label: Text(provider.translate('salary_by_day'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF5B9BFF)))),
+                  DataColumn(label: Text(provider.translate('days_worked'), style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13))),
+                  DataColumn(label: Text(provider.translate('working_hrs'), style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13))),
+                  DataColumn(label: Text(provider.translate('overtime_hrs'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF00FF87)))),
+                  DataColumn(label: Text(provider.translate('overtime_val'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF00FF87)))),
+                  DataColumn(label: Text(provider.translate('deficit_hrs'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFFF5C5C)))),
+                  DataColumn(label: Text(provider.translate('deficit_val'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFFF5C5C)))),
+                  DataColumn(label: Text(provider.translate('food_allow_short'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF5B9BFF)))),
+                  DataColumn(label: Text(provider.translate('trans_allow_short'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF5B9BFF)))),
+                  DataColumn(label: Text(provider.translate('other_allow_short'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF5B9BFF)))),
+                  DataColumn(label: Text(provider.translate('additions'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF10B981)))),
+                  DataColumn(label: Text(provider.translate('penalties'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFFF5C5C)))),
+                  DataColumn(label: Text(provider.translate('other_deduct'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFFF5C5C)))),
+                  DataColumn(label: Text(provider.translate('gross_salary'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2EBD96)))),
+                  DataColumn(label: Text(provider.translate('deductions'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFFF5C5C)))),
+                  DataColumn(label: Text(provider.translate('net_earnings'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2EBD96)))),
                   if (isHrOrAdmin)
-                    DataColumn(label: Text('Actions', style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13))),
+                    DataColumn(label: Text(provider.translate('actions'), style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13))),
                 ],
                 rows: [
                   ...reports.map((r) {
@@ -696,11 +696,11 @@ class _PayrollScreenState extends State<PayrollScreen> {
                         DataCell(Text(r.employee.name, style: TextStyle(color: textColor, fontWeight: FontWeight.w600, fontSize: 12))),
                         DataCell(Text(formatEmpAmount(r.basicSalary, r.currency), style: TextStyle(color: textColor, fontSize: 12))),
                         DataCell(Text(formatEmpAmount(r.salaryCalcByDay, r.currency), style: const TextStyle(fontSize: 12, color: Color(0xFF5B9BFF)))),
-                        DataCell(Text('${r.daysWorked} days', style: TextStyle(color: textColor, fontSize: 12))),
-                        DataCell(Text('${r.workingHours.toStringAsFixed(1)} hrs', style: TextStyle(color: textColor, fontSize: 12))),
-                        DataCell(Text('${r.overtimeHours.toStringAsFixed(1)} hrs', style: const TextStyle(fontSize: 12, color: Color(0xFF00FF87)))),
+                        DataCell(Text('${r.daysWorked} ${provider.translate('unit_days')}', style: TextStyle(color: textColor, fontSize: 12))),
+                        DataCell(Text('${r.workingHours.toStringAsFixed(1)} ${provider.translate('unit_hrs')}', style: TextStyle(color: textColor, fontSize: 12))),
+                        DataCell(Text('${r.overtimeHours.toStringAsFixed(1)} ${provider.translate('unit_hrs')}', style: const TextStyle(fontSize: 12, color: Color(0xFF00FF87)))),
                         DataCell(Text(formatEmpAmount(r.overtimeValue, r.currency), style: const TextStyle(fontSize: 12, color: Color(0xFF00FF87)))),
-                        DataCell(Text('${r.attendanceDeficitHours.toStringAsFixed(1)} hrs', style: const TextStyle(fontSize: 12, color: Color(0xFFFF5C5C)))),
+                        DataCell(Text('${r.attendanceDeficitHours.toStringAsFixed(1)} ${provider.translate('unit_hrs')}', style: const TextStyle(fontSize: 12, color: Color(0xFFFF5C5C)))),
                         DataCell(Text(formatEmpAmount(r.attendanceDeficit, r.currency), style: const TextStyle(fontSize: 12, color: Color(0xFFFF5C5C)))),
                         DataCell(Text(formatEmpAmount(r.foodAllowance, r.currency), style: TextStyle(color: textColor, fontSize: 12))),
                         DataCell(Text(formatEmpAmount(r.transportationAllowance, r.currency), style: TextStyle(color: textColor, fontSize: 12))),
@@ -717,7 +717,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Tooltip(
-                                  message: 'Add Addition for ${r.employee.name}',
+                                  message: provider.translate('add_addition_for').replaceAll('{name}', r.employee.name),
                                   child: Material(
                                     color: Colors.transparent,
                                     child: InkWell(
@@ -745,7 +745,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
                                 ),
                                 const SizedBox(width: 6),
                                 Tooltip(
-                                  message: 'Add Deduction for ${r.employee.name}',
+                                  message: provider.translate('add_deduction_for').replaceAll('{name}', r.employee.name),
                                   child: Material(
                                     color: Colors.transparent,
                                     child: InkWell(
@@ -773,7 +773,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
                                 ),
                                 const SizedBox(width: 6),
                                 Tooltip(
-                                  message: 'View Adjustments for ${r.employee.name}',
+                                  message: provider.translate('view_adjustments_for').replaceAll('{name}', r.employee.name),
                                   child: Material(
                                     color: Colors.transparent,
                                     child: InkWell(
@@ -813,7 +813,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
                     ),
                     cells: [
                       DataCell(Text(
-                        'Total',
+                        provider.translate('total'),
                         style: TextStyle(
                           color: textColor,
                           fontWeight: FontWeight.w800,
@@ -837,7 +837,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
                         ),
                       )),
                       DataCell(Text(
-                        '$totalDaysWorked days',
+                        '$totalDaysWorked ${provider.translate('unit_days')}',
                         style: TextStyle(
                           color: textColor,
                           fontWeight: FontWeight.bold,
@@ -845,7 +845,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
                         ),
                       )),
                       DataCell(Text(
-                        '${totalWorkingHours.toStringAsFixed(1)} hrs',
+                        '${totalWorkingHours.toStringAsFixed(1)} ${provider.translate('unit_hrs')}',
                         style: TextStyle(
                           color: textColor,
                           fontWeight: FontWeight.bold,
@@ -853,7 +853,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
                         ),
                       )),
                       DataCell(Text(
-                        '${totalOvertimeHours.toStringAsFixed(1)} hrs',
+                        '${totalOvertimeHours.toStringAsFixed(1)} ${provider.translate('unit_hrs')}',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
@@ -869,7 +869,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
                         ),
                       )),
                       DataCell(Text(
-                        '${totalDeficitHours.toStringAsFixed(1)} hrs',
+                        '${totalDeficitHours.toStringAsFixed(1)} ${provider.translate('unit_hrs')}',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
@@ -970,7 +970,8 @@ class _PayrollScreenState extends State<PayrollScreen> {
   }
 
   Widget _buildMonthSelector(BuildContext context, AttendanceProvider provider) {
-    final monthStr = DateFormat('MMMM yyyy').format(provider.selectedMonth);
+    final monthName = provider.translate('month_${provider.selectedMonth.month}');
+    final monthStr = '$monthName ${provider.selectedMonth.year}';
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
 
@@ -1037,7 +1038,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
         hoverColor: isDark ? Colors.white10 : Colors.black12,
       ),
       child: PopupMenuButton<String>(
-        tooltip: 'Export Payroll',
+        tooltip: provider.translate('export_payroll'),
         padding: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18),
@@ -1110,7 +1111,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
               .toList();
           if (reports.isEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('No payroll data to export.')),
+              SnackBar(content: Text(provider.translate('no_payroll_export'))),
             );
             return;
           }
@@ -1130,13 +1131,13 @@ class _PayrollScreenState extends State<PayrollScreen> {
             }
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Export successful!')),
+                SnackBar(content: Text(provider.translate('export_success'))),
               );
             }
           } catch (e) {
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Export failed: $e')),
+                SnackBar(content: Text('${provider.translate('export_failed')}$e')),
               );
             }
           }
@@ -1153,7 +1154,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
                 ),
                 const SizedBox(width: 10),
                 Text(
-                  'Export to Excel',
+                  provider.translate('export_to_excel'),
                   style: TextStyle(
                     color: textColor,
                     fontSize: 13,
@@ -1174,7 +1175,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
                 ),
                 const SizedBox(width: 10),
                 Text(
-                  'Export to PDF',
+                  provider.translate('export_to_pdf'),
                   style: TextStyle(
                     color: textColor,
                     fontSize: 13,
@@ -1249,7 +1250,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
       children: [
         // Manage / View adjustments button (Sleek pill matching reference)
         Tooltip(
-          message: 'Manage Monthly Adjustments ($count)',
+          message: '${provider.translate('manage_monthly_adjustments')} ($count)',
           child: Material(
             color: Colors.transparent,
             child: InkWell(
@@ -1297,7 +1298,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Adjustments',
+                      provider.translate('adjustments'),
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
@@ -1335,7 +1336,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
 
         // + Addition Button (Radiant Cyan-Aqua capsule hero button)
         Tooltip(
-          message: 'Add Bonus / Addition',
+          message: provider.translate('add_bonus_addition'),
           child: NeuButton(
             onPressed: () => showPayrollAdjustmentDialog(
               context: context,
@@ -1343,7 +1344,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
               initialMonth: provider.selectedMonth,
             ),
             icon: const Icon(Icons.add_circle_outline_rounded, size: 16),
-            label: 'Addition',
+            label: provider.translate('addition'),
             variant: NeuButtonVariant.primary,
             height: 40,
             fontSize: 13,
@@ -1354,7 +1355,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
 
         // - Deduction Button (Coral Red capsule hero button)
         Tooltip(
-          message: 'Add Loan / Fine / Deduction',
+          message: provider.translate('add_loan_deduction'),
           child: NeuButton(
             onPressed: () => showPayrollAdjustmentDialog(
               context: context,
@@ -1362,7 +1363,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
               initialMonth: provider.selectedMonth,
             ),
             icon: const Icon(Icons.remove_circle_outline_rounded, size: 16),
-            label: 'Deduction',
+            label: provider.translate('deduction'),
             variant: NeuButtonVariant.danger,
             height: 40,
             fontSize: 13,
@@ -1438,7 +1439,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
                         : (isDark ? Colors.white60 : Colors.black54),
                   ),
                   const SizedBox(width: 8),
-                  const Text('All Branches / Offices'),
+                  Text(provider.translate('all_branches_offices')),
                 ],
               ),
             ),

@@ -20,8 +20,8 @@ Future<void> showPayrollAdjustmentDialog({
   );
   if (!isAllowed) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Access denied. Only HR Managers and Super Admins can add payroll adjustments.'),
+      SnackBar(
+        content: Text(provider.translate('access_denied_adjustments')),
       ),
     );
     return;
@@ -304,8 +304,8 @@ class _PayrollAdjustmentDialogContentState
                                 children: [
                                   Text(
                                     isAddition
-                                        ? 'Employee Monthly Addition'
-                                        : 'Employee Monthly Deduction',
+                                        ? provider.translate('addition_bonus')
+                                        : provider.translate('deduction_loan_fine'),
                                     style: TextStyle(
                                       color: isDark ? Colors.white : const Color(0xFF0F172A),
                                       fontSize: 19,
@@ -389,7 +389,7 @@ class _PayrollAdjustmentDialogContentState
                                         ),
                                         const SizedBox(width: 6),
                                         Text(
-                                          'Addition / Bonus',
+                                          provider.translate('addition_bonus'),
                                           style: TextStyle(
                                             color: isAddition
                                                 ? const Color(0xFF0A2342)
@@ -441,7 +441,7 @@ class _PayrollAdjustmentDialogContentState
                                         ),
                                         const SizedBox(width: 6),
                                         Text(
-                                          'Deduction / Loan / Fine',
+                                          provider.translate('deduction_loan_fine'),
                                           style: TextStyle(
                                             color: !isAddition
                                                 ? Colors.white
@@ -462,7 +462,7 @@ class _PayrollAdjustmentDialogContentState
 
                         // Employee Selection Dropdown
                         Text(
-                          'Employee',
+                          provider.translate('employee'),
                           style: TextStyle(
                             color: isDark ? Colors.white70 : Colors.black87,
                             fontSize: 12.5,
@@ -488,7 +488,7 @@ class _PayrollAdjustmentDialogContentState
                               value: _selectedEmployee,
                               isExpanded: true,
                               dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-                              hint: const Text('Select Employee'),
+                              hint: Text(provider.translate('select_employee')),
                               items: employees.map((emp) {
                                 return DropdownMenuItem<CompanyEmployee>(
                                   value: emp,
@@ -627,7 +627,7 @@ class _PayrollAdjustmentDialogContentState
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Amount',
+                                    provider.translate('amount'),
                                     style: TextStyle(
                                       color: isDark ? Colors.white70 : Colors.black87,
                                       fontSize: 12.5,
@@ -700,7 +700,7 @@ class _PayrollAdjustmentDialogContentState
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Currency',
+                                    provider.translate('currency'),
                                     style: TextStyle(
                                       color: isDark ? Colors.white70 : Colors.black87,
                                       fontSize: 12.5,
@@ -749,7 +749,7 @@ class _PayrollAdjustmentDialogContentState
 
                         // Date Selector
                         Text(
-                          'Effective Date',
+                          provider.translate('effective_date'),
                           style: TextStyle(
                             color: isDark ? Colors.white70 : Colors.black87,
                             fontSize: 12.5,
@@ -803,7 +803,7 @@ class _PayrollAdjustmentDialogContentState
 
                         // Description / Notes
                         Text(
-                          'Notes / Description (Optional)',
+                          provider.translate('notes_desc_optional'),
                           style: TextStyle(
                             color: isDark ? Colors.white70 : Colors.black87,
                             fontSize: 12.5,
@@ -871,7 +871,7 @@ class _PayrollAdjustmentDialogContentState
                                 ),
                               ),
                               child: Text(
-                                'Cancel',
+                                provider.translate('cancel'),
                                 style: TextStyle(
                                   color: isDark ? Colors.white70 : Colors.black54,
                                   fontWeight: FontWeight.w600,
@@ -896,7 +896,9 @@ class _PayrollAdjustmentDialogContentState
                                           : Icons.remove_circle_rounded,
                                       size: 18,
                                     ),
-                              label: isAddition ? 'Save Addition' : 'Save Deduction',
+                              label: isAddition
+                                  ? '${provider.translate('save')} ${provider.translate('addition')}'
+                                  : '${provider.translate('save')} ${provider.translate('deduction')}',
                               variant: isAddition ? NeuButtonVariant.primary : NeuButtonVariant.danger,
                               height: 42,
                               padding: const EdgeInsets.symmetric(horizontal: 22),
@@ -961,8 +963,8 @@ Future<void> showManageAdjustmentsDialog({
   );
   if (!isAllowed) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Access denied. Only HR Managers and Super Admins can manage payroll adjustments.'),
+      SnackBar(
+        content: Text(provider.translate('access_denied_adjustments')),
       ),
     );
     return;
@@ -1069,7 +1071,7 @@ class _ManageAdjustmentsDialogContent extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Monthly Adjustments (${DateFormat('MMMM yyyy').format(targetMonth)})',
+                                '${provider.translate('monthly_adjustments')} (${provider.translate('month_${targetMonth.month}')} ${targetMonth.year})',
                                 style: TextStyle(
                                   color: isDark ? Colors.white : const Color(0xFF0F172A),
                                   fontSize: 17,
@@ -1113,7 +1115,7 @@ class _ManageAdjustmentsDialogContent extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 10),
                                 Text(
-                                  'No Adjustments for This Month',
+                                  provider.translate('no_adjustments_month'),
                                   style: TextStyle(
                                     color: isDark ? Colors.white70 : Colors.black87,
                                     fontWeight: FontWeight.bold,
@@ -1122,7 +1124,7 @@ class _ManageAdjustmentsDialogContent extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Add bonuses, loans, fines, or other additions/deductions.',
+                                  provider.translate('add_bonuses_loans_desc'),
                                   style: TextStyle(
                                     color: isDark ? Colors.white38 : Colors.black38,
                                     fontSize: 12,
@@ -1257,21 +1259,21 @@ class _ManageAdjustmentsDialogContent extends StatelessWidget {
                                         final confirmed = await showDialog<bool>(
                                           context: context,
                                           builder: (c) => AlertDialog(
-                                            title: const Text('Delete Adjustment?'),
+                                            title: Text(provider.translate('delete_adjustment_title')),
                                             content: Text(
                                               'Are you sure you want to remove this ${adj.type} (${adj.category}) of ${adj.amount} for ${emp.name}?',
                                             ),
                                             actions: [
                                               TextButton(
                                                 onPressed: () => Navigator.of(c).pop(false),
-                                                child: const Text('Cancel'),
+                                                child: Text(provider.translate('cancel')),
                                               ),
                                               NeuButton(
                                                 onPressed: () => Navigator.of(c).pop(true),
                                                 variant: NeuButtonVariant.danger,
                                                 height: 36,
                                                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                                                label: 'Delete',
+                                                label: provider.translate('delete'),
                                               ),
                                             ],
                                           ),
@@ -1297,7 +1299,7 @@ class _ManageAdjustmentsDialogContent extends StatelessWidget {
                         TextButton(
                           onPressed: () => Navigator.of(context).pop(),
                           child: Text(
-                            'Close',
+                            provider.translate('close'),
                             style: TextStyle(
                               color: isDark ? Colors.white70 : Colors.black54,
                             ),
@@ -1313,7 +1315,7 @@ class _ManageAdjustmentsDialogContent extends StatelessWidget {
                             );
                           },
                           icon: const Icon(Icons.add_rounded, size: 18),
-                          label: 'Add Adjustment',
+                          label: provider.translate('add_adjustment'),
                           variant: NeuButtonVariant.primary,
                           height: 40,
                           padding: const EdgeInsets.symmetric(horizontal: 18),

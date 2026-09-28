@@ -201,11 +201,11 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _buildTopNavItem(0, 'Home', Icons.home_filled),
-                      if (!kIsWeb) _buildTopNavItem(1, 'Clock', Icons.access_time_filled),
-                      _buildTopNavItem(2, 'History', Icons.history),
-                      _buildTopNavItem(3, 'Payroll', Icons.attach_money),
-                      _buildTopNavItem(4, 'Requests', Icons.description),
+                      _buildTopNavItem(0, provider.translate('home'), Icons.home_filled),
+                      if (!kIsWeb) _buildTopNavItem(1, provider.translate('clock'), Icons.access_time_filled),
+                      _buildTopNavItem(2, provider.translate('history'), Icons.history),
+                      _buildTopNavItem(3, provider.translate('payroll'), Icons.attach_money),
+                      _buildTopNavItem(4, provider.translate('requests'), Icons.description),
                       
                       // Dropdown for HR Admin if they have access
                       if (provider.currentEmployee?.role == 'hr' || provider.currentEmployee?.role == 'admin' || provider.canEditCompanyInfo)
@@ -225,7 +225,7 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                 child: Text(
-                                  'HR Admin ▾',
+                                  '${provider.translate('hr_admin')} ▾',
                                   style: TextStyle(
                                     color: isDark ? Colors.white70 : const Color(0xFF64748B),
                                     fontWeight: FontWeight.w600,
@@ -234,15 +234,15 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
                                 ),
                               ),
                               itemBuilder: (context) => [
-                                _buildPopupMenuItem(8, 'User Management', Icons.manage_accounts),
-                                _buildPopupMenuItem(13, 'Approvals', Icons.how_to_reg),
-                                _buildPopupMenuItem(5, 'Structures', Icons.business),
-                                _buildPopupMenuItem(6, 'Shifts', Icons.access_time),
-                                _buildPopupMenuItem(7, 'Groups', Icons.people),
-                                _buildPopupMenuItem(9, 'Holidays', Icons.event_available),
-                                _buildPopupMenuItem(10, 'Locations', Icons.location_on),
-                                _buildPopupMenuItem(11, 'HR Payroll', Icons.attach_money),
-                                _buildPopupMenuItem(12, 'Daily Report', Icons.bar_chart),
+                                _buildPopupMenuItem(8, provider.translate('user_management'), Icons.manage_accounts),
+                                _buildPopupMenuItem(13, provider.translate('approvals'), Icons.how_to_reg),
+                                _buildPopupMenuItem(5, provider.translate('structures'), Icons.business),
+                                _buildPopupMenuItem(6, provider.translate('shifts'), Icons.access_time),
+                                _buildPopupMenuItem(7, provider.translate('groups'), Icons.people),
+                                _buildPopupMenuItem(9, provider.translate('holidays'), Icons.event_available),
+                                _buildPopupMenuItem(10, provider.translate('locations'), Icons.location_on),
+                                _buildPopupMenuItem(11, provider.translate('hr_payroll'), Icons.attach_money),
+                                _buildPopupMenuItem(12, provider.translate('daily_report'), Icons.bar_chart),
                               ],
                             ),
                           ),
