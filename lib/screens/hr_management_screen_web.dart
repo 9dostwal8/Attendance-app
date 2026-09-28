@@ -4016,6 +4016,10 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
   }
 
   Widget _buildPayrollList(AttendanceProvider provider) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtextColor = isDark ? Colors.white60 : const Color(0xFF64748B);
+
     final filtered = _searchQuery.isEmpty
         ? provider.employees
         : provider.employees
@@ -4046,27 +4050,26 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                 final dailyRate = employee.basicSalary / 30.0;
                 return GestureDetector(
                   onTap: () => _showPayrollConfigDialog(employee, provider),
-                  child: Container(
+                  child: GlassContainer(
                     margin: const EdgeInsets.only(bottom: 12),
                     padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.2),
-                      ),
-                    ),
+                    borderRadius: 16,
                     child: Row(
                       children: [
                         CircleAvatar(
-                          backgroundImage: employee.avatarUrl != null
+                          radius: 22,
+                          backgroundImage: employee.avatarUrl != null && employee.avatarUrl!.isNotEmpty
                               ? NetworkImage(employee.avatarUrl!)
                               : null,
-                          backgroundColor: Colors.white.withValues(alpha: 0.2),
-                          child: employee.avatarUrl == null
+                          backgroundColor: const Color(0xFF10B981).withValues(alpha: 0.15),
+                          child: (employee.avatarUrl == null || employee.avatarUrl!.isEmpty)
                               ? Text(
-                                  employee.name[0],
-                                  style: const TextStyle(color: Colors.white),
+                                  employee.name.isNotEmpty ? employee.name[0].toUpperCase() : '?',
+                                  style: const TextStyle(
+                                    color: Color(0xFF10B981),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
                                 )
                               : null,
                         ),
@@ -4077,8 +4080,8 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                             children: [
                               Text(
                                 employee.name,
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                style: TextStyle(
+                                  color: textColor,
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -4087,25 +4090,33 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                               Text(
                                 'Salary: ${employee.basicSalary.toStringAsFixed(2)} ${employee.salaryCurrency} | Hours: ${employee.workingHours.toStringAsFixed(1)}',
                                 style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.7),
+                                  color: subtextColor,
                                   fontSize: 13,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 'Hourly Rate: ${hourlyRate.toStringAsFixed(2)} ${employee.salaryCurrency}/hr | Daily Rate: ${dailyRate.toStringAsFixed(2)} ${employee.salaryCurrency}/day',
                                 style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.7),
-                                  fontSize: 13,
+                                  color: subtextColor,
+                                  fontSize: 12.5,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        Icon(
-                          Icons.edit_outlined,
-                          color: Colors.white.withValues(alpha: 0.5),
-                          size: 20,
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.edit_outlined,
+                            color: isDark ? Colors.white70 : const Color(0xFF475569),
+                            size: 18,
+                          ),
                         ),
                       ],
                     ),
@@ -4129,6 +4140,10 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
     CompanyEmployee employee,
     AttendanceProvider provider,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtextColor = isDark ? Colors.white60 : const Color(0xFF64748B);
+
     showGlassDialog(
       context: context,
       title: 'Payroll History',
@@ -4137,9 +4152,9 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
       content: SizedBox(
         width: double.maxFinite,
         child: employee.salaryHistory.isEmpty
-            ? const Text(
+            ? Text(
                 'No payroll history.',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: subtextColor),
               )
             : ListView.builder(
                 shrinkWrap: true,
@@ -4150,16 +4165,19 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                     contentPadding: EdgeInsets.zero,
                     title: Text(
                       '${entry.basicSalary} ${entry.currency} | ${entry.workingHours} hrs',
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(
+                        color: textColor,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     subtitle: Text(
                       '${entry.startDate} to ${entry.endDate ?? 'Present'}',
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.7),
+                        color: subtextColor,
                       ),
                     ),
                     trailing: IconButton(
-                      icon: const Icon(Icons.edit, color: Colors.white),
+                      icon: Icon(Icons.edit_outlined, color: isDark ? Colors.white70 : Colors.black54),
                       onPressed: () {
                         Navigator.pop(context);
                         _showPayrollEditDialog(employee, provider, entry);
@@ -4172,7 +4190,7 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Close', style: TextStyle(color: Colors.grey)),
+          child: Text('Close', style: TextStyle(color: isDark ? Colors.white70 : Colors.black54)),
         ),
         NeuButton(
           icon: const Icon(Icons.add_rounded, size: 18),
@@ -4232,6 +4250,11 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
         ? DateTime.parse(existingEntry.endDate!)
         : null;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtextColor = isDark ? Colors.white60 : const Color(0xFF64748B);
+    final borderCol = (isDark ? Colors.white : Colors.black).withValues(alpha: 0.15);
+
     showGlassDialog(
       context: context,
       title: isEditing
@@ -4265,16 +4288,16 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      style: const TextStyle(color: Colors.white),
+                      style: TextStyle(color: textColor),
                       onChanged: (_) => setState(() {}),
                       decoration: InputDecoration(
                         labelText: 'Basic Salary',
                         labelStyle: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.7),
+                          color: subtextColor,
                         ),
                         enabledBorder: UnderlineInputBorder(
                           borderSide: BorderSide(
-                            color: Colors.white.withValues(alpha: 0.3),
+                            color: borderCol,
                           ),
                         ),
                         focusedBorder: const UnderlineInputBorder(
@@ -4288,17 +4311,20 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                     flex: 1,
                     child: DropdownButtonFormField<String>(
                       initialValue: selectedCurrency,
-                      dropdownColor: const Color(0xFF2A2A3C),
-                      style: const TextStyle(color: Colors.white),
+                      dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+                      style: TextStyle(color: textColor),
                       decoration: InputDecoration(
                         labelText: 'Currency',
                         labelStyle: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.7),
+                          color: subtextColor,
                         ),
                         enabledBorder: UnderlineInputBorder(
                           borderSide: BorderSide(
-                            color: Colors.white.withValues(alpha: 0.3),
+                            color: borderCol,
                           ),
+                        ),
+                        focusedBorder: const UnderlineInputBorder(
+                          borderSide: BorderSide(color: Color(0xFF2E65FF)),
                         ),
                       ),
                       items: ['USD', 'IQD']
@@ -4319,16 +4345,16 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: textColor),
                 onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
                   labelText: 'Working Hours',
                   labelStyle: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.7),
+                    color: subtextColor,
                   ),
                   enabledBorder: UnderlineInputBorder(
                     borderSide: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.3),
+                      color: borderCol,
                     ),
                   ),
                   focusedBorder: const UnderlineInputBorder(
@@ -4342,15 +4368,15 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: textColor),
                 decoration: InputDecoration(
                   labelText: provider.translate('food_allowance'),
                   labelStyle: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.7),
+                    color: subtextColor,
                   ),
                   enabledBorder: UnderlineInputBorder(
                     borderSide: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.3),
+                      color: borderCol,
                     ),
                   ),
                   focusedBorder: const UnderlineInputBorder(
@@ -4364,15 +4390,15 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: textColor),
                 decoration: InputDecoration(
                   labelText: provider.translate('transportation_allowance'),
                   labelStyle: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.7),
+                    color: subtextColor,
                   ),
                   enabledBorder: UnderlineInputBorder(
                     borderSide: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.3),
+                      color: borderCol,
                     ),
                   ),
                   focusedBorder: const UnderlineInputBorder(
@@ -4386,15 +4412,15 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: textColor),
                 decoration: InputDecoration(
                   labelText: provider.translate('other_allowance'),
                   labelStyle: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.7),
+                    color: subtextColor,
                   ),
                   enabledBorder: UnderlineInputBorder(
                     borderSide: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.3),
+                      color: borderCol,
                     ),
                   ),
                   focusedBorder: const UnderlineInputBorder(
@@ -4420,7 +4446,7 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                   decoration: BoxDecoration(
                     border: Border(
                       bottom: BorderSide(
-                        color: Colors.white.withValues(alpha: 0.3),
+                        color: borderCol,
                       ),
                     ),
                   ),
@@ -4428,15 +4454,15 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                     children: [
                       Icon(
                         Icons.calendar_today,
-                        color: Colors.white.withValues(alpha: 0.7),
+                        color: subtextColor,
                         size: 18,
                       ),
                       const SizedBox(width: 12),
                       Text(
                         'Start Date: ${DateFormat('yyyy-MM-dd').format(selectedStartDate)}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
+                        style: TextStyle(
+                          color: textColor,
+                          fontSize: 15,
                         ),
                       ),
                     ],
@@ -4461,7 +4487,7 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                   decoration: BoxDecoration(
                     border: Border(
                       bottom: BorderSide(
-                        color: Colors.white.withValues(alpha: 0.3),
+                        color: borderCol,
                       ),
                     ),
                   ),
@@ -4469,7 +4495,7 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                     children: [
                       Icon(
                         Icons.event_busy,
-                        color: Colors.white.withValues(alpha: 0.7),
+                        color: subtextColor,
                         size: 18,
                       ),
                       const SizedBox(width: 12),
@@ -4478,9 +4504,9 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                           selectedEndDate != null
                               ? 'End Date: ${DateFormat('yyyy-MM-dd').format(selectedEndDate!)}'
                               : 'End Date: Not set (Present)',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
+                          style: TextStyle(
+                            color: textColor,
+                            fontSize: 15,
                           ),
                         ),
                       ),
@@ -4503,7 +4529,7 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.05),
+                  color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF1F5F9),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -4512,15 +4538,15 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                     Text(
                       'Calculated Rates:',
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.5),
+                        color: subtextColor,
                         fontSize: 12,
                       ),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       'Hourly Rate: ${hourlyRate.toStringAsFixed(2)} $selectedCurrency/hr',
-                      style: const TextStyle(
-                        color: Color(0xFF34D399),
+                      style: TextStyle(
+                        color: isDark ? const Color(0xFF34D399) : const Color(0xFF059669),
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                       ),
@@ -4528,8 +4554,8 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                     const SizedBox(height: 4),
                     Text(
                       'Daily Rate: ${dailyRate.toStringAsFixed(2)} $selectedCurrency/day',
-                      style: const TextStyle(
-                        color: Color(0xFF34D399),
+                      style: TextStyle(
+                        color: isDark ? const Color(0xFF34D399) : const Color(0xFF059669),
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                       ),
@@ -4570,9 +4596,9 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                       Navigator.pop(context);
                       _showPayrollHistoryDialog(employee, provider);
                     },
-                    child: const Text(
+                    child: Text(
                       'Cancel',
-                      style: TextStyle(color: Colors.grey),
+                      style: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
                     ),
                   ),
                   NeuButton(
