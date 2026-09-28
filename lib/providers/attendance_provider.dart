@@ -608,7 +608,29 @@ class AttendanceProvider with ChangeNotifier {
       _subscriptions.add(
         _firebaseService.streamEmployees().listen((data) {
           _employees.clear();
-          _employees.addAll(data);
+          for (var emp in data) {
+            // Auto-heal: If employee has basicSalary configured but empty salaryHistory, synthesize initial entry and persist
+            if ((emp.basicSalary > 0 || emp.workingHours > 0) && emp.salaryHistory.isEmpty) {
+              final initialEntry = SalaryHistoryEntry(
+                basicSalary: emp.basicSalary,
+                workingHours: emp.workingHours > 0 ? emp.workingHours : 160.0,
+                currency: emp.salaryCurrency.isNotEmpty ? emp.salaryCurrency : 'USD',
+                startDate: emp.startDate.isNotEmpty ? emp.startDate : '2024-01-01',
+                endDate: null,
+                foodAllowance: emp.foodAllowance,
+                transportationAllowance: emp.transportationAllowance,
+                otherAllowance: emp.otherAllowance,
+              );
+              final healedEmp = emp.copyWith(
+                workingHours: emp.workingHours > 0 ? emp.workingHours : 160.0,
+                salaryHistory: [initialEntry],
+              );
+              _employees.add(healedEmp);
+              _firebaseService.saveEmployee(healedEmp);
+            } else {
+              _employees.add(emp);
+            }
+          }
 
           // --- ENSURE SUPER ADMIN REMAINS PERMANENTLY ---
           if (!_employees.any((e) => e.email == 'admin@company.com')) {

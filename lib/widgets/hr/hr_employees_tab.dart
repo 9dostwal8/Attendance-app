@@ -954,26 +954,73 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
               return;
             }
 
-            final newOrUpdatedEmp = CompanyEmployee(
-              id: isEditing ? employee.id : 'emp_${DateTime.now().millisecondsSinceEpoch}',
-              name: name,
-              email: email,
-              position: pos.isNotEmpty ? pos : 'Team Member',
-              role: selectedRole,
-              password: passwordController.text.trim().isNotEmpty ? passwordController.text.trim() : null,
-              structureId: selectedStructure,
-              groupId: selectedGroup,
-              phoneNumber: phoneController.text.trim(),
-              disabled: isDisabled,
-              startDate: isEditing ? employee.startDate : DateTime.now().toString().split(' ')[0],
-              basicSalary: double.tryParse(salaryController.text) ?? 0.0,
-              annualLeaveBalance: isEditing ? employee.annualLeaveBalance : 24.0,
-              faceEmbedding: isEditing ? employee.faceEmbedding : null,
-            );
+            final salaryVal = double.tryParse(salaryController.text) ?? 0.0;
+            final nowStr = DateTime.now().toString().split(' ')[0];
 
+            CompanyEmployee newOrUpdatedEmp;
             if (isEditing) {
+              List<SalaryHistoryEntry> sHistory = List.from(employee.salaryHistory);
+              if (sHistory.isEmpty && (salaryVal > 0 || employee.workingHours > 0)) {
+                sHistory.add(
+                  SalaryHistoryEntry(
+                    basicSalary: salaryVal > 0 ? salaryVal : employee.basicSalary,
+                    workingHours: employee.workingHours > 0 ? employee.workingHours : 160.0,
+                    currency: employee.salaryCurrency.isNotEmpty ? employee.salaryCurrency : 'USD',
+                    startDate: employee.startDate.isNotEmpty ? employee.startDate : nowStr,
+                    endDate: null,
+                    foodAllowance: employee.foodAllowance,
+                    transportationAllowance: employee.transportationAllowance,
+                    otherAllowance: employee.otherAllowance,
+                  ),
+                );
+              }
+              newOrUpdatedEmp = employee.copyWith(
+                name: name,
+                email: email,
+                position: pos.isNotEmpty ? pos : 'Team Member',
+                role: selectedRole,
+                password: passwordController.text.trim().isNotEmpty ? passwordController.text.trim() : employee.password,
+                structureId: selectedStructure,
+                overrideStructureId: true,
+                groupId: selectedGroup,
+                overrideGroupId: true,
+                phoneNumber: phoneController.text.trim(),
+                disabled: isDisabled,
+                basicSalary: salaryVal,
+                workingHours: employee.workingHours > 0 ? employee.workingHours : 160.0,
+                salaryHistory: sHistory,
+              );
               provider.updateEmployee(newOrUpdatedEmp);
             } else {
+              List<SalaryHistoryEntry> initialHistory = [];
+              if (salaryVal > 0) {
+                initialHistory.add(
+                  SalaryHistoryEntry(
+                    basicSalary: salaryVal,
+                    workingHours: 160.0,
+                    currency: 'USD',
+                    startDate: nowStr,
+                    endDate: null,
+                  ),
+                );
+              }
+              newOrUpdatedEmp = CompanyEmployee(
+                id: 'emp_${DateTime.now().millisecondsSinceEpoch}',
+                name: name,
+                email: email,
+                position: pos.isNotEmpty ? pos : 'Team Member',
+                role: selectedRole,
+                password: passwordController.text.trim().isNotEmpty ? passwordController.text.trim() : null,
+                structureId: selectedStructure,
+                groupId: selectedGroup,
+                phoneNumber: phoneController.text.trim(),
+                disabled: isDisabled,
+                startDate: nowStr,
+                basicSalary: salaryVal,
+                workingHours: 160.0,
+                salaryHistory: initialHistory,
+                annualLeaveBalance: 24.0,
+              );
               provider.addEmployee(newOrUpdatedEmp);
             }
 

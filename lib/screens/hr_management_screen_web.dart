@@ -4144,6 +4144,22 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
     final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
     final subtextColor = isDark ? Colors.white60 : const Color(0xFF64748B);
 
+    final List<SalaryHistoryEntry> displayHistory = List.from(employee.salaryHistory);
+    if (displayHistory.isEmpty && (employee.basicSalary > 0 || employee.workingHours > 0)) {
+      displayHistory.add(
+        SalaryHistoryEntry(
+          basicSalary: employee.basicSalary,
+          workingHours: employee.workingHours > 0 ? employee.workingHours : 160.0,
+          currency: employee.salaryCurrency.isNotEmpty ? employee.salaryCurrency : 'USD',
+          startDate: employee.startDate.isNotEmpty ? employee.startDate : '2024-01-01',
+          endDate: null,
+          foodAllowance: employee.foodAllowance,
+          transportationAllowance: employee.transportationAllowance,
+          otherAllowance: employee.otherAllowance,
+        ),
+      );
+    }
+
     showGlassDialog(
       context: context,
       title: 'Payroll History',
@@ -4151,16 +4167,16 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
       icon: Icons.monetization_on,
       content: SizedBox(
         width: double.maxFinite,
-        child: employee.salaryHistory.isEmpty
+        child: displayHistory.isEmpty
             ? Text(
                 'No payroll history.',
                 style: TextStyle(color: subtextColor),
               )
             : ListView.builder(
                 shrinkWrap: true,
-                itemCount: employee.salaryHistory.length,
+                itemCount: displayHistory.length,
                 itemBuilder: (context, index) {
-                  final entry = employee.salaryHistory[index];
+                  final entry = displayHistory[index];
                   return ListTile(
                     contentPadding: EdgeInsets.zero,
                     title: Text(
@@ -4579,7 +4595,14 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                               e.basicSalary == existingEntry.basicSalary,
                         );
 
+                        final lastEntry = newHistory.isNotEmpty ? newHistory.last : null;
                         final updatedEmployee = employee.copyWith(
+                          basicSalary: lastEntry?.basicSalary ?? 0.0,
+                          workingHours: lastEntry?.workingHours ?? 0.0,
+                          salaryCurrency: lastEntry?.currency ?? employee.salaryCurrency,
+                          foodAllowance: lastEntry?.foodAllowance ?? 0.0,
+                          transportationAllowance: lastEntry?.transportationAllowance ?? 0.0,
+                          otherAllowance: lastEntry?.otherAllowance ?? 0.0,
                           salaryHistory: newHistory,
                         );
                         provider.updateEmployee(updatedEmployee);
