@@ -676,8 +676,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   return provider.translate('overtime_approval');
                 }
                 if (r.type == 'Hourly Leave') {
-                  final hl = provider.translate('hourly_leave');
-                  return hl != 'hourly_leave' ? hl : 'Hourly Leave';
+                  return provider.translate('hourly_leave');
                 }
                 return r.type;
               })
@@ -2237,9 +2236,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             ),
                           ),
                           child: Text(
-                            provider.translate('close') != 'close'
-                                ? provider.translate('close')
-                                : 'Close',
+                            provider.translate('close'),
                             style: TextStyle(
                               color: textColor.withValues(alpha: 0.8),
                               fontWeight: FontWeight.w600,
@@ -2359,9 +2356,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           if (req.type == 'Change Shift' && req.targetShiftId != null) ...[
             _buildDetailRow(
               icon: Icons.schedule,
-              label: provider.translate('target_shift') != 'target_shift'
-                  ? provider.translate('target_shift')
-                  : 'Target Shift',
+              label: provider.translate('target_shift'),
               value: provider.shifts
                   .firstWhere(
                     (s) => s.id == req.targetShiftId,
@@ -2391,9 +2386,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             const SizedBox(height: 6),
             _buildDetailRow(
               icon: Icons.notes_rounded,
-              label: provider.translate('note') != 'note'
-                  ? provider.translate('note')
-                  : 'Note',
+              label: provider.translate('note'),
               value: req.note!,
               textColor: textColor,
             ),

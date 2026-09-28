@@ -314,7 +314,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                                   // Password Field
                                   Text(
-                                    provider.translate('security'),
+                                    provider.translate('password'),
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
@@ -420,7 +420,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     width: double.infinity,
                                     child: NeuButton(
                                       onPressed: _isLoggingIn ? null : _handleLogin,
-                                      label: 'Sign In',
+                                      label: provider.translate('login'),
                                       variant: NeuButtonVariant.primary,
                                       height: 52,
                                       borderRadius: 50,
@@ -436,7 +436,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     child: NeuButton(
                                       onPressed: _simulateFaceAuth,
                                       icon: const Icon(Icons.face_rounded),
-                                      label: 'Sign In with Face ID',
+                                      label: '${provider.translate('login')} (${provider.translate('face_verification')})',
                                       variant: NeuButtonVariant.whitePill,
                                       height: 50,
                                       borderRadius: 50,

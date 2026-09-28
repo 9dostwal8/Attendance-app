@@ -207,6 +207,13 @@ class MyApp extends StatelessWidget {
                 ),
               ),
             ),
+            locale: Locale(provider.currentLanguage),
+            builder: (context, child) {
+              return Directionality(
+                textDirection: provider.currentLanguageDirection,
+                child: child ?? const SizedBox(),
+              );
+            },
             home: provider.isLoggedIn ? const MainNavigationScreen() : const LoginScreen(),
           );
         },

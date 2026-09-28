@@ -297,14 +297,12 @@ Future<void> showNewRequestDialog({
             if (canSubmitForOthers && selectableEmployees.length > 1) ...[
               _buildDropdownFieldWidget(
                 context: context,
-                label: provider.translate('employee') != 'employee'
-                    ? provider.translate('employee')
-                    : 'Submit Request For',
+                label: provider.translate('employee'),
                 value: selectedEmployee.id,
                 items: selectableEmployees.map((emp) {
                   final isSelf = emp.id == currentUser.id;
                   final label = isSelf
-                      ? '${emp.name} (${provider.translate('myself') != 'myself' ? provider.translate('myself') : "Myself"})'
+                      ? '${emp.name} (${provider.translate('myself')})'
                       : '${emp.name} (${emp.position})';
                   return DropdownMenuItem(
                     value: emp.id,
@@ -354,11 +352,7 @@ Future<void> showNewRequestDialog({
                 ),
                 DropdownMenuItem(
                   value: 'Hourly Leave',
-                  child: Text(
-                    provider.translate('hourly_leave') != 'hourly_leave'
-                        ? provider.translate('hourly_leave')
-                        : 'Hourly Leave',
-                  ),
+                  child: Text(provider.translate('hourly_leave')),
                 ),
                 DropdownMenuItem(
                   value: 'Missing Punch',
@@ -366,11 +360,7 @@ Future<void> showNewRequestDialog({
                 ),
                 DropdownMenuItem(
                   value: 'Change Shift',
-                  child: Text(
-                    provider.translate('change_shift') != 'change_shift'
-                        ? provider.translate('change_shift')
-                        : 'Change Shift',
-                  ),
+                  child: Text(provider.translate('change_shift')),
                 ),
               ],
               onChanged: (val) {
@@ -410,9 +400,7 @@ Future<void> showNewRequestDialog({
               const SizedBox(height: 16),
               _buildDropdownFieldWidget(
                 context: context,
-                label: provider.translate('target_shift') != 'target_shift'
-                    ? provider.translate('target_shift')
-                    : 'Target Shift',
+                label: provider.translate('target_shift'),
                 value: selectedShiftId ?? provider.shifts.first.id,
                 items: provider.shifts
                     .map(
@@ -568,9 +556,7 @@ Future<void> showNewRequestDialog({
                   Expanded(
                     child: _buildDialogFieldWidget(
                       context: context,
-                      label: provider.translate('from_hour') != 'from_hour'
-                          ? provider.translate('from_hour')
-                          : 'From Hour',
+                      label: provider.translate('from_hour'),
                       controller: fromTimeController,
                       readOnly: true,
                       onTap: () async {
@@ -642,9 +628,7 @@ Future<void> showNewRequestDialog({
                   Expanded(
                     child: _buildDialogFieldWidget(
                       context: context,
-                      label: provider.translate('to_hour') != 'to_hour'
-                          ? provider.translate('to_hour')
-                          : 'To Hour',
+                      label: provider.translate('to_hour'),
                       controller: toTimeController,
                       readOnly: true,
                       onTap: () async {
@@ -717,10 +701,7 @@ Future<void> showNewRequestDialog({
               const SizedBox(height: 12),
               _buildDialogFieldWidget(
                 context: context,
-                label: provider.translate('calculated_duration') !=
-                        'calculated_duration'
-                    ? provider.translate('calculated_duration')
-                    : 'Calculated Duration (Minutes)',
+                label: provider.translate('calculated_duration'),
                 controller: durController,
                 readOnly: true,
               ),

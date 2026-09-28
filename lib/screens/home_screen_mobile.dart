@@ -489,7 +489,7 @@ class HomeScreenMobile extends StatelessWidget {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text(provider.translate('face_auth_failed') != 'face_auth_failed' ? provider.translate('face_auth_failed') : 'Face authentication failed or cancelled.'),
+                                content: Text(provider.translate('face_auth_failed')),
                                 backgroundColor: Colors.redAccent,
                               )
                             );
@@ -552,7 +552,7 @@ class HomeScreenMobile extends StatelessWidget {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text(provider.translate('face_auth_failed') != 'face_auth_failed' ? provider.translate('face_auth_failed') : 'Face authentication failed or cancelled.'),
+                                content: Text(provider.translate('face_auth_failed')),
                                 backgroundColor: Colors.redAccent,
                               )
                             );

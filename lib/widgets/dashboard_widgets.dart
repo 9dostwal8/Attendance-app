@@ -152,9 +152,10 @@ class AttendanceOverviewChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final provider = Provider.of<AttendanceProvider>(context);
     return DashboardCard(
-      title: 'Attendance Overview',
-      trailing: _buildDropdown(context, 'This Week'),
+      title: provider.translate('attendance_overview'),
+      trailing: _buildDropdown(context, provider.translate('this_week')),
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
       child: SizedBox(
         height: 250,
@@ -287,14 +288,14 @@ class QuickActionsList extends StatelessWidget {
     final hasApprovalRights = isHR || isSuper;
 
     return DashboardCard(
-      title: 'Quick Actions',
+      title: provider.translate('quick_actions'),
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
       child: Column(
         children: [
           if (hasApprovalRights)
             _buildActionItem(
               context,
-              'Approve Requests',
+              '${provider.translate('approve')} ${provider.translate('requests')}',
               Icons.how_to_reg_outlined,
               iconColor: const Color(0xFF10B981),
               badgeCount: provider.pendingApprovalsCount,
@@ -311,7 +312,7 @@ class QuickActionsList extends StatelessWidget {
             ),
           _buildActionItem(
             context,
-            'Submit Request',
+            provider.translate('submit_request'),
             Icons.post_add_outlined,
             iconColor: const Color(0xFF3B82F6),
             onTap: () {
@@ -326,7 +327,7 @@ class QuickActionsList extends StatelessWidget {
           if (isHR) ...[
             _buildActionItem(
               context,
-              'Employees Directory',
+              provider.translate('employees'),
               Icons.manage_accounts_outlined,
               iconColor: const Color(0xFF8B5CF6),
               onTap: () {
@@ -343,7 +344,7 @@ class QuickActionsList extends StatelessWidget {
             ),
             _buildActionItem(
               context,
-              'Holidays & Leaves',
+              provider.translate('holidays'),
               Icons.event_available_outlined,
               iconColor: const Color(0xFFEC4899),
               onTap: () {
@@ -433,8 +434,9 @@ class DepartmentAttendanceChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final provider = Provider.of<AttendanceProvider>(context);
     return DashboardCard(
-      title: 'Department Attendance',
+      title: provider.translate('department_attendance'),
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
       child: Row(
         children: [
@@ -531,8 +533,9 @@ class RecentActivitiesList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final provider = Provider.of<AttendanceProvider>(context);
     return DashboardCard(
-      title: 'Recent Activities',
+      title: provider.translate('recent_activities'),
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
       child: Column(
         children: [
@@ -638,7 +641,7 @@ class PendingApprovalsCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return DashboardCard(
-      title: 'Pending Approvals',
+      title: provider.translate('pending_approvals'),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -652,7 +655,7 @@ class PendingApprovalsCard extends StatelessWidget {
                 border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.3)),
               ),
               child: Text(
-                '${pendingItems.length} pending',
+                '${pendingItems.length} ${provider.translate('status_pending')}',
                 style: const TextStyle(
                   color: Color(0xFFF59E0B),
                   fontWeight: FontWeight.bold,
@@ -712,7 +715,7 @@ class PendingApprovalsCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'All Caught Up!',
+                      provider.translate('no_requests'),
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,

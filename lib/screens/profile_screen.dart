@@ -98,7 +98,7 @@ class ProfileScreen extends StatelessWidget {
 
                         // Theme Selection Section
                         Text(
-                          provider.translate('theme') == 'theme' ? 'Theme Options' : provider.translate('theme'),
+                          provider.translate('theme'),
                           style: TextStyle(
                             color: Theme.of(context).textTheme.bodyLarge?.color?.withValues(alpha: 0.7) ?? ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.7)),
                             fontSize: 13,
@@ -665,7 +665,9 @@ class ProfileScreen extends StatelessWidget {
                   ),
                 ),
                 child: Text(
-                  theme['name']!,
+                  theme['value'] == 'dark'
+                      ? provider.translate('dark_mode')
+                      : provider.translate('light_mode'),
                   style: TextStyle(
                     color: isSelected
                         ? ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black))

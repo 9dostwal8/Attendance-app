@@ -178,7 +178,7 @@ class _ClockScreenState extends State<ClockScreen> {
       if (success != true) {
         scaffoldMessenger.showSnackBar(
           SnackBar(
-            content: Text(provider.translate('face_auth_failed') != 'face_auth_failed' ? provider.translate('face_auth_failed') : 'Face authentication failed or cancelled.'),
+            content: Text(provider.translate('face_auth_failed')),
             backgroundColor: Colors.redAccent,
           )
         );
@@ -223,7 +223,7 @@ class _ClockScreenState extends State<ClockScreen> {
               Icon(Icons.check_circle_outline, color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black))),
               SizedBox(width: 12),
               Text(
-                isClockIn ? 'Successfully Clocked In!' : 'Successfully Clocked Out!',
+                isClockIn ? provider.translate('success_clock_in') : provider.translate('success_clock_out'),
                 style: TextStyle(color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)), fontWeight: FontWeight.bold),
               ),
             ],

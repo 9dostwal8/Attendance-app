@@ -56,6 +56,27 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
     super.dispose();
   }
 
+  String _getTabTitle(HrTab tab, AttendanceProvider provider) {
+    switch (tab) {
+      case HrTab.structures:
+        return provider.translate('structures');
+      case HrTab.shifts:
+        return provider.translate('shifts');
+      case HrTab.groups:
+        return provider.translate('groups');
+      case HrTab.employees:
+        return provider.translate('employees');
+      case HrTab.holidays:
+        return provider.translate('holidays');
+      case HrTab.locations:
+        return provider.translate('locations');
+      case HrTab.payroll:
+        return provider.translate('payroll');
+      case HrTab.dailyReport:
+        return provider.translate('daily_report');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<AttendanceProvider>(context);
@@ -76,7 +97,7 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      _activeTab.toString().split('.').last.toUpperCase(),
+                      _getTabTitle(_activeTab, provider),
                       style: TextStyle(
                         color: (Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black),
                         fontSize: 24,
@@ -118,11 +139,11 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                             child: Row(
                               children: [
                                 _buildBackButton(),
-                                const Expanded(
+                                Expanded(
                                   child: Center(
                                     child: Text(
-                                      'HR Management Pro',
-                                      style: TextStyle(
+                                      provider.translate('hr_management'),
+                                      style: const TextStyle(
                                         color: Colors.white,
                                         fontSize: 22,
                                         fontWeight: FontWeight.bold,
@@ -155,42 +176,42 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                                 _buildGridTab(
                                   tab: HrTab.structures,
                                   icon: Icons.business,
-                                  label: 'Structures',
+                                  label: provider.translate('structures'),
                                 ),
                                 _buildGridTab(
                                   tab: HrTab.shifts,
                                   icon: Icons.access_time,
-                                  label: 'Shifts',
+                                  label: provider.translate('shifts'),
                                 ),
                                 _buildGridTab(
                                   tab: HrTab.groups,
                                   icon: Icons.people_outline,
-                                  label: 'Groups',
+                                  label: provider.translate('groups'),
                                 ),
                                 _buildGridTab(
                                   tab: HrTab.employees,
                                   icon: Icons.manage_accounts_outlined,
-                                  label: 'Employees',
+                                  label: provider.translate('employees'),
                                 ),
                                 _buildGridTab(
                                   tab: HrTab.holidays,
                                   icon: Icons.event_available,
-                                  label: 'Holidays',
+                                  label: provider.translate('holidays'),
                                 ),
                                 _buildGridTab(
                                   tab: HrTab.locations,
                                   icon: Icons.location_on_outlined,
-                                  label: 'Locations',
+                                  label: provider.translate('locations'),
                                 ),
                                 _buildGridTab(
                                   tab: HrTab.payroll,
                                   icon: Icons.attach_money,
-                                  label: 'Payroll',
+                                  label: provider.translate('payroll'),
                                 ),
                                 _buildGridTab(
                                   tab: HrTab.dailyReport,
                                   icon: Icons.bar_chart,
-                                  label: 'Daily Report',
+                                  label: provider.translate('daily_report'),
                                 ),
                               ],
                             ),

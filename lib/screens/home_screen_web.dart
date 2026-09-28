@@ -81,7 +81,7 @@ class _HomeScreenWebState extends State<HomeScreenWeb> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Attendance Management',
+              provider.translate('attendance_management'),
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.w800,
@@ -91,7 +91,7 @@ class _HomeScreenWebState extends State<HomeScreenWeb> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Good morning, $userName! 👋 Here\'s what\'s happening with your team today.',
+              '${provider.translate('welcome_back')}, $userName!',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
@@ -144,25 +144,25 @@ class _HomeScreenWebState extends State<HomeScreenWeb> {
     final screenWidth = MediaQuery.of(context).size.width;
 
     final staffCard = OrderMetricCard(
-      title: 'Total Staff Members',
+      title: provider.translate('total_staff'),
       value: '$totalEmployees',
       icon: Icons.groups_outlined,
     );
 
     final presentCard = OrderMetricCard(
-      title: 'Present Today ($absent absent)',
+      title: '${provider.translate('present_today')} ($absent ${provider.translate('absent')})',
       value: '$presentToday',
       icon: Icons.check_circle_outline_rounded,
     );
 
     final leaveCard = OrderMetricCard(
-      title: 'On Approved Leave',
+      title: provider.translate('on_leave'),
       value: '$onLeave',
       icon: Icons.flight_takeoff_rounded,
     );
 
     final completionCard = OrderCompletionCard(
-      title: 'Today Attendance Complete',
+      title: provider.translate('attendance_overview'),
       completedCount: presentToday,
       totalCount: totalEmployees > 0 ? totalEmployees : 1,
     );

@@ -430,13 +430,9 @@ class _RequestsScreenState extends State<RequestsScreen> {
       case 'Forgot to Clock Out':
         return provider.translate('forgot_to_clock_out');
       case 'Hourly Leave':
-        return provider.translate('hourly_leave') != 'hourly_leave'
-            ? provider.translate('hourly_leave')
-            : 'Hourly Leave';
+        return provider.translate('hourly_leave');
       case 'Change Shift':
-        return provider.translate('change_shift') != 'change_shift'
-            ? provider.translate('change_shift')
-            : 'Change Shift';
+        return provider.translate('change_shift');
       case 'Missing Punch':
         return provider.translate('missing_punch');
       default:
@@ -724,7 +720,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
                     Text(
                       request.type == 'Change Shift' &&
                               request.targetShiftId != null
-                          ? '${provider.translate('target_shift') != 'target_shift' ? provider.translate('target_shift') : 'Target Shift'}: ${provider.shifts.firstWhere(
+                          ? '${provider.translate('target_shift')}: ${provider.shifts.firstWhere(
                               (s) => s.id == request.targetShiftId,
                               orElse: () => WorkShift(id: '', name: 'Unknown', startTime: '', endTime: ''),
                             ).name}'
@@ -783,10 +779,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
-                                  provider.translate('request_deleted') !=
-                                          'request_deleted'
-                                      ? provider.translate('request_deleted')
-                                      : 'Request deleted.',
+                                  provider.translate('request_deleted'),
                                 ),
                                 backgroundColor: Colors.redAccent,
                               ),
@@ -954,10 +947,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(
-                                    provider.translate('request_deleted') !=
-                                            'request_deleted'
-                                        ? provider.translate('request_deleted')
-                                        : 'Request deleted.',
+                                    provider.translate('request_deleted'),
                                   ),
                                   backgroundColor: Colors.redAccent,
                                 ),
@@ -1047,7 +1037,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
                         Text(
                           request.type == 'Change Shift' &&
                                   request.targetShiftId != null
-                              ? '${provider.translate('target_shift') != 'target_shift' ? provider.translate('target_shift') : 'Target Shift'}: ${provider.shifts.firstWhere(
+                              ? '${provider.translate('target_shift')}: ${provider.shifts.firstWhere(
                                   (s) => s.id == request.targetShiftId,
                                   orElse: () => WorkShift(id: '', name: 'Unknown', startTime: '', endTime: ''),
                                 ).name}'
@@ -1310,25 +1300,13 @@ class _RequestsScreenState extends State<RequestsScreen> {
                                     size: 14,
                                   ),
                                   SizedBox(width: 4),
-                                  Builder(
-                                    builder: (context) {
-                                      final hasHRManager = provider.employees.any(
-                                        (e) => (e.role == 'hr' || e.role == 'admin') && e.id != employee.id,
-                                      );
-                                      final isDirectApproval = canActAsHR || !hasHRManager;
-                                      return Text(
-                                        isDirectApproval
-                                            ? provider.translate('approve')
-                                            : (provider.translate('approve') != 'approve'
-                                                ? provider.translate('approve')
-                                                : 'Approve & Forward to HR'),
-                                        style: TextStyle(
-                                          color: Color(0xFFA7F3D0),
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      );
-                                    },
+                                  Text(
+                                    provider.translate('approve'),
+                                    style: const TextStyle(
+                                      color: Color(0xFFA7F3D0),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -1461,14 +1439,12 @@ class _RequestsScreenState extends State<RequestsScreen> {
               if (canSubmitForOthers && selectableEmployees.length > 1) ...[
                 _buildDropdownField(
                   context: context,
-                  label: provider.translate('employee') != 'employee'
-                      ? provider.translate('employee')
-                      : 'Submit Request For',
+                  label: provider.translate('employee'),
                   value: selectedEmployee.id,
                   items: selectableEmployees.map((emp) {
                     final isSelf = emp.id == currentUser.id;
                     final label = isSelf
-                        ? '${emp.name} (${provider.translate('myself') != 'myself' ? provider.translate('myself') : "Myself"})'
+                        ? '${emp.name} (${provider.translate('myself')})'
                         : '${emp.name} (${emp.position})';
                     return DropdownMenuItem(
                       value: emp.id,
@@ -1521,11 +1497,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
                   ),
                   DropdownMenuItem(
                     value: 'Hourly Leave',
-                    child: Text(
-                      provider.translate('hourly_leave') != 'hourly_leave'
-                          ? provider.translate('hourly_leave')
-                          : 'Hourly Leave',
-                    ),
+                    child: Text(provider.translate('hourly_leave')),
                   ),
                   DropdownMenuItem(
                     value: 'Missing Punch',
@@ -1533,11 +1505,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
                   ),
                   DropdownMenuItem(
                     value: 'Change Shift',
-                    child: Text(
-                      provider.translate('change_shift') != 'change_shift'
-                          ? provider.translate('change_shift')
-                          : 'Change Shift',
-                    ),
+                    child: Text(provider.translate('change_shift')),
                   ),
                 ],
                 onChanged: (val) {
@@ -1580,9 +1548,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
                 SizedBox(height: 16),
                 _buildDropdownField(
                   context: context,
-                  label: provider.translate('target_shift') != 'target_shift'
-                      ? provider.translate('target_shift')
-                      : 'Target Shift',
+                  label: provider.translate('target_shift'),
                   value: selectedShiftId ?? provider.shifts.first.id,
                   items: provider.shifts
                       .map(
@@ -1746,9 +1712,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
                   children: [
                     Expanded(
                       child: _buildDialogField(
-                        provider.translate('from_hour') != 'from_hour'
-                            ? provider.translate('from_hour')
-                            : 'From Hour',
+                        provider.translate('from_hour'),
                         fromTimeController,
                         readOnly: true,
                         onTap: () async {
@@ -1826,9 +1790,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
                     SizedBox(width: 16),
                     Expanded(
                       child: _buildDialogField(
-                        provider.translate('to_hour') != 'to_hour'
-                            ? provider.translate('to_hour')
-                            : 'To Hour',
+                        provider.translate('to_hour'),
                         toTimeController,
                         readOnly: true,
                         onTap: () async {
@@ -1907,10 +1869,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
                 ),
                 SizedBox(height: 12),
                 _buildDialogField(
-                  provider.translate('calculated_duration') !=
-                          'calculated_duration'
-                      ? provider.translate('calculated_duration')
-                      : 'Calculated Duration (Minutes)',
+                  provider.translate('calculated_duration'),
                   durController,
                   readOnly: true,
                 ),
