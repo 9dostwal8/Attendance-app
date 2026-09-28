@@ -335,20 +335,31 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
   }
 
   Widget _buildSearchBar(String hint) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
       child: GlassContainer(
         padding: const EdgeInsets.symmetric(horizontal: 16),
+        borderRadius: 12.0,
         child: TextField(
           controller: _searchController,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(
+            fontSize: 14,
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+          ),
           decoration: InputDecoration(
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(vertical: 11),
             hintText: hint,
-            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
+            hintStyle: TextStyle(
+              fontSize: 14,
+              color: isDark ? Colors.white54 : Colors.grey.shade400,
+            ),
             border: InputBorder.none,
             icon: Icon(
               Icons.search,
-              color: Colors.white.withValues(alpha: 0.7),
+              size: 20,
+              color: isDark ? Colors.white70 : Colors.grey.shade500,
             ),
           ),
           onChanged: (value) {

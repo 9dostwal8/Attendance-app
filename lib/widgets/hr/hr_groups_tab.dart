@@ -44,17 +44,19 @@ class _HrGroupsTabState extends State<HrGroupsTab> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final crossAxisCount = constraints.maxWidth > 900
-            ? 3
-            : constraints.maxWidth > 600
-                ? 2
-                : 1;
+        final crossAxisCount = constraints.maxWidth > 1400
+            ? 4
+            : constraints.maxWidth > 950
+                ? 3
+                : constraints.maxWidth > 650
+                    ? 2
+                    : 1;
 
         return GridView.builder(
-          padding: const EdgeInsets.only(bottom: 24),
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            childAspectRatio: 1.5,
+            childAspectRatio: crossAxisCount == 1 ? 2.5 : (crossAxisCount == 2 ? 2.05 : 2.2),
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
           ),
@@ -69,72 +71,213 @@ class _HrGroupsTabState extends State<HrGroupsTab> {
 
   Widget _buildGroupCard(BuildContext context, EmployeeGroup group, AttendanceProvider provider) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtextColor = isDark ? Colors.white60 : const Color(0xFF64748B);
+
+    WorkShift? assignedShift;
+    if (group.shiftId.isNotEmpty) {
+      try {
+        assignedShift = provider.shifts.firstWhere((s) => s.id == group.shiftId);
+      } catch (_) {}
+    }
+
+    final memberCount = provider.employees.where((e) => e.groupId == group.id).length;
 
     return GlassContainer(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+          // Top Row: Group Icon + Name & Subtitle + Edit/Delete Actions
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                width: 42,
+                height: 42,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: const Color(0xFFF59E0B).withValues(alpha: 0.25),
+                  ),
                 ),
                 child: const Icon(
                   Icons.group_outlined,
                   color: Color(0xFFF59E0B),
-                  size: 24,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      group.name,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      assignedShift != null ? 'Shift: ${assignedShift.name}' : 'No Shift Assigned',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: subtextColor,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
               ),
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined, size: 20),
-                    color: isDark ? Colors.white70 : Colors.black54,
-                    onPressed: () {
-                      if (widget.onEdit != null) {
-                        widget.onEdit!(group);
-                      } else {
-                        showGroupDialog(context, group: group);
-                      }
-                    },
+                  Tooltip(
+                    message: 'Edit Group',
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(6),
+                      onTap: () {
+                        if (widget.onEdit != null) {
+                          widget.onEdit!(group);
+                        } else {
+                          showGroupDialog(context, group: group);
+                        }
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(5),
+                        child: Icon(
+                          Icons.edit_outlined,
+                          size: 18,
+                          color: isDark ? Colors.white70 : Colors.black54,
+                        ),
+                      ),
+                    ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline, size: 20),
-                    color: Colors.red.shade400,
-                    onPressed: () {
-                      if (widget.onDelete != null) {
-                        widget.onDelete!(group.id);
-                      } else {
-                        _showDeleteConfirm(context, group.id, provider);
-                      }
-                    },
+                  const SizedBox(width: 4),
+                  Tooltip(
+                    message: 'Delete Group',
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(6),
+                      onTap: () {
+                        if (widget.onDelete != null) {
+                          widget.onDelete!(group.id);
+                        } else {
+                          _showDeleteConfirm(context, group.id, provider);
+                        }
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.all(5),
+                        child: Icon(
+                          Icons.delete_outline,
+                          size: 18,
+                          color: Color(0xFFEF4444),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
             ],
           ),
-          const Spacer(),
-          Text(
-            group.name,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : const Color(0xFF1E293B),
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+
+          // Divider
+          Divider(
+            height: 16,
+            thickness: 1,
+            color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.06),
           ),
-          const SizedBox(height: 6),
-          Text(
-            'Leave Addition: ${group.annualLeaveAdditionType}',
-            style: TextStyle(
-              fontSize: 13,
-              color: isDark ? Colors.white60 : Colors.grey.shade600,
+
+          // Details Grid (2 rows)
+          Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildInfoChip(
+                      icon: Icons.schedule_rounded,
+                      iconColor: const Color(0xFF10B981),
+                      label: assignedShift != null ? assignedShift.name : 'No Shift',
+                      isDark: isDark,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildInfoChip(
+                      icon: Icons.people_alt_outlined,
+                      iconColor: const Color(0xFF2E65FF),
+                      label: '$memberCount Members',
+                      isDark: isDark,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildInfoChip(
+                      icon: Icons.beach_access_outlined,
+                      iconColor: const Color(0xFFF59E0B),
+                      label: 'Leave: ${group.annualLeaveAdditionType}',
+                      isDark: isDark,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildInfoChip(
+                      icon: Icons.more_time_rounded,
+                      iconColor: const Color(0xFF8B5CF6),
+                      label: 'Overtime: ${group.overtimeAllowed ? 'Allowed' : 'Off'}',
+                      isDark: isDark,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoChip({
+    required IconData icon,
+    required Color iconColor,
+    required String label,
+    required bool isDark,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withValues(alpha: 0.03) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: iconColor),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w500,
+                color: isDark ? Colors.white70 : const Color(0xFF475569),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

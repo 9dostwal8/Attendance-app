@@ -44,17 +44,19 @@ class _HrHolidaysTabState extends State<HrHolidaysTab> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final crossAxisCount = constraints.maxWidth > 900
-            ? 3
-            : constraints.maxWidth > 600
-                ? 2
-                : 1;
+        final crossAxisCount = constraints.maxWidth > 1400
+            ? 4
+            : constraints.maxWidth > 950
+                ? 3
+                : constraints.maxWidth > 650
+                    ? 2
+                    : 1;
 
         return GridView.builder(
-          padding: const EdgeInsets.only(bottom: 24),
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            childAspectRatio: 1.5,
+            childAspectRatio: crossAxisCount == 1 ? 2.5 : (crossAxisCount == 2 ? 2.05 : 2.2),
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
           ),
@@ -69,73 +71,195 @@ class _HrHolidaysTabState extends State<HrHolidaysTab> {
 
   Widget _buildHolidayCard(BuildContext context, Holiday holiday, AttendanceProvider provider) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtextColor = isDark ? Colors.white60 : const Color(0xFF64748B);
+
+    int days = 1;
+    final from = DateTime.tryParse(holiday.fromDate);
+    final to = DateTime.tryParse(holiday.toDate);
+    if (from != null && to != null) {
+      days = to.difference(from).inDays + 1;
+      if (days < 1) days = 1;
+    }
+
+    final groupsCount = holiday.groupIds.isEmpty ? 'All Groups' : '${holiday.groupIds.length} Groups';
 
     return GlassContainer(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                width: 42,
+                height: 42,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEC4899).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  color: const Color(0xFFEC4899).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: const Color(0xFFEC4899).withValues(alpha: 0.25),
+                  ),
                 ),
                 child: const Icon(
                   Icons.beach_access_outlined,
                   color: Color(0xFFEC4899),
-                  size: 24,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      holiday.name,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '$days ${days == 1 ? "day" : "days"} duration',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: subtextColor,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
               ),
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined, size: 20),
-                    color: isDark ? Colors.white70 : Colors.black54,
-                    onPressed: () {
-                      if (widget.onEdit != null) {
-                        widget.onEdit!(holiday);
-                      } else {
-                        showHolidayDialog(context, holiday: holiday);
-                      }
-                    },
+                  Tooltip(
+                    message: 'Edit Holiday',
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(6),
+                      onTap: () {
+                        if (widget.onEdit != null) {
+                          widget.onEdit!(holiday);
+                        } else {
+                          showHolidayDialog(context, holiday: holiday);
+                        }
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(5),
+                        child: Icon(
+                          Icons.edit_outlined,
+                          size: 18,
+                          color: isDark ? Colors.white70 : Colors.black54,
+                        ),
+                      ),
+                    ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline, size: 20),
-                    color: Colors.red.shade400,
-                    onPressed: () {
-                      if (widget.onDelete != null) {
-                        widget.onDelete!(holiday.id);
-                      } else {
-                        _showDeleteConfirm(context, holiday.id, provider);
-                      }
-                    },
+                  const SizedBox(width: 4),
+                  Tooltip(
+                    message: 'Delete Holiday',
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(6),
+                      onTap: () {
+                        if (widget.onDelete != null) {
+                          widget.onDelete!(holiday.id);
+                        } else {
+                          _showDeleteConfirm(context, holiday.id, provider);
+                        }
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.all(5),
+                        child: Icon(
+                          Icons.delete_outline,
+                          size: 18,
+                          color: Color(0xFFEF4444),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
             ],
           ),
-          const Spacer(),
-          Text(
-            holiday.name,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : const Color(0xFF1E293B),
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+
+          Divider(
+            height: 16,
+            thickness: 1,
+            color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.06),
           ),
-          const SizedBox(height: 6),
-          Text(
-            'From: ${holiday.fromDate} To: ${holiday.toDate}',
-            style: TextStyle(
-              fontSize: 13,
-              color: isDark ? Colors.white60 : Colors.grey.shade600,
-            ),
+
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white.withValues(alpha: 0.03) : const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.date_range_outlined, size: 14, color: Color(0xFFEC4899)),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          holiday.fromDate == holiday.toDate
+                              ? holiday.fromDate
+                              : '${holiday.fromDate} → ${holiday.toDate}',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w500,
+                            color: isDark ? Colors.white70 : const Color(0xFF475569),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white.withValues(alpha: 0.03) : const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.groups_outlined, size: 14, color: Color(0xFF2E65FF)),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          groupsCount,
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w500,
+                            color: isDark ? Colors.white70 : const Color(0xFF475569),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

@@ -45,17 +45,19 @@ class _HrStructuresTabState extends State<HrStructuresTab> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final crossAxisCount = constraints.maxWidth > 1050
-            ? 3
-            : constraints.maxWidth > 650
-                ? 2
-                : 1;
+        final crossAxisCount = constraints.maxWidth > 1400
+            ? 4
+            : constraints.maxWidth > 950
+                ? 3
+                : constraints.maxWidth > 650
+                    ? 2
+                    : 1;
 
         return GridView.builder(
-          padding: const EdgeInsets.only(bottom: 24),
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            childAspectRatio: crossAxisCount == 1 ? 2.1 : 1.45,
+            childAspectRatio: crossAxisCount == 1 ? 2.5 : (crossAxisCount == 2 ? 2.05 : 2.2),
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
           ),

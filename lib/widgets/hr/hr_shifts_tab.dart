@@ -44,17 +44,19 @@ class _HrShiftsTabState extends State<HrShiftsTab> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final crossAxisCount = constraints.maxWidth > 1050
-            ? 3
-            : constraints.maxWidth > 650
-                ? 2
-                : 1;
+        final crossAxisCount = constraints.maxWidth > 1400
+            ? 4
+            : constraints.maxWidth > 950
+                ? 3
+                : constraints.maxWidth > 650
+                    ? 2
+                    : 1;
 
         return GridView.builder(
-          padding: const EdgeInsets.only(bottom: 24),
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            childAspectRatio: crossAxisCount == 1 ? 1.85 : 1.35,
+            childAspectRatio: crossAxisCount == 1 ? 2.2 : (crossAxisCount == 2 ? 1.75 : 1.95),
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
           ),
@@ -268,7 +270,7 @@ class _HrShiftsTabState extends State<HrShiftsTab> {
 
           // Divider
           Divider(
-            height: 18,
+            height: 14,
             thickness: 1,
             color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.06),
           ),
@@ -300,7 +302,7 @@ class _HrShiftsTabState extends State<HrShiftsTab> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               // Row 2: Break & Grace
               Row(
                 children: [
@@ -327,10 +329,10 @@ class _HrShiftsTabState extends State<HrShiftsTab> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               // Row 3: Working Days Indicators
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: isDark
                       ? Colors.white.withValues(alpha: 0.03)
