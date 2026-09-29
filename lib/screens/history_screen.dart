@@ -1102,7 +1102,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         const Color(0xFFFF5C5C),
       ),
       _buildMiniSummaryCard(
-        'Deficit',
+        provider.translate('deficit'),
         totalDeficitStr,
         const Color(0xFFFF5C5C),
       ),
@@ -1297,7 +1297,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                       color: const Color(0xFFFF5C5C),
                                     ),
                                     _buildHeaderCell(
-                                      'Deficit',
+                                      provider.translate('deficit'),
                                       color: const Color(0xFFFF5C5C),
                                     ),
                                     _buildHeaderCell(

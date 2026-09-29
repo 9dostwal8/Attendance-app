@@ -1534,7 +1534,7 @@ class _CustomCalendarState extends State<CustomCalendar> {
               ),
               _buildLegendItem(
                 color: const Color(0xFFFF3B30),
-                label: 'Deficit',
+                label: attendanceProvider.translate('deficit'),
                 isIcon: false,
               ),
               _buildLegendItem(
