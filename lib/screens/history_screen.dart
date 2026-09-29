@@ -2010,7 +2010,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final dayNameEng = DateFormat('EEEE').format(date).toLowerCase();
     final translatedDay = provider.translate(dayNameEng);
     final formattedDateStr =
-        '$translatedDay, ${DateFormat('d MMMM yyyy').format(date)}';
+        '$translatedDay, ${_formatLocalizedDate(date, provider)}';
     final requests = (rowData['requests'] as List<Request>?) ?? [];
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor =
@@ -2175,7 +2175,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
-                                  'No leave, shift change, or punch correction requests were submitted for this date.',
+                                  provider.translate('no_requests_for_date'),
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     color: textColor.withValues(alpha: 0.5),
@@ -2315,7 +2315,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      req.date,
+                      req.date
+                          .replaceAll('January', provider.translate('month_1'))
+                          .replaceAll('February', provider.translate('month_2'))
+                          .replaceAll('March', provider.translate('month_3'))
+                          .replaceAll('April', provider.translate('month_4'))
+                          .replaceAll('May', provider.translate('month_5'))
+                          .replaceAll('June', provider.translate('month_6'))
+                          .replaceAll('July', provider.translate('month_7'))
+                          .replaceAll('August', provider.translate('month_8'))
+                          .replaceAll('September', provider.translate('month_9'))
+                          .replaceAll('October', provider.translate('month_10'))
+                          .replaceAll('November', provider.translate('month_11'))
+                          .replaceAll('December', provider.translate('month_12')),
                       style: TextStyle(
                         color: textColor.withValues(alpha: 0.5),
                         fontSize: 11,
@@ -2376,7 +2388,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
               label: provider.translate('duration'),
               value: req.duration
                   .replaceAll('Clock In:', provider.translate('clock_in_colon'))
-                  .replaceAll('Clock Out:', provider.translate('clock_out_colon')),
+                  .replaceAll('Clock Out:', provider.translate('clock_out_colon'))
+                  .replaceAll(RegExp(r'\bDays\b', caseSensitive: false), provider.translate('unit_days'))
+                  .replaceAll(RegExp(r'\bDay\b', caseSensitive: false), provider.translate('day_unit')),
               textColor: textColor,
             ),
           ],
@@ -2448,18 +2462,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
         submitDate = DateTime(submitDate.year, submitDate.month, submitDate.day, 8, 30);
       } catch (_) {}
     }
-    final formattedSubmitDate = DateFormat('MMM d, yyyy • hh:mm a').format(submitDate);
+    final formattedSubmitDate = _formatLocalizedDateTime(submitDate, provider);
 
     // 3. Structure Supervisor Resolution
-    String supervisorName = 'Supervisor';
-    String supervisorRole = 'Structure Supervisor';
+    String supervisorName = provider.translate('role_supervisor');
+    String supervisorRole = provider.translate('role_supervisor');
     if (req.supervisorActionBy != null && req.supervisorActionBy!.isNotEmpty) {
       final sMatch = provider.employees.where(
         (e) => e.id == req.supervisorActionBy || e.name.toLowerCase() == req.supervisorActionBy!.toLowerCase(),
       ).firstOrNull;
       if (sMatch != null) {
         supervisorName = sMatch.name;
-        supervisorRole = sMatch.position.isNotEmpty ? sMatch.position : 'Structure Supervisor';
+        supervisorRole = sMatch.position.isNotEmpty ? sMatch.position : provider.translate('role_supervisor');
       }
     } else {
       // Find supervisor of the employee's structure
@@ -2469,21 +2483,22 @@ class _HistoryScreenState extends State<HistoryScreen> {
           final sMatch = provider.employees.where((e) => e.id == struct!.supervisorId).firstOrNull;
           if (sMatch != null) {
             supervisorName = sMatch.name;
-            supervisorRole = sMatch.position.isNotEmpty ? sMatch.position : 'Structure Supervisor';
+            supervisorRole = sMatch.position.isNotEmpty ? sMatch.position : provider.translate('role_supervisor');
           }
         }
       }
     }
+    supervisorRole = _translateRole(supervisorRole, provider);
 
     DateTime supervisorDate = submitDate.add(const Duration(minutes: 30));
     if (req.supervisorActionDate != null && req.supervisorActionDate!.isNotEmpty) {
       supervisorDate = DateTime.tryParse(req.supervisorActionDate!) ?? supervisorDate;
     }
-    final formattedSupervisorDate = DateFormat('MMM d, yyyy • hh:mm a').format(supervisorDate);
+    final formattedSupervisorDate = _formatLocalizedDateTime(supervisorDate, provider);
 
     // 4. HR Manager Resolution
-    String hrName = 'HR Manager';
-    String hrRole = 'HR Management';
+    String hrName = provider.translate('role_hr_manager');
+    String hrRole = provider.translate('role_hr_manager');
     final hrActionTarget = req.hrActionBy ?? (req.supervisorActionBy == null ? req.actionBy : null);
     if (hrActionTarget != null && hrActionTarget.isNotEmpty) {
       final hMatch = provider.employees.where(
@@ -2491,7 +2506,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       ).firstOrNull;
       if (hMatch != null) {
         hrName = hMatch.name;
-        hrRole = hMatch.position.isNotEmpty ? hMatch.position : 'HR Management';
+        hrRole = hMatch.position.isNotEmpty ? hMatch.position : provider.translate('role_hr_manager');
       }
     } else {
       final hrEmp = provider.employees.where(
@@ -2499,16 +2514,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
       ).firstOrNull ?? provider.employees.where((e) => e.role == 'hr' || e.role == 'admin').firstOrNull;
       if (hrEmp != null) {
         hrName = hrEmp.name;
-        hrRole = hrEmp.position.isNotEmpty ? hrEmp.position : 'HR Management';
+        hrRole = hrEmp.position.isNotEmpty ? hrEmp.position : provider.translate('role_hr_manager');
       }
     }
+    hrRole = _translateRole(hrRole, provider);
 
     DateTime hrDate = supervisorDate.add(const Duration(minutes: 30));
     final hrDateTarget = req.hrActionDate ?? (req.supervisorActionDate == null ? req.actionDate : null);
     if (hrDateTarget != null && hrDateTarget.isNotEmpty) {
       hrDate = DateTime.tryParse(hrDateTarget) ?? hrDate;
     }
-    final formattedHrDate = DateFormat('MMM d, yyyy • hh:mm a').format(hrDate);
+    final formattedHrDate = _formatLocalizedDateTime(hrDate, provider);
 
     final isApproved = req.status == 'Approved';
     final isRejected = req.status == 'Rejected';
@@ -2543,28 +2559,30 @@ class _HistoryScreenState extends State<HistoryScreen> {
     if (isSupApproved) {
       supColor = const Color(0xFF10B981);
       supIcon = Icons.check_circle_rounded;
-      supTitle = 'Approved by $supervisorName';
+      supTitle = provider.translate('approved_by').replaceAll('{name}', supervisorName);
       supSubtitle = '$supervisorRole • $formattedSupervisorDate';
     } else if (isSupRejected) {
       supColor = const Color(0xFFEF4444);
       supIcon = Icons.cancel_rounded;
-      supTitle = 'Rejected by $supervisorName';
+      supTitle = provider.translate('rejected_by').replaceAll('{name}', supervisorName);
       supSubtitle = '$supervisorRole • $formattedSupervisorDate';
     } else if (isSupPending) {
       supColor = const Color(0xFFF59E0B);
       supIcon = Icons.hourglass_top_rounded;
-      supTitle = 'Awaiting Supervisor Review';
-      supSubtitle = 'Pending review by $supervisorName ($supervisorRole)';
+      supTitle = provider.translate('awaiting_supervisor_review');
+      supSubtitle = provider.translate('pending_review_by')
+          .replaceAll('{name}', supervisorName)
+          .replaceAll('{role}', supervisorRole);
     } else if (isSupBypassed) {
       supColor = const Color(0xFF3B82F6);
       supIcon = Icons.check_circle_outline_rounded;
-      supTitle = 'Passed Supervisor Review';
-      supSubtitle = 'Structure has no supervisor assigned (Passed)';
+      supTitle = provider.translate('passed_supervisor_review');
+      supSubtitle = provider.translate('no_supervisor_assigned');
     } else {
       supColor = textColor.withValues(alpha: 0.3);
       supIcon = Icons.radio_button_unchecked_rounded;
-      supTitle = 'Supervisor Review';
-      supSubtitle = 'Pending';
+      supTitle = provider.translate('supervisor_review');
+      supSubtitle = provider.translate('status_pending');
     }
 
     // Determine Step 3 (HR Manager) State
@@ -2584,40 +2602,44 @@ class _HistoryScreenState extends State<HistoryScreen> {
       if (req.hrActionBy == null && req.supervisorActionBy != null && !hasHRManager) {
         hrColor = const Color(0xFF10B981);
         hrIcon = Icons.check_circle_rounded;
-        hrTitle = 'Approved (Passed HR Review)';
-        hrSubtitle = 'No HR Manager configured (Passed)';
+        hrTitle = provider.translate('approved_passed_hr');
+        hrSubtitle = provider.translate('no_hr_configured');
       } else if (req.hrActionBy == null && req.supervisorActionBy == null && !hasHRManager) {
         hrColor = const Color(0xFF10B981);
         hrIcon = Icons.check_circle_rounded;
-        hrTitle = 'Auto-Approved';
-        hrSubtitle = 'No supervisor or HR Manager required (Passed)';
+        hrTitle = provider.translate('auto_approved');
+        hrSubtitle = provider.translate('no_supervisor_hr_required');
       } else {
         hrColor = const Color(0xFF10B981);
         hrIcon = Icons.check_circle_rounded;
-        hrTitle = 'Approved by $hrName';
-        hrSubtitle = '$hrRole • $formattedHrDate (Message sent to employee)';
+        hrTitle = provider.translate('approved_by').replaceAll('{name}', hrName);
+        hrSubtitle = '$hrRole • $formattedHrDate ${provider.translate('msg_sent_employee')}';
       }
     } else if (isHrRejected) {
       hrColor = const Color(0xFFEF4444);
       hrIcon = Icons.cancel_rounded;
-      hrTitle = 'Rejected by $hrName';
+      hrTitle = provider.translate('rejected_by').replaceAll('{name}', hrName);
       hrSubtitle = '$hrRole • $formattedHrDate';
     } else if (isHrPending) {
       hrColor = const Color(0xFF8B5CF6);
       hrIcon = Icons.hourglass_top_rounded;
-      hrTitle = 'Awaiting HR Manager Approval';
-      hrSubtitle = 'Assigned to $hrName ($hrRole)';
+      hrTitle = provider.translate('awaiting_hr_approval');
+      hrSubtitle = provider.translate('assigned_to')
+          .replaceAll('{name}', hrName)
+          .replaceAll('{role}', hrRole);
     } else if (isSupRejected) {
       hrColor = textColor.withValues(alpha: 0.3);
       hrIcon = Icons.block_rounded;
-      hrTitle = 'HR Manager Review';
-      hrSubtitle = 'Terminated due to supervisor rejection';
+      hrTitle = provider.translate('hr_manager_review');
+      hrSubtitle = provider.translate('terminated_supervisor_rejection');
     } else {
       hrColor = textColor.withValues(alpha: 0.3);
       hrIcon = Icons.radio_button_unchecked_rounded;
-      hrTitle = 'HR Manager Review';
-      hrSubtitle = 'Pending supervisor approval first';
+      hrTitle = provider.translate('hr_manager_review');
+      hrSubtitle = provider.translate('pending_supervisor_approval');
     }
+
+    submitterRole = _translateRole(submitterRole, provider);
 
     return Container(
       margin: const EdgeInsets.only(top: 14),
@@ -2641,7 +2663,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ),
               const SizedBox(width: 8),
               Text(
-                'Approval Workflow',
+                provider.translate('approval_workflow'),
                 style: TextStyle(
                   color: textColor,
                   fontSize: 12,
@@ -2662,7 +2684,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     Icon(overallIcon, size: 12, color: overallColor),
                     const SizedBox(width: 4),
                     Text(
-                      req.status,
+                      _translateRequestStatus(req.status, provider),
                       style: TextStyle(
                         color: overallColor,
                         fontSize: 11,
@@ -2710,7 +2732,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '1. Registered by $submitterName',
+                        provider.translate('registered_by_step').replaceAll('{name}', submitterName),
                         style: TextStyle(
                           color: textColor,
                           fontSize: 13,
@@ -2929,6 +2951,34 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
+  String _translateRole(String rawRole, AttendanceProvider provider) {
+    final lower = rawRole.trim().toLowerCase();
+    if (lower == 'super administrator' || lower == 'super admin' || lower == 'admin') {
+      return provider.translate('role_super_admin');
+    }
+    if (lower == 'structure supervisor' || lower == 'supervisor') {
+      return provider.translate('role_supervisor');
+    }
+    if (lower == 'hr management' || lower == 'hr manager' || lower == 'hr') {
+      return provider.translate('role_hr_manager');
+    }
+    if (lower == 'employee' || lower == 'staff') {
+      return provider.translate('role_employee');
+    }
+    return rawRole;
+  }
+
+  String _formatLocalizedDate(DateTime dt, AttendanceProvider provider) {
+    final monthName = provider.translate('month_${dt.month}');
+    return '$monthName ${dt.day}, ${dt.year}';
+  }
+
+  String _formatLocalizedDateTime(DateTime dt, AttendanceProvider provider) {
+    final monthName = provider.translate('month_${dt.month}');
+    final timeStr = DateFormat('hh:mm a').format(dt);
+    return '$monthName ${dt.day}, ${dt.year} • $timeStr';
+  }
+
   String _translateRequestStatus(
     String rawStatus,
     AttendanceProvider provider,
@@ -2938,6 +2988,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
         return provider.translate('status_approved');
       case 'Pending':
         return provider.translate('status_pending');
+      case 'Pending Supervisor':
+        return provider.translate('status_pending_supervisor');
+      case 'Pending HR':
+        return provider.translate('status_pending_hr');
       case 'Rejected':
         return provider.translate('status_rejected');
       default:

@@ -669,9 +669,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       case 'Pending':
         return provider.translate('status_pending');
       case 'Pending Supervisor':
-        return 'Pending Supervisor';
+        return provider.translate('status_pending_supervisor');
       case 'Pending HR':
-        return 'Pending HR';
+        return provider.translate('status_pending_hr');
       case 'Rejected':
         return provider.translate('status_rejected');
       default:
