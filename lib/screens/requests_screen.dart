@@ -1383,7 +1383,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
     showGlassDialog(
       context: context,
       title: provider.translate('new_request'),
-      subtitle: 'Submit a new request for approval',
+      subtitle: provider.translate('submit_request_subtitle'),
       icon: Icons.edit_calendar,
       iconBackgroundColor: [Color(0xFF2E65FF), Color(0xFF8236FE)],
       content: StatefulBuilder(
@@ -1624,7 +1624,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
                 Row(
                   children: [
                     Text(
-                      'Punch Type:',
+                      provider.translate('punch_type'),
                       style: TextStyle(
                         color:
                             ((Theme.of(context).textTheme.bodyLarge?.color ??
@@ -1648,14 +1648,14 @@ class _RequestsScreenState extends State<RequestsScreen> {
                       fillColor: const Color(0xFF2E65FF).withValues(alpha: 0.8),
                       color: Colors.white70,
                       constraints: const BoxConstraints(minHeight: 36),
-                      children: const [
+                      children: [
                         Padding(
                           padding: EdgeInsets.symmetric(horizontal: 16),
-                          child: Text('Clock In'),
+                          child: Text(provider.translate('clock_in_btn')),
                         ),
                         Padding(
                           padding: EdgeInsets.symmetric(horizontal: 16),
-                          child: Text('Clock Out'),
+                          child: Text(provider.translate('clock_out_btn')),
                         ),
                       ],
                     ),
@@ -1663,7 +1663,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
                 ),
                 SizedBox(height: 16),
                 _buildDialogField(
-                  'Requested Time',
+                  provider.translate('requested_time'),
                   timeController,
                   readOnly: true,
                   onTap: () async {
@@ -1956,7 +1956,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
               ],
               const SizedBox(height: 16),
               _buildDialogField(
-                'Note (Optional)',
+                provider.translate('note_optional'),
                 noteController,
                 keyboardType: TextInputType.multiline,
               ),
@@ -2257,7 +2257,9 @@ class _RequestsScreenState extends State<RequestsScreen> {
                           content: Text(
                             isForSelf
                                 ? provider.translate('submit_success')
-                                : 'Request submitted successfully for ${selectedEmployee.name}',
+                                : provider
+                                    .translate('submit_success_for')
+                                    .replaceAll('{name}', selectedEmployee.name),
                           ),
                           backgroundColor: const Color(0xFF2EBD96),
                         ),

@@ -241,7 +241,7 @@ Future<void> showNewRequestDialog({
   return showGlassDialog(
     context: context,
     title: provider.translate('new_request'),
-    subtitle: 'Submit a new request for approval',
+    subtitle: provider.translate('submit_request_subtitle'),
     icon: Icons.edit_calendar,
     iconBackgroundColor: const [Color(0xFF2E65FF), Color(0xFF8236FE)],
     content: StatefulBuilder(
@@ -470,7 +470,7 @@ Future<void> showNewRequestDialog({
               Row(
                 children: [
                   Text(
-                    'Punch Type:',
+                    provider.translate('punch_type'),
                     style: TextStyle(
                       color:
                           ((Theme.of(context).textTheme.bodyLarge?.color ??
@@ -494,14 +494,14 @@ Future<void> showNewRequestDialog({
                     fillColor: const Color(0xFF2E65FF).withValues(alpha: 0.8),
                     color: Colors.white70,
                     constraints: const BoxConstraints(minHeight: 36),
-                    children: const [
+                    children: [
                       Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: Text('Clock In'),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(provider.translate('clock_in_btn')),
                       ),
                       Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: Text('Clock Out'),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(provider.translate('clock_out_btn')),
                       ),
                     ],
                   ),
@@ -510,7 +510,7 @@ Future<void> showNewRequestDialog({
               const SizedBox(height: 16),
               _buildDialogFieldWidget(
                 context: context,
-                label: 'Requested Time',
+                label: provider.translate('requested_time'),
                 controller: timeController,
                 readOnly: true,
                 onTap: () async {
@@ -790,7 +790,7 @@ Future<void> showNewRequestDialog({
             const SizedBox(height: 16),
             _buildDialogFieldWidget(
               context: context,
-              label: 'Note (Optional)',
+              label: provider.translate('note_optional'),
               controller: noteController,
               keyboardType: TextInputType.multiline,
             ),
@@ -1100,7 +1100,9 @@ Future<void> showNewRequestDialog({
                         content: Text(
                           isForSelf
                               ? provider.translate('submit_success')
-                              : 'Request submitted successfully for ${selectedEmployee.name}',
+                              : provider
+                                  .translate('submit_success_for')
+                                  .replaceAll('{name}', selectedEmployee.name),
                         ),
                         backgroundColor: const Color(0xFF2EBD96),
                       ),
