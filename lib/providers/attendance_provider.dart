@@ -319,7 +319,19 @@ class AttendanceProvider with ChangeNotifier {
   String get userTitle => _userTitle;
   String get employeeId => _employeeId;
   String get email => _email;
-  String get department => _department;
+  String get department {
+    if (_department.isNotEmpty) {
+      final struct = _structures.where((s) => s.id == _department).firstOrNull;
+      if (struct != null) return struct.name;
+      if (!_department.startsWith('struct_')) return _department;
+    }
+    final emp = currentEmployee;
+    if (emp?.structureId != null && emp!.structureId!.isNotEmpty) {
+      final struct = _structures.where((s) => s.id == emp.structureId).firstOrNull;
+      if (struct != null) return struct.name;
+    }
+    return _position.isNotEmpty ? _position : 'General';
+  }
   String get position => _position;
   String? get avatarPath => _avatarPath;
 
@@ -1948,7 +1960,14 @@ class AttendanceProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updatePassword(dynamic oldOrNew, [dynamic newPass]) async {}
+  Future<void> updatePassword(dynamic oldOrNew, [dynamic newPass]) async {
+    final newPassword = (newPass != null ? newPass.toString() : oldOrNew.toString()).trim();
+    final emp = currentEmployee;
+    if (emp != null && newPassword.isNotEmpty) {
+      final updated = emp.copyWith(password: newPassword);
+      await updateEmployee(updated);
+    }
+  }
 
   // Group resolution with accurate date ranges
   String? getGroupIdForDate(dynamic emp, DateTime date) {

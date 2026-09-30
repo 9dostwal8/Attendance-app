@@ -1,190 +1,1663 @@
-import 'dart:ui';
 import 'dart:convert';
+import 'dart:ui';
 import 'package:flutter/material.dart';
-import '../widgets/glass_dialog.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+import '../models/hr_models.dart';
 import '../providers/attendance_provider.dart';
-import '../widgets/glass_container.dart';
 import '../widgets/avatar_image_helper.dart';
+import '../widgets/glass_dialog.dart';
 import 'user_management_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  String? _copiedKey;
+
+  void _copyToClipboard(String key, String title, String value) {
+    if (value.trim().isEmpty) return;
+    Clipboard.setData(ClipboardData(text: value.trim()));
+    HapticFeedback.lightImpact();
+    setState(() => _copiedKey = key);
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted && _copiedKey == key) {
+        setState(() => _copiedKey = null);
+      }
+    });
+
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                '$title copied to clipboard!',
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              ),
+            ),
+          ],
+        ),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+        backgroundColor: const Color(0xFF10B981),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
+
+  String _getDepartmentName(AttendanceProvider provider) {
+    final currentEmp = provider.currentEmployee;
+    final structId = currentEmp?.structureId ?? provider.department;
+    final structMatch = provider.structures.where((s) => s.id == structId).firstOrNull;
+    if (structMatch != null) {
+      return structMatch.name;
+    }
+    final dept = provider.department;
+    if (dept.isNotEmpty && !dept.startsWith('struct_')) {
+      return dept;
+    }
+    return currentEmp?.position.isNotEmpty == true ? currentEmp!.position : 'General';
+  }
+
+  String _getRoleLabel(String? role) {
+    switch (role) {
+      case 'admin':
+        return 'Super Admin';
+      case 'hr':
+        return 'HR Manager';
+      case 'supervisor':
+        return 'Supervisor';
+      case 'employee':
+      default:
+        return 'Employee';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<AttendanceProvider>(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isRtl = provider.currentLanguageDirection == TextDirection.rtl;
+
+    final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final cardBorder = isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0);
+    final primaryTextColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final secondaryTextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+
+    final currentEmp = provider.currentEmployee;
+    WorkShift? activeShift;
+    if (currentEmp != null) {
+      activeShift = provider.getShiftForDate(currentEmp, DateTime.now());
+    }
+
+    final departmentName = _getDepartmentName(provider);
+    final roleLabel = _getRoleLabel(currentEmp?.role);
 
     return Directionality(
       textDirection: provider.currentLanguageDirection,
       child: Scaffold(
-        body: Container(
-          // Use standard flat background
-          color: Theme.of(context).brightness == Brightness.dark
-              ? const Color(0xFF0F172A)
-              : const Color(0xFFF9FAFB),
-          child: SafeArea(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 800),
-                child: Column(
-                  children: [
-                // Custom Header App Bar
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20.0,
-                    vertical: 10.0,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildBackButton(context),
-                      Text(
-                        provider.translate('profile'),
-                        style: TextStyle(
-                          color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(
-                        width: 44,
-                      ), // Spacer to balance the back button
+        backgroundColor: bgColor,
+        body: Stack(
+          children: [
+            // Ambient top decoration glow
+            Positioned(
+              top: -120,
+              left: 0,
+              right: 0,
+              height: 320,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment.topCenter,
+                    radius: 1.2,
+                    colors: [
+                      isDark
+                          ? const Color(0xFF2563EB).withValues(alpha: 0.15)
+                          : const Color(0xFF3B82F6).withValues(alpha: 0.10),
+                      Colors.transparent,
                     ],
                   ),
                 ),
+              ),
+            ),
 
-                // Scrollable content
-                Expanded(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20.0,
-                      vertical: 10.0,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Profile Card
-                        _buildProfileCard(context, provider),
-                        SizedBox(height: 24),
+            SafeArea(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 720),
+                  child: Column(
+                    children: [
+                      // Modern Navigation Header
+                      _buildHeader(context, provider, isDark, isRtl, primaryTextColor, secondaryTextColor),
 
-                        // Personal Information Section
-                        Text(
-                          provider.translate('personal_info'),
-                          style: TextStyle(
-                            color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.7)),
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
+                      // Scrollable content
+                      Expanded(
+                        child: SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Hero Profile Card
+                              _buildHeroProfileCard(
+                                context,
+                                provider,
+                                isDark,
+                                cardBg,
+                                cardBorder,
+                                primaryTextColor,
+                                secondaryTextColor,
+                                currentEmp,
+                                activeShift,
+                                departmentName,
+                                roleLabel,
+                              ),
+                              const SizedBox(height: 24),
+
+                              // Section: Personal & Employment Information
+                              _buildSectionTitle(
+                                icon: Icons.badge_outlined,
+                                iconColor: const Color(0xFF2563EB),
+                                title: provider.translate('personal_info'),
+                                textColor: secondaryTextColor,
+                              ),
+                              const SizedBox(height: 12),
+                              _buildPersonalInfoCard(
+                                context,
+                                provider,
+                                isDark,
+                                cardBg,
+                                cardBorder,
+                                primaryTextColor,
+                                secondaryTextColor,
+                                currentEmp,
+                                activeShift,
+                                departmentName,
+                                roleLabel,
+                              ),
+                              const SizedBox(height: 24),
+
+                              // Section: Preferences (Language & Appearance)
+                              _buildSectionTitle(
+                                icon: Icons.tune_rounded,
+                                iconColor: const Color(0xFF8B5CF6),
+                                title: provider.translate('change_language'),
+                                textColor: secondaryTextColor,
+                              ),
+                              const SizedBox(height: 12),
+                              _buildLanguageSelector(context, provider, isDark, cardBg, cardBorder),
+                              const SizedBox(height: 24),
+
+                              _buildSectionTitle(
+                                icon: Icons.palette_outlined,
+                                iconColor: const Color(0xFFF59E0B),
+                                title: provider.translate('theme'),
+                                textColor: secondaryTextColor,
+                              ),
+                              const SizedBox(height: 12),
+                              _buildThemeSelector(context, provider, isDark, cardBg, cardBorder),
+                              const SizedBox(height: 24),
+
+                              // Section: Security
+                              _buildSectionTitle(
+                                icon: Icons.shield_outlined,
+                                iconColor: const Color(0xFFEF4444),
+                                title: provider.translate('security'),
+                                textColor: secondaryTextColor,
+                              ),
+                              const SizedBox(height: 12),
+                              _buildSecurityCard(
+                                context,
+                                provider,
+                                isDark,
+                                cardBg,
+                                cardBorder,
+                                primaryTextColor,
+                                secondaryTextColor,
+                                isRtl,
+                              ),
+                              const SizedBox(height: 24),
+
+                              // Administrative Access (If applicable)
+                              if (currentEmp?.role == 'hr' || currentEmp?.role == 'admin') ...[
+                                _buildSectionTitle(
+                                  icon: Icons.admin_panel_settings_outlined,
+                                  iconColor: const Color(0xFF6366F1),
+                                  title: 'System Administration',
+                                  textColor: secondaryTextColor,
+                                ),
+                                const SizedBox(height: 12),
+                                _buildUserManagementCard(
+                                  context,
+                                  isDark,
+                                  cardBg,
+                                  cardBorder,
+                                  primaryTextColor,
+                                  secondaryTextColor,
+                                  isRtl,
+                                ),
+                                const SizedBox(height: 24),
+                              ],
+
+                              // Account Switcher (Testing Mode)
+                              _buildSectionTitle(
+                                icon: Icons.swap_horiz_rounded,
+                                iconColor: const Color(0xFF06B6D4),
+                                title: provider.translate('switch_account'),
+                                textColor: secondaryTextColor,
+                              ),
+                              const SizedBox(height: 12),
+                              _buildAccountSwitcherCard(
+                                context,
+                                provider,
+                                isDark,
+                                cardBg,
+                                cardBorder,
+                                primaryTextColor,
+                                secondaryTextColor,
+                              ),
+                              const SizedBox(height: 28),
+
+                              // Sign Out Button
+                              _buildSignOutCard(context, provider, isDark),
+                              const SizedBox(height: 20),
+                            ],
                           ),
                         ),
-                        SizedBox(height: 12),
-                        _buildPersonalInfoCard(provider, context),
-                        SizedBox(height: 24),
-
-                        // Language Selection Section
-                        Text(
-                          provider.translate('change_language'),
-                          style: TextStyle(
-                            color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.7)),
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: 12),
-                        _buildLanguageCard(provider, context),
-                        SizedBox(height: 24),
-
-                        // Theme Selection Section
-                        Text(
-                          provider.translate('theme'),
-                          style: TextStyle(
-                            color: Theme.of(context).textTheme.bodyLarge?.color?.withValues(alpha: 0.7) ?? ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.7)),
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: 12),
-                        _buildThemeCard(provider, context),
-                        SizedBox(height: 24),
-
-                        // Security Section
-                        Text(
-                          provider.translate('security'),
-                          style: TextStyle(
-                            color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.7)),
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: 12),
-                        _buildSecurityCard(context, provider),
-                        SizedBox(height: 24),
-
-                        // User Management Section
-                        Text(
-                          'User & Access Management',
-                          style: TextStyle(
-                            color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.7)),
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: 12),
-                        _buildUserManagementCard(provider, context),
-                        SizedBox(height: 24),
-
-                        // Account Switcher Section (Testing Only)
-                        Text(
-                          provider.translate('switch_account'),
-                          style: TextStyle(
-                            color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.7)),
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: 12),
-                        _buildAccountSwitcherCard(provider, context),
-                        SizedBox(height: 24),
-
-                        // Sign Out Section
-                        _buildLogoutCard(provider, context),
-                        SizedBox(height: 40),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- HEADER APP BAR ---
+  Widget _buildHeader(
+    BuildContext context,
+    AttendanceProvider provider,
+    bool isDark,
+    bool isRtl,
+    Color primaryColor,
+    Color secondaryColor,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Frosted Back Button
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => Navigator.pop(context),
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.04),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.08),
+                    width: 1,
+                  ),
+                ),
+                child: Icon(
+                  isRtl ? Icons.arrow_forward_ios_rounded : Icons.arrow_back_ios_new_rounded,
+                  color: primaryColor,
+                  size: 18,
                 ),
               ),
             ),
           ),
-        ),
+
+          // Title & Subtitle
+          Column(
+            children: [
+              Text(
+                provider.translate('profile'),
+                style: TextStyle(
+                  color: primaryColor,
+                  fontSize: 19,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Personal Account & Preferences',
+                style: TextStyle(
+                  color: secondaryColor,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+
+          // Quick Theme Toggle Button in Header
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                provider.toggleTheme();
+              },
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.04),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.08),
+                    width: 1,
+                  ),
+                ),
+                child: Icon(
+                  isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                  color: isDark ? const Color(0xFFFBBF24) : const Color(0xFF6366F1),
+                  size: 20,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildBackButton(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.pop(context),
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.08)),
-          border: Border.all(
-            color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.2)),
-            width: 1,
+  // --- SECTION HEADER ---
+  Widget _buildSectionTitle({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required Color textColor,
+  }) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(5),
+          decoration: BoxDecoration(
+            color: iconColor.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 14, color: iconColor),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: TextStyle(
+            color: textColor,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
           ),
         ),
-        child: Icon(Icons.arrow_back, color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)), size: 20),
+      ],
+    );
+  }
+
+  // --- HERO PROFILE CARD ---
+  Widget _buildHeroProfileCard(
+    BuildContext context,
+    AttendanceProvider provider,
+    bool isDark,
+    Color cardBg,
+    Color cardBorder,
+    Color primaryColor,
+    Color secondaryColor,
+    CompanyEmployee? currentEmp,
+    WorkShift? activeShift,
+    String departmentName,
+    String roleLabel,
+  ) {
+    final avatarProvider = getAvatarProvider(provider.avatarPath);
+    final initials = provider.userName.trim().isNotEmpty
+        ? provider.userName.trim().split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join().toUpperCase()
+        : 'U';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: cardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          // Banner with Mesh Gradient and Decorative Elements
+          Stack(
+            children: [
+              Container(
+                height: 95,
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF1D4ED8),
+                      Color(0xFF2563EB),
+                      Color(0xFF4F46E5),
+                      Color(0xFF7C3AED),
+                    ],
+                  ),
+                ),
+              ),
+              // Subtle background circle accents
+              Positioned(
+                top: -30,
+                right: -20,
+                child: Container(
+                  width: 110,
+                  height: 110,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.12),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: -20,
+                left: 30,
+                child: Container(
+                  width: 70,
+                  height: 70,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.08),
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          // Avatar overlapping the banner
+          Transform.translate(
+            offset: const Offset(0, -48),
+            child: Column(
+              children: [
+                Stack(
+                  alignment: Alignment.center,
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      width: 96,
+                      height: 96,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isDark ? const Color(0xFF0F172A) : const Color(0xFFEFF6FF),
+                        border: Border.all(
+                          color: cardBg,
+                          width: 4,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.15),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                        image: avatarProvider != null
+                            ? DecorationImage(image: avatarProvider, fit: BoxFit.cover)
+                            : null,
+                      ),
+                      child: avatarProvider == null
+                          ? Center(
+                              child: Text(
+                                initials,
+                                style: const TextStyle(
+                                  color: Color(0xFF2563EB),
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            )
+                          : null,
+                    ),
+
+                    // Camera floating action badge
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => _showPhotoPickerSheet(context, provider),
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            padding: const EdgeInsets.all(7),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                              ),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: cardBg, width: 2.5),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF2563EB).withValues(alpha: 0.45),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt_rounded,
+                              color: Colors.white,
+                              size: 15,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                // Full Name
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    provider.userName.isNotEmpty ? provider.userName : 'Employee',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: primaryColor,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+
+                // Job Title
+                Text(
+                  provider.userTitle.isNotEmpty ? provider.userTitle : 'Staff Member',
+                  style: TextStyle(
+                    color: secondaryColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // Badges Row
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    // Role Badge
+                    _buildPillBadge(
+                      icon: Icons.shield_rounded,
+                      label: roleLabel,
+                      bgColor: const Color(0xFF3B82F6).withValues(alpha: isDark ? 0.2 : 0.1),
+                      fgColor: isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
+                    ),
+
+                    // Department Badge
+                    _buildPillBadge(
+                      icon: Icons.domain_rounded,
+                      label: departmentName,
+                      bgColor: const Color(0xFF8B5CF6).withValues(alpha: isDark ? 0.2 : 0.1),
+                      fgColor: isDark ? const Color(0xFFA78BFA) : const Color(0xFF7C3AED),
+                    ),
+
+                    // Active Status Badge
+                    _buildPillBadge(
+                      icon: Icons.fiber_manual_record_rounded,
+                      label: 'Active',
+                      bgColor: const Color(0xFF10B981).withValues(alpha: isDark ? 0.2 : 0.1),
+                      fgColor: isDark ? const Color(0xFF34D399) : const Color(0xFF059669),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // Quick Highlights Bottom Row
+          Transform.translate(
+            offset: const Offset(0, -28),
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white.withValues(alpha: 0.03) : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isDark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFEEF2F6),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _buildStatItem(
+                      label: 'EMP ID',
+                      value: provider.employeeId.isNotEmpty ? provider.employeeId : 'N/A',
+                      primaryColor: primaryColor,
+                      secondaryColor: secondaryColor,
+                    ),
+                  ),
+                  Container(
+                    height: 28,
+                    width: 1,
+                    color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+                  ),
+                  Expanded(
+                    child: _buildStatItem(
+                      label: 'SHIFT',
+                      value: activeShift != null ? activeShift.name : 'Standard',
+                      primaryColor: primaryColor,
+                      secondaryColor: secondaryColor,
+                    ),
+                  ),
+                  Container(
+                    height: 28,
+                    width: 1,
+                    color: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
+                  ),
+                  Expanded(
+                    child: _buildStatItem(
+                      label: 'HOURS',
+                      value: activeShift != null
+                          ? '${activeShift.startTime} - ${activeShift.endTime}'
+                          : '09:00 - 17:00',
+                      primaryColor: primaryColor,
+                      secondaryColor: secondaryColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
+  Widget _buildPillBadge({
+    required IconData icon,
+    required String label,
+    required Color bgColor,
+    required Color fgColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: fgColor),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              color: fgColor,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem({
+    required String label,
+    required String value,
+    required Color primaryColor,
+    required Color secondaryColor,
+  }) {
+    return Column(
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: secondaryColor,
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: primaryColor,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // --- PERSONAL INFO CARD ---
+  Widget _buildPersonalInfoCard(
+    BuildContext context,
+    AttendanceProvider provider,
+    bool isDark,
+    Color cardBg,
+    Color cardBorder,
+    Color primaryColor,
+    Color secondaryColor,
+    CompanyEmployee? currentEmp,
+    WorkShift? activeShift,
+    String departmentName,
+    String roleLabel,
+  ) {
+    final shiftValue = activeShift != null
+        ? '${activeShift.name} (${activeShift.startTime} - ${activeShift.endTime})'
+        : 'Standard Shift (09:00 - 17:00)';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: cardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          // Full Name
+          _buildInfoRow(
+            context: context,
+            icon: Icons.person_rounded,
+            gradientColors: const [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+            title: 'Full Name',
+            value: provider.userName,
+            isDark: isDark,
+            primaryColor: primaryColor,
+            secondaryColor: secondaryColor,
+          ),
+          _buildDivider(isDark),
+
+          // User / Employee ID
+          _buildInfoRow(
+            context: context,
+            icon: Icons.badge_rounded,
+            gradientColors: const [Color(0xFF6366F1), Color(0xFF4338CA)],
+            title: provider.translate('user_id'),
+            value: provider.employeeId,
+            isDark: isDark,
+            primaryColor: primaryColor,
+            secondaryColor: secondaryColor,
+            trailing: _buildCopyButton('emp_id', provider.translate('user_id'), provider.employeeId, isDark),
+          ),
+          _buildDivider(isDark),
+
+          // Email Address
+          _buildInfoRow(
+            context: context,
+            icon: Icons.alternate_email_rounded,
+            gradientColors: const [Color(0xFF10B981), Color(0xFF047857)],
+            title: provider.translate('email'),
+            value: provider.email,
+            isDark: isDark,
+            primaryColor: primaryColor,
+            secondaryColor: secondaryColor,
+            trailing: _buildCopyButton('email', provider.translate('email'), provider.email, isDark),
+          ),
+          _buildDivider(isDark),
+
+          // Department (Properly resolved!)
+          _buildInfoRow(
+            context: context,
+            icon: Icons.domain_rounded,
+            gradientColors: const [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
+            title: provider.translate('department'),
+            value: departmentName,
+            isDark: isDark,
+            primaryColor: primaryColor,
+            secondaryColor: secondaryColor,
+          ),
+          _buildDivider(isDark),
+
+          // Job Position
+          _buildInfoRow(
+            context: context,
+            icon: Icons.work_rounded,
+            gradientColors: const [Color(0xFFF59E0B), Color(0xFFB45309)],
+            title: provider.translate('position'),
+            value: provider.position.isNotEmpty ? provider.position : provider.userTitle,
+            isDark: isDark,
+            primaryColor: primaryColor,
+            secondaryColor: secondaryColor,
+          ),
+          _buildDivider(isDark),
+
+          // Current Shift & Schedule
+          _buildInfoRow(
+            context: context,
+            icon: Icons.schedule_rounded,
+            gradientColors: const [Color(0xFF06B6D4), Color(0xFF0E7490)],
+            title: 'Assigned Shift',
+            value: shiftValue,
+            isDark: isDark,
+            primaryColor: primaryColor,
+            secondaryColor: secondaryColor,
+          ),
+
+          // Phone Number (if available)
+          if (currentEmp?.phoneNumber.isNotEmpty == true) ...[
+            _buildDivider(isDark),
+            _buildInfoRow(
+              context: context,
+              icon: Icons.phone_rounded,
+              gradientColors: const [Color(0xFF14B8A6), Color(0xFF0F766E)],
+              title: 'Phone Number',
+              value: currentEmp!.phoneNumber,
+              isDark: isDark,
+              primaryColor: primaryColor,
+              secondaryColor: secondaryColor,
+              trailing: _buildCopyButton('phone', 'Phone Number', currentEmp.phoneNumber, isDark),
+            ),
+          ],
+
+          _buildDivider(isDark),
+
+          // Access Role
+          _buildInfoRow(
+            context: context,
+            icon: Icons.admin_panel_settings_rounded,
+            gradientColors: const [Color(0xFFEC4899), Color(0xFFBE185D)],
+            title: provider.translate('role'),
+            value: roleLabel,
+            isDark: isDark,
+            primaryColor: primaryColor,
+            secondaryColor: secondaryColor,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDivider(bool isDark) {
+    return Divider(
+      height: 1,
+      thickness: 1,
+      indent: 68,
+      color: isDark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFF1F5F9),
+    );
+  }
+
+  Widget _buildCopyButton(String key, String title, String value, bool isDark) {
+    final isCopied = _copiedKey == key;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _copyToClipboard(key, title, value),
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          decoration: BoxDecoration(
+            color: isCopied
+                ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.04)),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isCopied ? Icons.check_rounded : Icons.copy_rounded,
+                size: 14,
+                color: isCopied ? const Color(0xFF10B981) : (isDark ? Colors.white60 : Colors.black54),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                isCopied ? 'Copied' : 'Copy',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: isCopied ? const Color(0xFF10B981) : (isDark ? Colors.white60 : Colors.black54),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow({
+    required BuildContext context,
+    required IconData icon,
+    required List<Color> gradientColors,
+    required String title,
+    required String value,
+    required bool isDark,
+    required Color primaryColor,
+    required Color secondaryColor,
+    Widget? trailing,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+      child: Row(
+        children: [
+          // Gradient Icon Container
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  gradientColors[0].withValues(alpha: isDark ? 0.25 : 0.12),
+                  gradientColors[1].withValues(alpha: isDark ? 0.20 : 0.08),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: gradientColors[0].withValues(alpha: isDark ? 0.35 : 0.25),
+                width: 1,
+              ),
+            ),
+            child: Icon(
+              icon,
+              color: gradientColors[0],
+              size: 19,
+            ),
+          ),
+          const SizedBox(width: 14),
+
+          // Titles and Values
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: secondaryColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value.isNotEmpty ? value : '—',
+                  style: TextStyle(
+                    color: primaryColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          if (trailing != null) trailing,
+        ],
+      ),
+    );
+  }
+
+  // --- LANGUAGE SELECTOR ---
+  Widget _buildLanguageSelector(
+    BuildContext context,
+    AttendanceProvider provider,
+    bool isDark,
+    Color cardBg,
+    Color cardBorder,
+  ) {
+    final languages = [
+      {'code': 'en', 'name': 'English'},
+      {'code': 'ku', 'name': 'کوردی'},
+      {'code': 'ar', 'name': 'العربية'},
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(5),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cardBorder),
+      ),
+      child: Row(
+        children: languages.map((lang) {
+          final isSelected = provider.currentLanguage == lang['code'];
+          return Expanded(
+            child: GestureDetector(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                provider.setLanguage(lang['code']!);
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeInOut,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  gradient: isSelected
+                      ? const LinearGradient(
+                          colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                        )
+                      : null,
+                  color: isSelected ? null : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: const Color(0xFF2563EB).withValues(alpha: 0.35),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (isSelected) ...[
+                      const Icon(Icons.check_rounded, color: Colors.white, size: 15),
+                      const SizedBox(width: 6),
+                    ],
+                    Text(
+                      lang['name']!,
+                      style: TextStyle(
+                        color: isSelected
+                            ? Colors.white
+                            : (isDark ? Colors.white70 : const Color(0xFF475569)),
+                        fontSize: 13,
+                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  // --- THEME SELECTOR ---
+  Widget _buildThemeSelector(
+    BuildContext context,
+    AttendanceProvider provider,
+    bool isDark,
+    Color cardBg,
+    Color cardBorder,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(5),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cardBorder),
+      ),
+      child: Row(
+        children: [
+          // Light Mode Segment
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                if (provider.isDarkMode) {
+                  HapticFeedback.selectionClick();
+                  provider.toggleTheme();
+                }
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeInOut,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  gradient: !provider.isDarkMode
+                      ? const LinearGradient(
+                          colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                        )
+                      : null,
+                  color: !provider.isDarkMode ? null : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: !provider.isDarkMode
+                      ? [
+                          BoxShadow(
+                            color: const Color(0xFF2563EB).withValues(alpha: 0.35),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.light_mode_rounded,
+                      size: 17,
+                      color: !provider.isDarkMode ? Colors.white : const Color(0xFFF59E0B),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      provider.translate('light_mode'),
+                      style: TextStyle(
+                        color: !provider.isDarkMode
+                            ? Colors.white
+                            : (isDark ? Colors.white70 : const Color(0xFF475569)),
+                        fontSize: 13,
+                        fontWeight: !provider.isDarkMode ? FontWeight.w700 : FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Dark Mode Segment
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                if (!provider.isDarkMode) {
+                  HapticFeedback.selectionClick();
+                  provider.toggleTheme();
+                }
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeInOut,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  gradient: provider.isDarkMode
+                      ? const LinearGradient(
+                          colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                        )
+                      : null,
+                  color: provider.isDarkMode ? null : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: provider.isDarkMode
+                      ? [
+                          BoxShadow(
+                            color: const Color(0xFF2563EB).withValues(alpha: 0.35),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.dark_mode_rounded,
+                      size: 17,
+                      color: provider.isDarkMode ? Colors.white : const Color(0xFF6366F1),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      provider.translate('dark_mode'),
+                      style: TextStyle(
+                        color: provider.isDarkMode
+                            ? Colors.white
+                            : (isDark ? Colors.white70 : const Color(0xFF475569)),
+                        fontSize: 13,
+                        fontWeight: provider.isDarkMode ? FontWeight.w700 : FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- SECURITY CARD (CHANGE PASSWORD) ---
+  Widget _buildSecurityCard(
+    BuildContext context,
+    AttendanceProvider provider,
+    bool isDark,
+    Color cardBg,
+    Color cardBorder,
+    Color primaryColor,
+    Color secondaryColor,
+    bool isRtl,
+  ) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _showChangePasswordDialog(context, provider),
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: cardBorder),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFFF59E0B).withValues(alpha: isDark ? 0.25 : 0.12),
+                      const Color(0xFFD97706).withValues(alpha: isDark ? 0.20 : 0.08),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: const Color(0xFFF59E0B).withValues(alpha: isDark ? 0.35 : 0.25),
+                  ),
+                ),
+                child: const Icon(
+                  Icons.lock_reset_rounded,
+                  color: Color(0xFFF59E0B),
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      provider.translate('change_pwd'),
+                      style: TextStyle(
+                        color: primaryColor,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      provider.translate('update_pwd'),
+                      style: TextStyle(
+                        color: secondaryColor,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.04),
+                ),
+                child: Icon(
+                  isRtl ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
+                  color: secondaryColor,
+                  size: 20,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- USER MANAGEMENT CARD (ADMIN / HR) ---
+  Widget _buildUserManagementCard(
+    BuildContext context,
+    bool isDark,
+    Color cardBg,
+    Color cardBorder,
+    Color primaryColor,
+    Color secondaryColor,
+    bool isRtl,
+  ) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const UserManagementScreen()),
+          );
+        },
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: cardBorder),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFF6366F1).withValues(alpha: isDark ? 0.25 : 0.12),
+                      const Color(0xFF4F46E5).withValues(alpha: isDark ? 0.20 : 0.08),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: const Color(0xFF6366F1).withValues(alpha: isDark ? 0.35 : 0.25),
+                  ),
+                ),
+                child: const Icon(
+                  Icons.manage_accounts_rounded,
+                  color: Color(0xFF6366F1),
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Manage System Users & Roles',
+                      style: TextStyle(
+                        color: primaryColor,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Configure employee permissions and accounts',
+                      style: TextStyle(
+                        color: secondaryColor,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.04),
+                ),
+                child: Icon(
+                  isRtl ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
+                  color: secondaryColor,
+                  size: 20,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- ACCOUNT SWITCHER (TESTING) ---
+  Widget _buildAccountSwitcherCard(
+    BuildContext context,
+    AttendanceProvider provider,
+    bool isDark,
+    Color cardBg,
+    Color cardBorder,
+    Color primaryColor,
+    Color secondaryColor,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: cardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: provider.employeeId,
+          isExpanded: true,
+          dropdownColor: cardBg,
+          borderRadius: BorderRadius.circular(16),
+          icon: Icon(
+            Icons.unfold_more_rounded,
+            color: secondaryColor,
+          ),
+          style: TextStyle(
+            color: primaryColor,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+          items: provider.employees.map((emp) {
+            final role = _getRoleLabel(emp.role);
+            final isCurrent = emp.id == provider.employeeId;
+            return DropdownMenuItem<String>(
+              value: emp.id,
+              child: Row(
+                children: [
+                  Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isCurrent
+                          ? const Color(0xFF2563EB).withValues(alpha: 0.2)
+                          : (isDark ? Colors.white12 : const Color(0xFFF1F5F9)),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      emp.name.isNotEmpty ? emp.name[0].toUpperCase() : 'U',
+                      style: TextStyle(
+                        color: isCurrent
+                            ? const Color(0xFF2563EB)
+                            : (isDark ? Colors.white70 : Colors.black87),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      '${emp.name} ($role)',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: primaryColor,
+                        fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+          onChanged: (val) {
+            if (val != null) {
+              HapticFeedback.mediumImpact();
+              provider.switchProfile(val);
+            }
+          },
+        ),
+      ),
+    );
+  }
+
+  // --- SIGN OUT BUTTON ---
+  Widget _buildSignOutCard(
+    BuildContext context,
+    AttendanceProvider provider,
+    bool isDark,
+  ) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _confirmSignOut(context, provider, isDark),
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
+          decoration: BoxDecoration(
+            color: isDark
+                ? const Color(0xFFEF4444).withValues(alpha: 0.08)
+                : const Color(0xFFFEF2F2),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isDark
+                  ? const Color(0xFFEF4444).withValues(alpha: 0.25)
+                  : const Color(0xFFFECACA),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFFEF4444).withValues(alpha: 0.14),
+                ),
+                child: const Icon(
+                  Icons.logout_rounded,
+                  color: Color(0xFFEF4444),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Sign Out',
+                      style: TextStyle(
+                        color: Color(0xFFEF4444),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Log out of your current session safely',
+                      style: TextStyle(
+                        color: isDark ? const Color(0xFFF87171).withValues(alpha: 0.7) : const Color(0xFFB91C1C).withValues(alpha: 0.7),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: Color(0xFFEF4444),
+                size: 22,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _confirmSignOut(BuildContext context, AttendanceProvider provider, bool isDark) {
+    showGlassDialog(
+      context: context,
+      title: 'Sign Out',
+      subtitle: 'Are you sure you want to end your session?',
+      icon: Icons.logout_rounded,
+      iconBackgroundColor: const [Color(0xFFEF4444), Color(0xFFDC2626)],
+      content: const Text(
+        'You will need to sign in again to access your attendance records and requests.',
+        style: TextStyle(color: Colors.white70, fontSize: 13),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(
+            provider.translate('cancel'),
+            style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w600),
+          ),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFEF4444),
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          ),
+          onPressed: () {
+            Navigator.pop(context);
+            provider.logout();
+            Navigator.of(context).popUntil((route) => route.isFirst);
+          },
+          child: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.bold)),
+        ),
+      ],
+    );
+  }
+
+  // --- PHOTO PICKER SHEET ---
   void _showPhotoPickerSheet(BuildContext context, AttendanceProvider provider) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sheetBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final primaryTextColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final secondaryTextColor = isDark ? Colors.white60 : const Color(0xFF64748B);
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -192,14 +1665,21 @@ class ProfileScreen extends StatelessWidget {
         return BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E293B).withValues(alpha: 0.85),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              color: sheetBg,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
               border: Border.all(
-                color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.15)),
+                color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.08),
                 width: 1,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 24,
+                  offset: const Offset(0, -6),
+                ),
+              ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -207,32 +1687,32 @@ class ProfileScreen extends StatelessWidget {
               children: [
                 Center(
                   child: Container(
-                    width: 40,
-                    height: 4,
+                    width: 44,
+                    height: 5,
                     decoration: BoxDecoration(
-                      color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.3)),
-                      borderRadius: BorderRadius.circular(2),
+                      color: isDark ? Colors.white24 : Colors.black12,
+                      borderRadius: BorderRadius.circular(3),
                     ),
                   ),
                 ),
-                SizedBox(height: 20),
+                const SizedBox(height: 20),
                 Text(
                   'Profile Photo',
                   style: TextStyle(
-                    color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
+                    color: primaryTextColor,
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   'Choose how you want to update your profile photo',
                   style: TextStyle(
-                    color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.6)),
+                    color: secondaryTextColor,
                     fontSize: 13,
                   ),
                 ),
-                SizedBox(height: 24),
+                const SizedBox(height: 24),
                 Row(
                   children: [
                     // Camera option
@@ -242,9 +1722,9 @@ class ProfileScreen extends StatelessWidget {
                           final picker = ImagePicker();
                           final image = await picker.pickImage(
                             source: ImageSource.camera,
-                            maxWidth: 200,
-                            maxHeight: 200,
-                            imageQuality: 70,
+                            maxWidth: 300,
+                            maxHeight: 300,
+                            imageQuality: 80,
                           );
                           if (image != null) {
                             final bytes = await image.readAsBytes();
@@ -255,7 +1735,7 @@ class ProfileScreen extends StatelessWidget {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text('Profile picture updated successfully!'),
-                                  backgroundColor: Color(0xFF2EBD96),
+                                  backgroundColor: Color(0xFF10B981),
                                 ),
                               );
                             }
@@ -264,22 +1744,37 @@ class ProfileScreen extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 20),
                           decoration: BoxDecoration(
-                            color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.06)),
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.05)
+                                : const Color(0xFFF1F5F9),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.1)),
+                              color: isDark
+                                  ? Colors.white.withValues(alpha: 0.1)
+                                  : const Color(0xFFE2E8F0),
                             ),
                           ),
                           child: Column(
                             children: [
-                              Icon(Icons.photo_camera_outlined, color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)), size: 32),
-                              SizedBox(height: 12),
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF2563EB).withValues(alpha: 0.12),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.photo_camera_rounded,
+                                  color: Color(0xFF2563EB),
+                                  size: 26,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
                               Text(
                                 'Take Photo',
                                 style: TextStyle(
-                                  color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
+                                  color: primaryTextColor,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ],
@@ -287,7 +1782,8 @@ class ProfileScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                    SizedBox(width: 16),
+                    const SizedBox(width: 14),
+
                     // Gallery option
                     Expanded(
                       child: GestureDetector(
@@ -295,9 +1791,9 @@ class ProfileScreen extends StatelessWidget {
                           final picker = ImagePicker();
                           final image = await picker.pickImage(
                             source: ImageSource.gallery,
-                            maxWidth: 200,
-                            maxHeight: 200,
-                            imageQuality: 70,
+                            maxWidth: 300,
+                            maxHeight: 300,
+                            imageQuality: 80,
                           );
                           if (image != null) {
                             final bytes = await image.readAsBytes();
@@ -308,7 +1804,7 @@ class ProfileScreen extends StatelessWidget {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text('Profile picture updated successfully!'),
-                                  backgroundColor: Color(0xFF2EBD96),
+                                  backgroundColor: Color(0xFF10B981),
                                 ),
                               );
                             }
@@ -317,22 +1813,37 @@ class ProfileScreen extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 20),
                           decoration: BoxDecoration(
-                            color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.06)),
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.05)
+                                : const Color(0xFFF1F5F9),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.1)),
+                              color: isDark
+                                  ? Colors.white.withValues(alpha: 0.1)
+                                  : const Color(0xFFE2E8F0),
                             ),
                           ),
                           child: Column(
                             children: [
-                              Icon(Icons.photo_library_outlined, color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)), size: 32),
-                              SizedBox(height: 12),
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF8B5CF6).withValues(alpha: 0.12),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.photo_library_rounded,
+                                  color: Color(0xFF8B5CF6),
+                                  size: 26,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
                               Text(
-                                'Choose Photo',
+                                'Choose Gallery',
                                 style: TextStyle(
-                                  color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
+                                  color: primaryTextColor,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ],
@@ -342,628 +1853,214 @@ class ProfileScreen extends StatelessWidget {
                     ),
                   ],
                 ),
+
+                // Remove Photo Option (if user has avatar)
                 if (provider.avatarPath != null && provider.avatarPath!.isNotEmpty) ...[
-                  SizedBox(height: 16),
-                  // Delete option
-                  GestureDetector(
-                    onTap: () {
-                      provider.updateProfileImage(null);
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Profile picture removed!'),
-                          backgroundColor: Color(0xFFEF4444),
+                  const SizedBox(height: 14),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        provider.updateProfileImage(null);
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Profile picture removed!'),
+                            backgroundColor: Color(0xFFEF4444),
+                          ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(14),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEF4444).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: const Color(0xFFEF4444).withValues(alpha: 0.25),
+                          ),
                         ),
-                      );
-                    },
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEF4444).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: const Color(0xFFEF4444).withValues(alpha: 0.2),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.delete_outline, color: Color(0xFFF87171), size: 18),
-                          SizedBox(width: 8),
-                          Text(
-                            'Remove Photo',
-                            style: TextStyle(
-                              color: Color(0xFFFCA5A5),
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 18),
+                            SizedBox(width: 8),
+                            Text(
+                              'Remove Photo',
+                              style: TextStyle(
+                                color: Color(0xFFEF4444),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildProfileCard(BuildContext context, AttendanceProvider provider) {
-    final avatarProvider = getAvatarProvider(provider.avatarPath);
-    return GlassContainer(
-      child: Center(
-        child: Column(
-          children: [
-            // Profile image with edit overlay
-            Stack(
-              children: [
-                Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: avatarProvider != null ? null : const Color(0xFF3B82F6),
-                    image: avatarProvider != null
-                        ? DecorationImage(
-                            image: avatarProvider,
-                            fit: BoxFit.cover,
-                          )
-                        : null,
-                    border: Border.all(color: (Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.black12), width: 2),
-                  ),
-                  child: avatarProvider != null
-                      ? null
-                      : Center(
-                          child: Icon(
-                            Icons.person_outline,
-                            color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
-                            size: 56,
-                          ),
+                          ],
                         ),
-                ),
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: GestureDetector(
-                    onTap: () => _showPhotoPickerSheet(context, provider),
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF2E65FF),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.photo_camera,
-                        color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
-                        size: 16,
                       ),
                     ),
                   ),
-                ),
+                ],
               ],
             ),
-            SizedBox(height: 16),
-            // User name
-            Text(
-              provider.userName,
-              style: TextStyle(
-                color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 4),
-            // Title
-            Text(
-              provider.userTitle,
-              style: TextStyle(
-                color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.6)),
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPersonalInfoCard(AttendanceProvider provider, BuildContext context) {
-    String roleLabel = 'Employee';
-    if (provider.currentEmployee?.role == 'hr') {
-      roleLabel = 'HR Manager';
-    } else if (provider.currentEmployee?.role == 'supervisor') {
-      roleLabel = 'Supervisor';
-    }
-
-    return GlassContainer(
-      padding: EdgeInsets.zero, // Zero padding to build clean list rows
-      child: Column(
-        children: [
-          _buildInfoRow(context, 
-            icon: Icons.person_outline,
-            iconBg: const Color(0xFF2E65FF), // Blue
-            title: provider.translate('user_id'),
-            value: provider.employeeId,
           ),
-          Divider(color: (Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.black12), height: 1),
-          _buildInfoRow(context, 
-            icon: Icons.mail_outline,
-            iconBg: const Color(0xFF2EBD96), // Green
-            title: provider.translate('email'),
-            value: provider.email,
-          ),
-          Divider(color: (Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.black12), height: 1),
-          _buildInfoRow(context, 
-            icon: Icons.business_outlined,
-            iconBg: const Color(0xFF8236FE), // Purple/Indigo
-            title: provider.translate('department'),
-            value: provider.department,
-          ),
-          Divider(color: (Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.black12), height: 1),
-          _buildInfoRow(context, 
-            icon: Icons.work_outline,
-            iconBg: const Color(0xFFF59E0B), // Orange/Brown
-            title: provider.translate('position'),
-            value: provider.position,
-          ),
-          Divider(color: (Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.black12), height: 1),
-          _buildInfoRow(context, 
-            icon: Icons.security_outlined,
-            iconBg: const Color(0xFFEC4899), // Pink
-            title: provider.translate('role'),
-            value: roleLabel,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(BuildContext context, {
-    required IconData icon,
-    required Color iconBg,
-    required String title,
-    required String value,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
-      child: Row(
-        children: [
-          // Icon container with rounded shape
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: iconBg.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: iconBg.withValues(alpha: 0.3),
-                width: 1,
-              ),
-            ),
-            child: Icon(icon, color: iconBg, size: 20),
-          ),
-          SizedBox(width: 16),
-          // Titles
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.5)),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              SizedBox(height: 2),
-              Text(
-                value,
-                style: TextStyle(
-                  color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLanguageCard(AttendanceProvider provider, BuildContext context) {
-    final languages = [
-      {'code': 'en', 'name': 'English'},
-      {'code': 'ku', 'name': 'کوردی'},
-      {'code': 'ar', 'name': 'العربية'},
-    ];
-
-    return GlassContainer(
-      padding: const EdgeInsets.all(12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: languages.map((lang) {
-          final isSelected = provider.currentLanguage == lang['code'];
-          return Expanded(
-            child: GestureDetector(
-              onTap: () => provider.setLanguage(lang['code']!),
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                height: 40,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? const Color(0xFF2E65FF)
-                      : ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.08)),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isSelected
-                        ? const Color(0xFF2E65FF)
-                        : ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.15)),
-                    width: 1,
-                  ),
-                ),
-                child: Text(
-                  lang['name']!,
-                  style: TextStyle(
-                    color: isSelected
-                        ? ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black))
-                        : ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.7)),
-                    fontSize: 12,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                  ),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  Widget _buildThemeCard(AttendanceProvider provider, BuildContext context) {
-    final themes = [
-      {'value': 'dark', 'name': 'Dark'},
-      {'value': 'light', 'name': 'Light'},
-    ];
-    final isDarkContext = Theme.of(context).brightness == Brightness.dark;
-
-    return GlassContainer(
-      padding: const EdgeInsets.all(12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: themes.map((theme) {
-          final isSelected = (theme['value'] == 'dark' && provider.isDarkMode) || 
-                             (theme['value'] == 'light' && !provider.isDarkMode);
-          
-          return Expanded(
-            child: GestureDetector(
-              onTap: () {
-                if (!isSelected) {
-                  provider.toggleTheme();
-                }
-              },
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                height: 40,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? const Color(0xFF2E65FF)
-                      : (isDarkContext ? ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.08)) : Colors.black.withValues(alpha: 0.05)),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isSelected
-                        ? const Color(0xFF2E65FF)
-                        : (isDarkContext ? ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.15)) : Colors.black.withValues(alpha: 0.1)),
-                    width: 1,
-                  ),
-                ),
-                child: Text(
-                  theme['value'] == 'dark'
-                      ? provider.translate('dark_mode')
-                      : provider.translate('light_mode'),
-                  style: TextStyle(
-                    color: isSelected
-                        ? ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black))
-                        : (isDarkContext ? ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.7)) : Colors.black.withValues(alpha: 0.7)),
-                    fontSize: 12,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                  ),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  Widget _buildSecurityCard(BuildContext context, AttendanceProvider provider) {
-    return GlassContainer(
-      padding: EdgeInsets.zero,
-      child: GestureDetector(
-        onTap: () => _showChangePasswordDialog(context, provider),
-        behavior: HitTestBehavior.opaque,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEC4899).withValues(alpha: 0.2), // Pink
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: const Color(0xFFEC4899).withValues(alpha: 0.3),
-                    width: 1,
-                  ),
-                ),
-                child: Icon(
-                  Icons.lock_outline,
-                  color: Color(0xFFEC4899),
-                  size: 20,
-                ),
-              ),
-              SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      provider.translate('change_pwd'),
-                      style: TextStyle(
-                        color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      provider.translate('update_pwd'),
-                      style: TextStyle(
-                        color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.5)),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAccountSwitcherCard(AttendanceProvider provider, BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
-    final dropdownBg = isDark ? const Color(0xFF1E293B) : Colors.white;
-
-    return GlassContainer(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: provider.employeeId,
-          isExpanded: true,
-          dropdownColor: dropdownBg,
-          borderRadius: BorderRadius.circular(14),
-          icon: Icon(
-            Icons.swap_horiz,
-            color: isDark ? Colors.white60 : Colors.black54,
-          ),
-          style: TextStyle(
-            color: textColor,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-          items: provider.employees.map((emp) {
-            String roleLabel = 'Employee';
-            if (emp.role == 'hr') {
-              roleLabel = 'HR Manager';
-            } else if (emp.role == 'supervisor') {
-              roleLabel = 'Supervisor';
-            } else if (emp.role == 'admin') {
-              roleLabel = 'Super Admin';
-            }
-
-            return DropdownMenuItem<String>(
-              value: emp.id,
-              child: Text(
-                '${emp.name} ($roleLabel)',
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            );
-          }).toList(),
-          onChanged: (val) {
-            if (val != null) {
-              provider.switchProfile(val);
-            }
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLogoutCard(AttendanceProvider provider, BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        provider.logout();
-        Navigator.of(context).popUntil((route) => route.isFirst);
-      },
-      child: GlassContainer(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        borderColor: Colors.red.withValues(alpha: 0.3),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.logout_rounded,
-                color: Colors.redAccent,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Sign Out',
-                    style: TextStyle(
-                      color: Colors.redAccent,
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Log out of your current session',
-                    style: TextStyle(
-                      color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.5)),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(
-              Icons.chevron_right,
-              color: Colors.redAccent,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUserManagementCard(AttendanceProvider provider, BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const UserManagementScreen()),
         );
       },
-      child: GlassContainer(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: const Color(0xFF2E65FF).withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.manage_accounts_rounded,
-                color: Color(0xFF2E65FF),
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Manage System Users & Roles',
-                    style: TextStyle(
-                      color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Add, edit, suspend, and configure user accounts',
-                    style: TextStyle(
-                      color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.5)),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.chevron_right,
-              color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.5)),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
+  // --- CHANGE PASSWORD DIALOG ---
   void _showChangePasswordDialog(
     BuildContext context,
     AttendanceProvider provider,
   ) {
-    final controller = TextEditingController();
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+    bool obscureNew = true;
+    bool obscureConfirm = true;
 
     showGlassDialog(
       context: context,
       title: provider.translate('change_pwd'),
-      subtitle: 'Update your account password',
-      icon: Icons.lock_outline,
-      iconBackgroundColor: [Color(0xFFF59E0B), Color(0xFFD97706)], // Orange theme for security
-      content: TextField(
-        controller: controller,
-        obscureText: true,
-        style: const TextStyle(color: Colors.white),
-        decoration: InputDecoration(
-          hintText: provider.translate('new_pwd_hint'),
-          hintStyle: TextStyle(
-            color: Colors.white.withValues(alpha: 0.4),
-          ),
-          focusedBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(color: Color(0xFF2E65FF)),
-          ),
-        ),
+      subtitle: 'Enter and confirm your new account password',
+      icon: Icons.lock_reset_rounded,
+      iconBackgroundColor: const [Color(0xFFF59E0B), Color(0xFFD97706)],
+      content: StatefulBuilder(
+        builder: (context, setModalState) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: newPasswordController,
+                obscureText: obscureNew,
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                decoration: InputDecoration(
+                  labelText: 'New Password *',
+                  labelStyle: const TextStyle(color: Colors.white70, fontSize: 13),
+                  hintText: provider.translate('new_pwd_hint'),
+                  hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 12),
+                  prefixIcon: const Icon(Icons.lock_outline_rounded, color: Colors.white60, size: 18),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      obscureNew ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      color: Colors.white60,
+                      size: 18,
+                    ),
+                    onPressed: () {
+                      setModalState(() => obscureNew = !obscureNew);
+                    },
+                  ),
+                  filled: true,
+                  fillColor: Colors.white.withValues(alpha: 0.08),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: confirmPasswordController,
+                obscureText: obscureConfirm,
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                decoration: InputDecoration(
+                  labelText: 'Confirm Password *',
+                  labelStyle: const TextStyle(color: Colors.white70, fontSize: 13),
+                  hintText: 'Re-enter your new password',
+                  hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 12),
+                  prefixIcon: const Icon(Icons.verified_user_outlined, color: Colors.white60, size: 18),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      obscureConfirm ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      color: Colors.white60,
+                      size: 18,
+                    ),
+                    onPressed: () {
+                      setModalState(() => obscureConfirm = !obscureConfirm);
+                    },
+                  ),
+                  filled: true,
+                  fillColor: Colors.white.withValues(alpha: 0.08),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: Text(
             provider.translate('cancel'),
-            style: const TextStyle(color: Colors.white70),
+            style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w600),
           ),
         ),
         ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF2E65FF),
+            backgroundColor: const Color(0xFF2563EB),
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           ),
           onPressed: () {
-            if (controller.text.isNotEmpty) {
-              provider.updatePassword(controller.text);
-              Navigator.pop(context);
+            final newPass = newPasswordController.text.trim();
+            final confirmPass = confirmPasswordController.text.trim();
+
+            if (newPass.isEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(provider.translate('pwd_success')),
-                  backgroundColor: const Color(0xFF2EBD96),
+                const SnackBar(
+                  content: Text('Please enter a new password'),
+                  backgroundColor: Color(0xFFEF4444),
                 ),
               );
+              return;
             }
+            if (newPass.length < 6) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Password must be at least 6 characters long'),
+                  backgroundColor: Color(0xFFEF4444),
+                ),
+              );
+              return;
+            }
+            if (newPass != confirmPass) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Passwords do not match'),
+                  backgroundColor: Color(0xFFEF4444),
+                ),
+              );
+              return;
+            }
+
+            provider.updatePassword(newPass);
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(provider.translate('pwd_success')),
+                backgroundColor: const Color(0xFF10B981),
+              ),
+            );
           },
           child: Text(
             provider.translate('save'),
-            style: const TextStyle(color: Colors.white),
+            style: const TextStyle(fontWeight: FontWeight.bold),
           ),
         ),
       ],
