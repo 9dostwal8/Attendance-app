@@ -1252,18 +1252,18 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                           children: [
                             TableRow(
                               children: [
-                                _buildHeaderCell('Employee'),
-                                _buildHeaderCell('Branch / Structure'),
-                                _buildHeaderCell('Shift Timing'),
-                                _buildHeaderCell('Group'),
+                                _buildHeaderCell('Employee', textColor: textColor),
+                                _buildHeaderCell('Branch / Structure', textColor: textColor),
+                                _buildHeaderCell('Shift Timing', textColor: textColor),
+                                _buildHeaderCell('Group', textColor: textColor),
                                 _buildHeaderCell('Clock Time', color: const Color(0xFF5B9BFF)),
-                                _buildHeaderCell('Attendance'),
+                                _buildHeaderCell('Attendance', textColor: textColor),
                                 _buildHeaderCell('Rest', color: const Color(0xFF2EBD96)),
-                                _buildHeaderCell('Duty'),
+                                _buildHeaderCell('Duty', textColor: textColor),
                                 _buildHeaderCell('Delay', color: const Color(0xFFFF5C5C)),
                                 _buildHeaderCell('Early Exit', color: const Color(0xFFFF5C5C)),
-                                _buildHeaderCell('Overtime', color: const Color(0xFF00FF87)),
-                                _buildHeaderCell('Status'),
+                                _buildHeaderCell('Overtime', color: isDark ? const Color(0xFF00FF87) : const Color(0xFF00A859)),
+                                _buildHeaderCell('Status', textColor: textColor),
                               ],
                             ),
                           ],
@@ -1527,7 +1527,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                                             fontSize: 12,
                                             fontWeight: overtimeMins > 0 ? FontWeight.bold : FontWeight.normal,
                                             color: overtimeMins > 0
-                                                ? const Color(0xFF00FF87)
+                                                ? (isDark ? const Color(0xFF00FF87) : const Color(0xFF00A859))
                                                 : textColor.withValues(alpha: 0.5),
                                           ),
                                         ),
@@ -1591,7 +1591,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
     );
   }
 
-  Widget _buildHeaderCell(String text, {Color? color}) {
+  Widget _buildHeaderCell(String text, {Color? color, Color? textColor}) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       child: Text(
@@ -1599,7 +1599,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
         style: TextStyle(
           fontSize: 11.5,
           fontWeight: FontWeight.bold,
-          color: color ?? Colors.white70,
+          color: color ?? textColor?.withValues(alpha: 0.85) ?? Colors.white70,
         ),
       ),
     );
