@@ -1028,7 +1028,92 @@ class AttendanceProvider with ChangeNotifier {
     );
   }
 
+  DateTime? _parseFlexibleDateOnly(String? dateStr) {
+    if (dateStr == null || dateStr.trim().isEmpty) return null;
+    final s = dateStr.trim();
+    try {
+      final dt = DateTime.parse(s);
+      return DateTime(dt.year, dt.month, dt.day);
+    } catch (_) {}
+
+    if (s.contains('/')) {
+      final parts = s.split('/');
+      if (parts.length == 3) {
+        final p0 = int.tryParse(parts[0]);
+        final p1 = int.tryParse(parts[1]);
+        final p2 = int.tryParse(parts[2]);
+        if (p0 != null && p1 != null && p2 != null) {
+          if (parts[2].length == 4) {
+            return DateTime(p2, p1, p0);
+          } else if (parts[0].length == 4) {
+            return DateTime(p0, p1, p2);
+          }
+        }
+      }
+    }
+
+    final formats = [
+      'MMMM d, yyyy',
+      'MMM d, yyyy',
+      'yyyy-MM-dd',
+      'd MMMM yyyy',
+      'd MMM yyyy',
+      'dd-MM-yyyy',
+    ];
+    for (var f in formats) {
+      try {
+        final dt = DateFormat(f).parse(s);
+        return DateTime(dt.year, dt.month, dt.day);
+      } catch (_) {}
+    }
+    return null;
+  }
+
   WorkShift getShiftForDate(CompanyEmployee emp, DateTime date) {
+    final target = DateTime(date.year, date.month, date.day);
+
+    // 1. Check if there's an approved Change Shift request for this employee covering this date
+    final approvedShiftRequests = _allCompanyRequests.where(
+      (r) =>
+          (r.employeeId == emp.id ||
+              (_employeeId == emp.id && r.employeeId == null)) &&
+          r.status == 'Approved' &&
+          r.type == 'Change Shift' &&
+          r.targetShiftId != null &&
+          r.targetShiftId!.isNotEmpty,
+    );
+
+    for (var req in approvedShiftRequests) {
+      final dateStr = req.date.trim();
+      DateTime? start;
+      DateTime? end;
+
+      if (dateStr.contains(' - ')) {
+        final parts = dateStr.split(' - ');
+        end = _parseFlexibleDateOnly(parts[1].trim());
+        String startStr = parts[0].trim();
+        if (!startStr.contains(',') && end != null) {
+          startStr = '$startStr, ${end.year}';
+        }
+        start = _parseFlexibleDateOnly(startStr);
+      } else {
+        start = _parseFlexibleDateOnly(dateStr);
+        end = start;
+      }
+
+      if (start != null && end != null) {
+        if ((target.isAtSameMomentAs(start) || target.isAfter(start)) &&
+            (target.isAtSameMomentAs(end) || target.isBefore(end))) {
+          final foundShift =
+              _shifts.where((s) => s.id == req.targetShiftId).firstOrNull;
+          if (foundShift != null) {
+            return foundShift;
+          }
+        }
+      }
+    }
+
+    // 2. Resolve via active group for date
     final activeGroupId = getGroupIdForDate(emp, date);
     final group = _groups.firstWhere(
       (g) => g.id == activeGroupId,
@@ -1165,15 +1250,7 @@ class AttendanceProvider with ChangeNotifier {
           maxOvertimeMinutes: 0,
         ),
       );
-      final shift = _shifts.firstWhere(
-        (s) => s.id == group.shiftId,
-        orElse: () => WorkShift(
-          id: '',
-          name: 'Default Shift',
-          startTime: '09:00',
-          endTime: '17:00',
-        ),
-      );
+      final shift = getShiftForDate(emp, date);
 
       final isWorkingDay = shift.isWorkingDay(date);
 
@@ -1211,7 +1288,7 @@ class AttendanceProvider with ChangeNotifier {
         (h) {
           final isForGroup =
               h.groupIds.isEmpty ||
-              (emp.groupId != null && h.groupIds.contains(emp.groupId));
+              (activeGroupId != null && h.groupIds.contains(activeGroupId));
           if (!isForGroup) return false;
           try {
             final from = DateTime.parse(
@@ -1873,28 +1950,79 @@ class AttendanceProvider with ChangeNotifier {
 
   Future<void> updatePassword(dynamic oldOrNew, [dynamic newPass]) async {}
 
-  // Requests screen stubs
+  // Group resolution with accurate date ranges
   String? getGroupIdForDate(dynamic emp, DateTime date) {
-    if (emp is CompanyEmployee) {
-      if (emp.groupHistory.isNotEmpty) {
-        for (var entry in emp.groupHistory) {
-          DateTime start = DateTime.parse(entry.startDate);
-          DateTime? end = entry.endDate.isNotEmpty
-              ? DateTime.parse(entry.endDate)
-              : null;
+    if (emp is! CompanyEmployee) return null;
+    final target = DateTime(date.year, date.month, date.day);
 
-          if (date.isAtSameMomentAs(start) || date.isAfter(start)) {
-            if (end == null ||
-                date.isBefore(end) ||
-                date.isAtSameMomentAs(end)) {
+    if (emp.groupHistory.isNotEmpty) {
+      final validEntries = emp.groupHistory
+          .where((e) => e.groupId.isNotEmpty && e.startDate.isNotEmpty)
+          .toList();
+
+      // 1. Check specific bounded periods (has both start and end date)
+      for (var entry in validEntries) {
+        if (entry.endDate.isNotEmpty) {
+          final start = _parseFlexibleDateOnly(entry.startDate);
+          final end = _parseFlexibleDateOnly(entry.endDate);
+          if (start != null && end != null) {
+            if ((target.isAtSameMomentAs(start) || target.isAfter(start)) &&
+                (target.isAtSameMomentAs(end) || target.isBefore(end))) {
               return entry.groupId;
             }
           }
         }
       }
-      return emp.groupId;
+
+      // 2. Check ongoing periods (endDate is empty), sorted newest start date first
+      final ongoing = validEntries.where((e) => e.endDate.isEmpty).toList()
+        ..sort((a, b) {
+          final da = _parseFlexibleDateOnly(a.startDate) ?? DateTime(1900);
+          final db = _parseFlexibleDateOnly(b.startDate) ?? DateTime(1900);
+          return db.compareTo(da);
+        });
+
+      for (var entry in ongoing) {
+        final start = _parseFlexibleDateOnly(entry.startDate);
+        if (start != null) {
+          if (target.isAtSameMomentAs(start) || target.isAfter(start)) {
+            return entry.groupId;
+          }
+        }
+      }
+
+      // 3. Fallback: check all valid entries where start <= target
+      for (var entry in validEntries) {
+        final start = _parseFlexibleDateOnly(entry.startDate);
+        final end = _parseFlexibleDateOnly(entry.endDate);
+        if (start != null) {
+          if (target.isAtSameMomentAs(start) || target.isAfter(start)) {
+            if (end == null ||
+                target.isAtSameMomentAs(end) ||
+                target.isBefore(end)) {
+              return entry.groupId;
+            }
+          }
+        }
+      }
+
+      // 4. If target is BEFORE all entries in groupHistory:
+      // Return the group of the earliest recorded period (employee was in that shift before the change)
+      final sortedAsc = List<GroupHistoryEntry>.from(validEntries)
+        ..sort((a, b) {
+          final da = _parseFlexibleDateOnly(a.startDate) ?? DateTime(2100);
+          final db = _parseFlexibleDateOnly(b.startDate) ?? DateTime(2100);
+          return da.compareTo(db);
+        });
+      if (sortedAsc.isNotEmpty) {
+        final earliestStart = _parseFlexibleDateOnly(sortedAsc.first.startDate);
+        if (earliestStart != null && target.isBefore(earliestStart)) {
+          return sortedAsc.first.groupId;
+        }
+      }
     }
-    return null;
+
+    return emp.groupId;
   }
 
   Future<void> submitRequest(

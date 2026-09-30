@@ -188,60 +188,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
       for (var date in datesInPeriod) {
         final activeGroupId = provider.getGroupIdForDate(emp, date);
         EmployeeGroup? group;
-        WorkShift? shift;
         try {
           group = provider.groups.firstWhere((g) => g.id == activeGroupId);
-          shift = provider.shifts.firstWhere((s) => s.id == group!.shiftId);
         } catch (_) {}
-
-        // Override shift if there's an approved Change Shift request
-        for (var req in requestsToCompile) {
-          if (req.status == 'Approved' &&
-              req.type == 'Change Shift' &&
-              req.targetShiftId != null) {
-            try {
-              final dateStr = req.date;
-              DateTime start;
-              DateTime end;
-              if (dateStr.contains(' - ')) {
-                final parts = dateStr.split(' - ');
-                end = DateFormat('MMMM d, yyyy').parse(parts[1].trim());
-                String startStr = parts[0].trim();
-                if (!startStr.contains(',')) {
-                  startStr = '$startStr, ${end.year}';
-                }
-                start = DateFormat('MMMM d, yyyy').parse(startStr);
-              } else {
-                start = DateFormat('MMMM d, yyyy').parse(dateStr.trim());
-                end = start;
-              }
-
-              final target = DateTime(date.year, date.month, date.day);
-              final startOnly = DateTime(start.year, start.month, start.day);
-              final endOnly = DateTime(end.year, end.month, end.day);
-
-              if ((target.isAtSameMomentAs(startOnly) ||
-                      target.isAfter(startOnly)) &&
-                  (target.isAtSameMomentAs(endOnly) ||
-                      target.isBefore(endOnly))) {
-                shift = provider.shifts.firstWhere(
-                  (s) => s.id == req.targetShiftId,
-                );
-                break;
-              }
-            } catch (_) {}
-          }
-        }
-
-        shift ??= WorkShift(
-          id: 'default',
-          name: 'Standard Shift',
-          startTime: '09:00',
-          endTime: '17:00',
-          forgivenessOfDelay: 15,
-          earlyExit: 10,
-          breakDurationMinutes: 60,
-        );
+        final shift = provider.getShiftForDate(emp, date);
 
         final startTimeStr = shift.getStartTimeForDate(date);
         final endTimeStr = shift.getEndTimeForDate(date);

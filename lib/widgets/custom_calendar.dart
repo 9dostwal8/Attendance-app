@@ -1424,46 +1424,12 @@ class _CustomCalendarState extends State<CustomCalendar> {
               // Resolve active group and shift for this specific date
               final dayGroupId = employee != null ? attendanceProvider.getGroupIdForDate(employee, date) : null;
               EmployeeGroup? activeGroup;
-              WorkShift? activeShift;
               if (dayGroupId != null) {
                 try {
                   activeGroup = attendanceProvider.groups.firstWhere((g) => g.id == dayGroupId);
-                  activeShift = attendanceProvider.shifts.firstWhere((s) => s.id == activeGroup!.shiftId);
                 } catch (_) {}
               }
-
-              // Override shift if there's an approved Change Shift request
-              for (var req in requests) {
-                if (req.status == 'Approved' && req.type == 'Change Shift' && req.targetShiftId != null) {
-                  try {
-                    final dateStr = req.date;
-                    DateTime start;
-                    DateTime end;
-                    if (dateStr.contains(' - ')) {
-                      final parts = dateStr.split(' - ');
-                      end = DateFormat('MMMM d, yyyy').parse(parts[1].trim());
-                      String startStr = parts[0].trim();
-                      if (!startStr.contains(',')) {
-                        startStr = '$startStr, ${end.year}';
-                      }
-                      start = DateFormat('MMMM d, yyyy').parse(startStr);
-                    } else {
-                      start = DateFormat('MMMM d, yyyy').parse(dateStr.trim());
-                      end = start;
-                    }
-
-                    final target = DateTime(date.year, date.month, date.day);
-                    final startOnly = DateTime(start.year, start.month, start.day);
-                    final endOnly = DateTime(end.year, end.month, end.day);
-
-                    if ((target.isAtSameMomentAs(startOnly) || target.isAfter(startOnly)) &&
-                        (target.isAtSameMomentAs(endOnly) || target.isBefore(endOnly))) {
-                      activeShift = attendanceProvider.shifts.firstWhere((s) => s.id == req.targetShiftId);
-                      break;
-                    }
-                  } catch (_) {}
-                }
-              }
+              WorkShift? activeShift = employee != null ? attendanceProvider.getShiftForDate(employee, date) : null;
 
               activeShift ??= shift ?? WorkShift(
                 id: 'default',

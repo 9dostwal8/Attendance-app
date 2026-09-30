@@ -842,7 +842,23 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
         endDateController.text = employee.endDate ?? '';
         positionStartDateController.text = employee.positionStartDate;
         groupStartDateController.text = employee.groupStartDate;
-        tempGroupHistory = List.from(employee.groupHistory);
+        if (employee.groupHistory.isNotEmpty) {
+          tempGroupHistory = List.from(employee.groupHistory);
+        } else if (employee.groupId != null && employee.groupId!.isNotEmpty) {
+          tempGroupHistory = [
+            GroupHistoryEntry(
+              groupId: employee.groupId!,
+              startDate: employee.groupStartDate.isNotEmpty
+                  ? employee.groupStartDate
+                  : (employee.startDate.isNotEmpty
+                      ? employee.startDate
+                      : DateFormat('yyyy-MM-dd').format(DateTime.now())),
+              endDate: '',
+            ),
+          ];
+        } else {
+          tempGroupHistory = [];
+        }
         disabledValue = employee.disabled;
         annualLeaveBalanceController.text = employee.annualLeaveBalance > 0
             ? employee.annualLeaveBalance.toString()
@@ -2671,6 +2687,23 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                             ),
                             IconButton(
                               icon: const Icon(
+                                Icons.edit_outlined,
+                                color: Color(0xFF2E65FF),
+                                size: 19,
+                              ),
+                              onPressed: () {
+                                _showAddGroupHistoryDialog(
+                                  context,
+                                  tempGroupHistory,
+                                  setDialogState,
+                                  provider,
+                                  entryToEdit: h,
+                                  editIndex: idx,
+                                );
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(
                                 Icons.delete_outline,
                                 color: Colors.redAccent,
                                 size: 20,
@@ -3347,12 +3380,23 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                           List<GroupHistoryEntry> gHistory = List.from(
                             tempGroupHistory,
                           );
-                          String? derivedGroupId = gHistory.isNotEmpty
-                              ? gHistory.first.groupId
-                              : null;
-                          String activeGroupStart = gHistory.isNotEmpty
-                              ? gHistory.first.startDate
-                              : '';
+                          final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+                          String? derivedGroupId;
+                          String activeGroupStart = '';
+                          for (var h in gHistory) {
+                            if (h.startDate.compareTo(todayStr) <= 0 &&
+                                (h.endDate.isEmpty || h.endDate.compareTo(todayStr) >= 0)) {
+                              derivedGroupId = h.groupId;
+                              activeGroupStart = h.startDate;
+                              break;
+                            }
+                          }
+                          if (derivedGroupId == null && gHistory.isNotEmpty) {
+                            final sorted = List<GroupHistoryEntry>.from(gHistory)
+                              ..sort((a, b) => b.startDate.compareTo(a.startDate));
+                            derivedGroupId = sorted.first.groupId;
+                            activeGroupStart = sorted.first.startDate;
+                          }
 
                           provider.updateEmployee(
                             employee.copyWith(
@@ -3493,17 +3537,25 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
     BuildContext parentContext,
     List<GroupHistoryEntry> tempGroupHistory,
     StateSetter parentSetState,
-    AttendanceProvider provider,
-  ) {
-    String? selectedGroupId;
-    final startDateController = TextEditingController();
-    final endDateController = TextEditingController();
+    AttendanceProvider provider, {
+    GroupHistoryEntry? entryToEdit,
+    int? editIndex,
+  }) {
+    String? selectedGroupId = entryToEdit?.groupId;
+    final startDateController =
+        TextEditingController(text: entryToEdit?.startDate ?? '');
+    final endDateController =
+        TextEditingController(text: entryToEdit?.endDate ?? '');
 
     String? dialogErrorMessage;
     showGlassDialog(
       context: parentContext,
-      title: 'Add Group History Period',
-      subtitle: 'Add a new period',
+      title: entryToEdit != null
+          ? 'Edit Group Period'
+          : 'Add Group History Period',
+      subtitle: entryToEdit != null
+          ? 'Update period start and end dates'
+          : 'Add a new shift period',
       icon: Icons.history_rounded,
       content: StatefulBuilder(
         builder: (context, setDialogState) {
@@ -3585,13 +3637,13 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                   ),
                   const SizedBox(width: 8),
                   NeuButton(
-                    label: 'Add',
+                    label: entryToEdit != null ? 'Save' : 'Add',
                     variant: NeuButtonVariant.primary,
                     height: 40,
                     padding: const EdgeInsets.symmetric(horizontal: 22),
                     onPressed: () {
                       if (selectedGroupId == null ||
-                          startDateController.text.isEmpty) {
+                          startDateController.text.trim().isEmpty) {
                         setDialogState(() {
                           dialogErrorMessage =
                               'Please select a group and start date.';
@@ -3599,36 +3651,67 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                         return;
                       }
                       parentSetState(() {
-                        try {
-                          final newStartDate = DateTime.parse(
-                            startDateController.text,
+                        if (editIndex != null &&
+                            editIndex < tempGroupHistory.length) {
+                          tempGroupHistory[editIndex] = GroupHistoryEntry(
+                            groupId: selectedGroupId!,
+                            startDate: startDateController.text.trim(),
+                            endDate: endDateController.text.trim(),
                           );
-                          final previousDay = newStartDate.subtract(
-                            const Duration(days: 1),
-                          );
-                          final prevDayStr =
-                              "${previousDay.year.toString().padLeft(4, '0')}-${previousDay.month.toString().padLeft(2, '0')}-${previousDay.day.toString().padLeft(2, '0')}";
+                        } else {
+                          try {
+                            final newStartDate = DateTime.parse(
+                              startDateController.text.trim(),
+                            );
+                            final previousDay = newStartDate.subtract(
+                              const Duration(days: 1),
+                            );
+                            final prevDayStr =
+                                "${previousDay.year.toString().padLeft(4, '0')}-${previousDay.month.toString().padLeft(2, '0')}-${previousDay.day.toString().padLeft(2, '0')}";
 
-                          for (int i = 0; i < tempGroupHistory.length; i++) {
-                            if (tempGroupHistory[i].endDate.isEmpty) {
-                              tempGroupHistory[i] = GroupHistoryEntry(
-                                groupId: tempGroupHistory[i].groupId,
-                                startDate: tempGroupHistory[i].startDate,
-                                endDate: prevDayStr,
+                            String? previousOngoingGroup;
+                            for (int i = 0; i < tempGroupHistory.length; i++) {
+                              if (tempGroupHistory[i].endDate.isEmpty) {
+                                previousOngoingGroup =
+                                    tempGroupHistory[i].groupId;
+                                tempGroupHistory[i] = GroupHistoryEntry(
+                                  groupId: tempGroupHistory[i].groupId,
+                                  startDate: tempGroupHistory[i].startDate,
+                                  endDate: prevDayStr,
+                                );
+                              }
+                            }
+
+                            final newEndText = endDateController.text.trim();
+                            if (newEndText.isNotEmpty &&
+                                previousOngoingGroup != null) {
+                              final endDt = DateTime.parse(newEndText);
+                              final nextDay = endDt.add(
+                                const Duration(days: 1),
+                              );
+                              final nextDayStr =
+                                  "${nextDay.year.toString().padLeft(4, '0')}-${nextDay.month.toString().padLeft(2, '0')}-${nextDay.day.toString().padLeft(2, '0')}";
+                              tempGroupHistory.add(
+                                GroupHistoryEntry(
+                                  groupId: previousOngoingGroup,
+                                  startDate: nextDayStr,
+                                  endDate: '',
+                                ),
                               );
                             }
+                          } catch (_) {
+                            // Ignore if date parsing fails
                           }
-                        } catch (_) {
-                          // Ignore if date parsing fails
+
+                          tempGroupHistory.add(
+                            GroupHistoryEntry(
+                              groupId: selectedGroupId!,
+                              startDate: startDateController.text.trim(),
+                              endDate: endDateController.text.trim(),
+                            ),
+                          );
                         }
 
-                        tempGroupHistory.add(
-                          GroupHistoryEntry(
-                            groupId: selectedGroupId!,
-                            startDate: startDateController.text,
-                            endDate: endDateController.text,
-                          ),
-                        );
                         tempGroupHistory.sort(
                           (a, b) => b.startDate.compareTo(a.startDate),
                         );

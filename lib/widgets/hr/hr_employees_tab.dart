@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../providers/attendance_provider.dart';
 import '../../models/hr_models.dart';
 import '../glass_container.dart';
@@ -779,17 +780,45 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
     CompanyEmployee? employee,
   }) {
     final isEditing = employee != null;
+    final nowStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
     final nameController = TextEditingController(text: employee?.name ?? '');
     final emailController = TextEditingController(text: employee?.email ?? '');
     final positionController = TextEditingController(text: employee?.position ?? '');
     final passwordController = TextEditingController(text: employee?.password ?? '');
     final phoneController = TextEditingController(text: employee?.phoneNumber ?? '');
     final salaryController = TextEditingController(text: employee?.basicSalary.toString() ?? '0');
+    final groupStartDateController = TextEditingController(
+      text: employee?.groupStartDate.isNotEmpty == true
+          ? employee!.groupStartDate
+          : (employee?.startDate.isNotEmpty == true
+              ? employee!.startDate
+              : nowStr),
+    );
+    final groupEndDateController = TextEditingController();
     
     String selectedRole = employee?.role ?? 'employee';
     String? selectedStructure = employee?.structureId;
     String? selectedGroup = employee?.groupId;
     bool isDisabled = employee?.disabled ?? false;
+
+    List<GroupHistoryEntry> tempGroupHistory = [];
+    if (employee != null) {
+      if (employee.groupHistory.isNotEmpty) {
+        tempGroupHistory = List<GroupHistoryEntry>.from(employee.groupHistory);
+      } else if (employee.groupId != null && employee.groupId!.isNotEmpty) {
+        tempGroupHistory = [
+          GroupHistoryEntry(
+            groupId: employee.groupId!,
+            startDate: employee.groupStartDate.isNotEmpty
+                ? employee.groupStartDate
+                : (employee.startDate.isNotEmpty
+                    ? employee.startDate
+                    : nowStr),
+            endDate: '',
+          ),
+        ];
+      }
+    }
 
     showGlassDialog(
       context: context,
@@ -885,25 +914,207 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                 ),
                 const SizedBox(height: 12),
 
-                // Group Dropdown
+                // Group / Shift Dropdown
                 DropdownButtonFormField<String?>(
                   initialValue: selectedGroup,
                   dropdownColor: const Color(0xFF1E293B),
                   style: const TextStyle(color: Colors.white),
                   decoration: const InputDecoration(
-                    labelText: 'Employee Group',
+                    labelText: 'Employee Group (Shift)',
                     labelStyle: TextStyle(color: Colors.white70),
                   ),
                   items: [
                     const DropdownMenuItem(value: null, child: Text('None (Standard)')),
                     ...provider.groups.map(
-                      (g) => DropdownMenuItem(value: g.id, child: Text(g.name)),
+                      (g) {
+                        final shift = provider.shifts.where((s) => s.id == g.shiftId).firstOrNull;
+                        final shiftName = shift != null ? ' (${shift.name})' : '';
+                        return DropdownMenuItem(value: g.id, child: Text('${g.name}$shiftName'));
+                      },
                     ),
                   ],
                   onChanged: (val) {
-                    setDialogState(() => selectedGroup = val);
+                    setDialogState(() {
+                      selectedGroup = val;
+                      if (val != employee?.groupId) {
+                        groupStartDateController.text = nowStr;
+                        groupEndDateController.text = '';
+                      }
+                    });
                   },
                 ),
+                if (selectedGroup != null) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.04),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.white12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.date_range_rounded, size: 16, color: Color(0xFF2E65FF)),
+                            const SizedBox(width: 6),
+                            const Text(
+                              'Shift Change Effective Dates',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: InkWell(
+                                onTap: () async {
+                                  final initial = DateTime.tryParse(groupStartDateController.text) ?? DateTime.now();
+                                  final picked = await showDatePicker(
+                                    context: context,
+                                    initialDate: initial,
+                                    firstDate: DateTime(2000),
+                                    lastDate: DateTime(2100),
+                                    builder: (context, child) => Theme(
+                                      data: ThemeData.dark().copyWith(
+                                        colorScheme: const ColorScheme.dark(
+                                          primary: Color(0xFF2E65FF),
+                                          surface: Color(0xFF1E293B),
+                                        ),
+                                      ),
+                                      child: child!,
+                                    ),
+                                  );
+                                  if (picked != null) {
+                                    setDialogState(() {
+                                      groupStartDateController.text = DateFormat('yyyy-MM-dd').format(picked);
+                                    });
+                                  }
+                                },
+                                child: IgnorePointer(
+                                  child: TextField(
+                                    controller: groupStartDateController,
+                                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                                    decoration: const InputDecoration(
+                                      labelText: 'Start Date *',
+                                      labelStyle: TextStyle(color: Colors.white70, fontSize: 12),
+                                      suffixIcon: Icon(Icons.calendar_today, size: 16, color: Colors.white60),
+                                      isDense: true,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: InkWell(
+                                onTap: () async {
+                                  final initial = DateTime.tryParse(groupEndDateController.text) ?? DateTime.now();
+                                  final picked = await showDatePicker(
+                                    context: context,
+                                    initialDate: initial,
+                                    firstDate: DateTime(2000),
+                                    lastDate: DateTime(2100),
+                                    builder: (context, child) => Theme(
+                                      data: ThemeData.dark().copyWith(
+                                        colorScheme: const ColorScheme.dark(
+                                          primary: Color(0xFF2E65FF),
+                                          surface: Color(0xFF1E293B),
+                                        ),
+                                      ),
+                                      child: child!,
+                                    ),
+                                  );
+                                  if (picked != null) {
+                                    setDialogState(() {
+                                      groupEndDateController.text = DateFormat('yyyy-MM-dd').format(picked);
+                                    });
+                                  }
+                                },
+                                child: IgnorePointer(
+                                  child: TextField(
+                                    controller: groupEndDateController,
+                                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                                    decoration: InputDecoration(
+                                      labelText: 'End Date (Optional)',
+                                      labelStyle: const TextStyle(color: Colors.white70, fontSize: 12),
+                                      hintText: 'Ongoing',
+                                      hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 12),
+                                      suffixIcon: groupEndDateController.text.isNotEmpty
+                                          ? IconButton(
+                                              icon: const Icon(Icons.clear, size: 16, color: Colors.white60),
+                                              onPressed: () {
+                                                setDialogState(() => groupEndDateController.clear());
+                                              },
+                                            )
+                                          : const Icon(Icons.calendar_today, size: 16, color: Colors.white60),
+                                      isDense: true,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Days prior to this start date will keep their previous shift.',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.5),
+                            fontSize: 10.5,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                        if (tempGroupHistory.length > 1) ...[
+                          const SizedBox(height: 10),
+                          const Divider(color: Colors.white12, height: 1),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Recorded Shift Periods:',
+                            style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 4),
+                          ...tempGroupHistory.asMap().entries.map((entry) {
+                            final idx = entry.key;
+                            final h = entry.value;
+                            final grp = provider.groups.where((g) => g.id == h.groupId).firstOrNull;
+                            final shf = provider.shifts.where((s) => s.id == grp?.shiftId).firstOrNull;
+                            final gTitle = grp != null
+                                ? '${grp.name}${shf != null ? ' (${shf.name})' : ''}'
+                                : 'Unknown Group';
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 2),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      '• $gTitle: ${h.startDate} to ${h.endDate.isEmpty ? 'Ongoing' : h.endDate}',
+                                      style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 11),
+                                    ),
+                                  ),
+                                  InkWell(
+                                    onTap: () {
+                                      setDialogState(() {
+                                        tempGroupHistory.removeAt(idx);
+                                      });
+                                    },
+                                    child: const Icon(Icons.close, size: 14, color: Colors.redAccent),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 12),
 
                 TextField(
@@ -955,7 +1166,132 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
             }
 
             final salaryVal = double.tryParse(salaryController.text) ?? 0.0;
-            final nowStr = DateTime.now().toString().split(' ')[0];
+
+            List<GroupHistoryEntry> gHistory = List<GroupHistoryEntry>.from(tempGroupHistory);
+            String? finalGroupId = selectedGroup;
+            String finalGroupStartDate = groupStartDateController.text.trim().isNotEmpty
+                ? groupStartDateController.text.trim()
+                : nowStr;
+            String finalGroupEndDate = groupEndDateController.text.trim();
+
+            if (selectedGroup == null) {
+              finalGroupId = null;
+              finalGroupStartDate = '';
+              gHistory = [];
+            } else if (isEditing) {
+              if (selectedGroup != employee.groupId) {
+                // The shift is changing!
+                final newStartStr = finalGroupStartDate;
+                final newEndStr = finalGroupEndDate;
+
+                try {
+                  final newStart = DateTime.parse(newStartStr);
+                  final prevDay = newStart.subtract(const Duration(days: 1));
+                  final prevDayStr =
+                      "${prevDay.year.toString().padLeft(4, '0')}-${prevDay.month.toString().padLeft(2, '0')}-${prevDay.day.toString().padLeft(2, '0')}";
+
+                  // Close previous ongoing period up to (newStart - 1 day)
+                  String? previousOngoingGroup = employee.groupId;
+                  if (gHistory.isEmpty && employee.groupId != null && employee.groupId!.isNotEmpty) {
+                    gHistory.add(
+                      GroupHistoryEntry(
+                        groupId: employee.groupId!,
+                        startDate: employee.startDate.isNotEmpty ? employee.startDate : '2020-01-01',
+                        endDate: prevDayStr,
+                      ),
+                    );
+                  } else {
+                    for (int i = 0; i < gHistory.length; i++) {
+                      if (gHistory[i].endDate.isEmpty) {
+                        previousOngoingGroup = gHistory[i].groupId;
+                        gHistory[i] = GroupHistoryEntry(
+                          groupId: gHistory[i].groupId,
+                          startDate: gHistory[i].startDate,
+                          endDate: prevDayStr,
+                        );
+                      }
+                    }
+                  }
+
+                  // If new period has an end date, resume previous ongoing group afterwards
+                  if (newEndStr.isNotEmpty && previousOngoingGroup != null && previousOngoingGroup.isNotEmpty) {
+                    final endDt = DateTime.parse(newEndStr);
+                    final nextDay = endDt.add(const Duration(days: 1));
+                    final nextDayStr =
+                        "${nextDay.year.toString().padLeft(4, '0')}-${nextDay.month.toString().padLeft(2, '0')}-${nextDay.day.toString().padLeft(2, '0')}";
+                    gHistory.add(
+                      GroupHistoryEntry(
+                        groupId: previousOngoingGroup,
+                        startDate: nextDayStr,
+                        endDate: '',
+                      ),
+                    );
+                  }
+                } catch (_) {}
+
+                // Add the new shift period
+                gHistory.add(
+                  GroupHistoryEntry(
+                    groupId: selectedGroup!,
+                    startDate: newStartStr,
+                    endDate: newEndStr,
+                  ),
+                );
+              } else {
+                // Same group, ensure current period is recorded with updated dates
+                if (gHistory.isEmpty) {
+                  gHistory.add(
+                    GroupHistoryEntry(
+                      groupId: selectedGroup!,
+                      startDate: finalGroupStartDate,
+                      endDate: finalGroupEndDate,
+                    ),
+                  );
+                } else {
+                  bool found = false;
+                  for (int i = 0; i < gHistory.length; i++) {
+                    if (gHistory[i].groupId == selectedGroup && gHistory[i].endDate.isEmpty) {
+                      gHistory[i] = GroupHistoryEntry(
+                        groupId: selectedGroup!,
+                        startDate: finalGroupStartDate,
+                        endDate: finalGroupEndDate,
+                      );
+                      found = true;
+                      break;
+                    }
+                  }
+                  if (!found) {
+                    gHistory.add(
+                      GroupHistoryEntry(
+                        groupId: selectedGroup!,
+                        startDate: finalGroupStartDate,
+                        endDate: finalGroupEndDate,
+                      ),
+                    );
+                  }
+                }
+              }
+
+              gHistory.sort((a, b) => b.startDate.compareTo(a.startDate));
+
+              final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+              for (var h in gHistory) {
+                if (h.startDate.compareTo(todayStr) <= 0 &&
+                    (h.endDate.isEmpty || h.endDate.compareTo(todayStr) >= 0)) {
+                  finalGroupId = h.groupId;
+                  finalGroupStartDate = h.startDate;
+                  break;
+                }
+              }
+            } else {
+              gHistory = [
+                GroupHistoryEntry(
+                  groupId: selectedGroup!,
+                  startDate: finalGroupStartDate,
+                  endDate: finalGroupEndDate,
+                ),
+              ];
+            }
 
             CompanyEmployee newOrUpdatedEmp;
             if (isEditing) {
@@ -982,8 +1318,10 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                 password: passwordController.text.trim().isNotEmpty ? passwordController.text.trim() : employee.password,
                 structureId: selectedStructure,
                 overrideStructureId: true,
-                groupId: selectedGroup,
+                groupId: finalGroupId,
                 overrideGroupId: true,
+                groupStartDate: finalGroupStartDate,
+                groupHistory: gHistory,
                 phoneNumber: phoneController.text.trim(),
                 disabled: isDisabled,
                 basicSalary: salaryVal,
@@ -1012,7 +1350,9 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                 role: selectedRole,
                 password: passwordController.text.trim().isNotEmpty ? passwordController.text.trim() : null,
                 structureId: selectedStructure,
-                groupId: selectedGroup,
+                groupId: finalGroupId,
+                groupStartDate: finalGroupStartDate,
+                groupHistory: gHistory,
                 phoneNumber: phoneController.text.trim(),
                 disabled: isDisabled,
                 startDate: nowStr,
