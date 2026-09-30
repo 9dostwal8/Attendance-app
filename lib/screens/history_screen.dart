@@ -254,6 +254,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
             ? int.parse(partsEnd[0]) * 60 + int.parse(partsEnd[1])
             : 1020; // Default 17:00
 
+        int dayShiftDurMins = shiftEndMinutes - shiftStartMinutes;
+        if (dayShiftDurMins < 0 || shift.isOvernightForDate(date)) {
+          dayShiftDurMins += 24 * 60;
+        }
+        final shiftWorkHoursStr = formatMinutes(dayShiftDurMins);
+
         final dateRecords = provider.getRecordsForDate(
           date,
           emp: emp,
@@ -765,6 +771,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
           'missingPunchTimes': missingPunchTimes,
           'isWeekend': isWeekendDay,
           'requests': allDayRequests,
+          'shiftName': shift.name,
+          'shiftWorkHours': shiftWorkHoursStr,
+          'shiftTiming': '$startTimeStr - $endTimeStr',
+          'shiftDurationMinutes': dayShiftDurMins,
         });
       }
     }
@@ -1221,7 +1231,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final headerBgColor = bodyTextColor.withValues(alpha: 0.06);
 
     const columnWidths = <int, TableColumnWidth>{
-      0: FlexColumnWidth(1.2),  // Date
+      0: FlexColumnWidth(1.5),  // Date & Shift
       1: FlexColumnWidth(2.2),  // Clock Time
       2: FlexColumnWidth(1.1),  // Attendance
       3: FlexColumnWidth(1.0),  // Rest Time
@@ -1243,7 +1253,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             borderRadius: BorderRadius.circular(16),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final tableWidth = math.max(constraints.maxWidth, 1200.0);
+                final tableWidth = math.max(constraints.maxWidth, 1250.0);
 
                 return Scrollbar(
                   controller: _tableHorizontalController,
@@ -1384,6 +1394,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                     final penaltyStr = penaltyVal > 0
                                         ? '${NumberFormat('#,##0').format(penaltyVal)} IQD'
                                         : '-';
+                                    final shiftName =
+                                        (row['shiftName'] as String?) ?? '';
+                                    final shiftWorkHours =
+                                        (row['shiftWorkHours'] as String?) ?? '';
 
                                     final rowColor = isSelected
                                         ? (isDark
@@ -1466,28 +1480,94 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                                     ),
                                                   ),
                                                 Expanded(
-                                                  child: Text(
-                                                    dateStr,
-                                                    style: TextStyle(
-                                                      color: isSelected
-                                                          ? const Color(
-                                                            0xFF2E65FF,
-                                                          )
-                                                          : (isWeekend
-                                                              ? bodyTextColor
+                                                  child: Column(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(
+                                                        dateStr,
+                                                        style: TextStyle(
+                                                          color: isSelected
+                                                              ? const Color(
+                                                                0xFF2E65FF,
+                                                              )
+                                                              : (isWeekend
+                                                                  ? bodyTextColor
+                                                                      .withValues(
+                                                                        alpha: 0.38,
+                                                                      )
+                                                                  : bodyTextColor
+                                                                      .withValues(
+                                                                        alpha: 0.7,
+                                                                      )),
+                                                          fontWeight: isSelected
+                                                              ? FontWeight.bold
+                                                              : FontWeight.w600,
+                                                          fontSize: 12,
+                                                          height: 1.2,
+                                                        ),
+                                                      ),
+                                                      if (shiftName.isNotEmpty) ...[
+                                                        const SizedBox(height: 3),
+                                                        Container(
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .symmetric(
+                                                                horizontal: 5,
+                                                                vertical: 2,
+                                                              ),
+                                                          decoration: BoxDecoration(
+                                                            color: (isSelected
+                                                                    ? const Color(
+                                                                        0xFF2E65FF,
+                                                                      )
+                                                                    : bodyTextColor)
+                                                                .withValues(
+                                                                  alpha: 0.07,
+                                                                ),
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  4,
+                                                                ),
+                                                            border: Border.all(
+                                                              color: (isSelected
+                                                                      ? const Color(
+                                                                          0xFF2E65FF,
+                                                                        )
+                                                                      : bodyTextColor)
                                                                   .withValues(
-                                                                    alpha: 0.38,
-                                                                  )
-                                                              : bodyTextColor
-                                                                  .withValues(
-                                                                    alpha: 0.7,
-                                                                  )),
-                                                      fontWeight: isSelected
-                                                          ? FontWeight.bold
-                                                          : FontWeight.w600,
-                                                      fontSize: 12,
-                                                      height: 1.2,
-                                                    ),
+                                                                    alpha: 0.12,
+                                                                  ),
+                                                              width: 0.8,
+                                                            ),
+                                                          ),
+                                                          child: Text(
+                                                            shiftWorkHours.isNotEmpty
+                                                                ? '$shiftName • $shiftWorkHours'
+                                                                : shiftName,
+                                                            style: TextStyle(
+                                                              fontSize: 10,
+                                                              fontWeight:
+                                                                  FontWeight.w600,
+                                                              color: isSelected
+                                                                  ? const Color(
+                                                                      0xFF2E65FF,
+                                                                    )
+                                                                  : bodyTextColor
+                                                                      .withValues(
+                                                                        alpha:
+                                                                            0.75,
+                                                                      ),
+                                                            ),
+                                                            maxLines: 1,
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ],
                                                   ),
                                                 ),
                                                 if (hasRequests)
@@ -2106,6 +2186,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
+                        if ((rowData['shiftName'] as String?)?.isNotEmpty ?? false)
+                          _buildDialogDayStat(
+                            label: provider.translate('shift'),
+                            value: (rowData['shiftWorkHours'] as String?)?.isNotEmpty ?? false
+                                ? '${rowData['shiftName']} (${rowData['shiftWorkHours']})'
+                                : '${rowData['shiftName']}',
+                            color: const Color(0xFF10B981),
+                          ),
                         _buildDialogDayStat(
                           label: provider.translate('attendance'),
                           value: (rowData['isLeave'] as bool? ?? false) &&

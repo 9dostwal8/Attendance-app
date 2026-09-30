@@ -387,6 +387,7 @@ class ExportService {
 
     final headers = [
       'Date',
+      'Shift',
       'Clock Time',
       'Attendance',
       'Duty',
@@ -506,8 +507,17 @@ class ExportService {
               headers: headers,
               data: records.map((r) {
                 final date = r['date'] as DateTime;
+                final shiftName = (r['shiftName'] as String?) ?? '';
+                final shiftWorkHours = (r['shiftWorkHours'] as String?) ?? '';
+                final shiftCell = shiftName.isNotEmpty
+                    ? (shiftWorkHours.isNotEmpty
+                        ? '$shiftName\n($shiftWorkHours)'
+                        : shiftName)
+                    : '-';
+
                 return [
                   DateFormat('dd MMM').format(date),
+                  shiftCell,
                   r['clockTime'].toString().replaceAll('\n', ' / '),
                   formatMins(r['attendance'] as int),
                   formatMins(r['duty'] as int),
@@ -530,16 +540,17 @@ class ExportService {
               cellPadding: const pw.EdgeInsets.symmetric(horizontal: 2.5, vertical: 2.8),
               cellAlignment: pw.Alignment.center,
               columnWidths: {
-                0: const pw.FlexColumnWidth(1.2), // Date
-                1: const pw.FlexColumnWidth(1.5), // Clock Time
-                2: const pw.FlexColumnWidth(1.1), // Attendance
-                3: const pw.FlexColumnWidth(1.0), // Duty
-                4: const pw.FlexColumnWidth(0.9), // Delay
-                5: const pw.FlexColumnWidth(1.0), // Early Exit
-                6: const pw.FlexColumnWidth(1.0), // Deficit
-                7: const pw.FlexColumnWidth(1.1), // Extra Time
-                8: const pw.FlexColumnWidth(1.1), // Overtime
-                9: const pw.FlexColumnWidth(1.2), // Penalty
+                0: const pw.FlexColumnWidth(1.1), // Date
+                1: const pw.FlexColumnWidth(1.3), // Shift
+                2: const pw.FlexColumnWidth(1.5), // Clock Time
+                3: const pw.FlexColumnWidth(1.1), // Attendance
+                4: const pw.FlexColumnWidth(1.0), // Duty
+                5: const pw.FlexColumnWidth(0.9), // Delay
+                6: const pw.FlexColumnWidth(1.0), // Early Exit
+                7: const pw.FlexColumnWidth(1.0), // Deficit
+                8: const pw.FlexColumnWidth(1.1), // Extra Time
+                9: const pw.FlexColumnWidth(1.1), // Overtime
+                10: const pw.FlexColumnWidth(1.2), // Penalty
               },
             ),
           ];
