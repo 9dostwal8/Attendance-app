@@ -53,6 +53,13 @@ class AttendanceProvider with ChangeNotifier {
         _position = match.position;
         _email = match.email;
         _department = match.structureId ?? match.position;
+        final langPref = match.languagePreference;
+        if (langPref.isNotEmpty && _currentLanguage != langPref) {
+          _currentLanguage = langPref;
+          SharedPreferences.getInstance().then((prefs) {
+            prefs.setString('app_language', langPref);
+          });
+        }
         if (_isLoggedIn) {
           _saveAuthSession(
             true,
@@ -78,6 +85,7 @@ class AttendanceProvider with ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isLoggedIn', loggedIn);
+      await prefs.setString('app_language', _currentLanguage);
       if (loggedIn) {
         await prefs.setString('loggedInEmployeeId', empId);
         if (name != null) await prefs.setString('loggedInUserName', name);
@@ -99,6 +107,10 @@ class AttendanceProvider with ChangeNotifier {
   Future<void> _loadAuthSession() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final savedLang = prefs.getString('app_language');
+      if (savedLang != null && savedLang.isNotEmpty) {
+        _currentLanguage = savedLang;
+      }
       final isLoggedInSaved = prefs.getBool('isLoggedIn') ?? false;
       final savedEmployeeId = prefs.getString('loggedInEmployeeId');
       final savedName = prefs.getString('loggedInUserName');
@@ -121,6 +133,8 @@ class AttendanceProvider with ChangeNotifier {
           _userTitle = savedPosition;
         }
         _syncCurrentEmployeeInfo();
+        notifyListeners();
+      } else if (savedLang != null && savedLang.isNotEmpty) {
         notifyListeners();
       }
     } catch (e) {
@@ -152,6 +166,9 @@ class AttendanceProvider with ChangeNotifier {
         _userTitle = match.position;
         _position = match.position;
         _email = match.email;
+        if (match.languagePreference.isNotEmpty) {
+          _currentLanguage = match.languagePreference;
+        }
         _isLoggedIn = true;
         _isLoading = false;
         await _saveAuthSession(
@@ -188,6 +205,9 @@ class AttendanceProvider with ChangeNotifier {
     _userTitle = employee.position;
     _position = employee.position;
     _email = employee.email;
+    if (employee.languagePreference.isNotEmpty) {
+      _currentLanguage = employee.languagePreference;
+    }
     _isLoggedIn = true;
     await _saveAuthSession(
       true,
@@ -428,9 +448,26 @@ class AttendanceProvider with ChangeNotifier {
     return dictionary[key] ?? key;
   }
 
-  void setLanguage(String langCode) {
+  Future<void> setLanguage(String langCode) async {
     _currentLanguage = langCode;
     notifyListeners();
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('app_language', langCode);
+
+      final emp = currentEmployee;
+      if (emp != null) {
+        final updatedEmp = emp.copyWith(languagePreference: langCode);
+        final index = _employees.indexWhere((e) => e.id == emp.id);
+        if (index != -1) {
+          _employees[index] = updatedEmp;
+        }
+        await _firebaseService.saveEmployee(updatedEmp);
+      }
+    } catch (e) {
+      debugPrint('Error saving language preference: $e');
+    }
   }
 
   Future<void> toggleTheme() async {

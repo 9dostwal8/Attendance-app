@@ -698,6 +698,7 @@ class CompanyEmployee {
   
   final List<double>? faceEmbedding;
   final String themePreference; // 'dark' or 'light'
+  final String languagePreference; // 'en', 'ku', 'ar'
   final String? fcmToken;
   final String? password;
 
@@ -728,6 +729,7 @@ class CompanyEmployee {
     this.otherAllowance = 0.0,
     this.faceEmbedding,
     this.themePreference = 'dark',
+    this.languagePreference = 'en',
     this.fcmToken,
     this.password,
   });
@@ -764,6 +766,7 @@ class CompanyEmployee {
     List<double>? faceEmbedding,
     bool overrideFaceEmbedding = false,
     String? themePreference,
+    String? languagePreference,
     String? fcmToken,
     bool overrideFcmToken = false,
     String? password,
@@ -796,6 +799,8 @@ class CompanyEmployee {
       otherAllowance: otherAllowance ?? this.otherAllowance,
       faceEmbedding: overrideFaceEmbedding ? faceEmbedding : (faceEmbedding ?? this.faceEmbedding),
       themePreference: themePreference ?? this.themePreference,
+      languagePreference: languagePreference ?? this.languagePreference,
+      fcmToken: overrideFcmToken ? fcmToken : (fcmToken ?? this.fcmToken),
       password: overridePassword ? password : (password ?? this.password),
     );
   }
@@ -828,6 +833,7 @@ class CompanyEmployee {
       'otherAllowance': otherAllowance,
       'faceEmbedding': faceEmbedding,
       'themePreference': themePreference,
+      'languagePreference': languagePreference,
       'fcmToken': fcmToken,
       'password': password,
     };
@@ -880,6 +886,7 @@ class CompanyEmployee {
           ? List<double>.from((map['faceEmbedding'] as List).map((e) => (e as num).toDouble()))
           : null,
       themePreference: map['themePreference'] ?? 'dark',
+      languagePreference: map['languagePreference'] ?? 'en',
       fcmToken: map['fcmToken'],
       password: map['password'],
     );
