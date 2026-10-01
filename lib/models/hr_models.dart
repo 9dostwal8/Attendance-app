@@ -191,7 +191,9 @@ class WorkShift {
   final List<int> workingDays; // list of weekdays, e.g. [1, 2, 3, 4, 5] (Fallback for non-rotation)
   
   final bool isRotation;
-  final Map<int, DayShiftConfig> weeklySchedule; // 1 (Mon) to 7 (Sun)
+  final int rotationDays; // Number of days in the rotation cycle (e.g. 3, 4, 7). Defaults to 7.
+  final String rotationStartDate; // Anchor start date 'yyyy-MM-dd' for Day 1 of rotation.
+  final Map<int, DayShiftConfig> rotationSchedule; // 1 to rotationDays
   final bool isOvernight;
   final String crossMidnightCutoff; // "HH:mm" e.g., "03:00" (Checkouts up to this cutoff calculate to previous date)
 
@@ -207,10 +209,17 @@ class WorkShift {
     this.breakDurationMinutes = 0,
     this.workingDays = const [1, 2, 3, 4, 5],
     this.isRotation = false,
-    this.weeklySchedule = const {},
+    int? rotationDays,
+    this.rotationStartDate = '',
+    Map<int, DayShiftConfig>? rotationSchedule,
+    Map<int, DayShiftConfig>? weeklySchedule,
     this.isOvernight = false,
     this.crossMidnightCutoff = '',
-  });
+  })  : rotationDays = rotationDays ?? (rotationSchedule?.length ?? (weeklySchedule?.length ?? 7)),
+        rotationSchedule = rotationSchedule ?? weeklySchedule ?? const {};
+
+  // Alias for backward compatibility
+  Map<int, DayShiftConfig> get weeklySchedule => rotationSchedule;
 
   static bool isTimeCrossMidnight(String start, String end) {
     final sParts = start.trim().split(':');
@@ -223,9 +232,43 @@ class WorkShift {
     return false;
   }
 
+  /// Calculates which day (1 to rotationDays) of the rotation cycle a given calendar date falls on.
+  int getRotationDayForDate(DateTime date) {
+    if (!isRotation || rotationDays <= 0) return 1;
+
+    // Backwards compatibility: if rotationDays is 7 and rotationStartDate is empty, use weekday (1=Mon..7=Sun)
+    if (rotationDays == 7 && rotationStartDate.isEmpty) {
+      return date.weekday;
+    }
+
+    DateTime baseDate;
+    if (rotationStartDate.isNotEmpty) {
+      try {
+        baseDate = DateTime.parse(rotationStartDate);
+      } catch (_) {
+        baseDate = DateTime(2026, 1, 1);
+      }
+    } else {
+      baseDate = DateTime(2026, 1, 1);
+    }
+
+    final dateOnly = DateTime(date.year, date.month, date.day);
+    final baseOnly = DateTime(baseDate.year, baseDate.month, baseDate.day);
+    final diff = dateOnly.difference(baseOnly).inDays;
+    final mod = ((diff % rotationDays) + rotationDays) % rotationDays;
+    return mod + 1; // 1-indexed (1 .. rotationDays)
+  }
+
+  /// Returns the DayShiftConfig for a given date in the rotation schedule.
+  DayShiftConfig? getConfigForDate(DateTime date) {
+    if (!isRotation) return null;
+    final dayNum = getRotationDayForDate(date);
+    return rotationSchedule[dayNum] ?? weeklySchedule[dayNum];
+  }
+
   bool isOvernightForDate(DateTime date) {
     if (isRotation) {
-      final config = weeklySchedule[date.weekday];
+      final config = getConfigForDate(date);
       if (config != null) {
         return config.isOvernight || isTimeCrossMidnight(config.startTime, config.endTime);
       }
@@ -235,7 +278,7 @@ class WorkShift {
 
   String getCrossMidnightCutoffForDate(DateTime date) {
     if (isRotation) {
-      final config = weeklySchedule[date.weekday];
+      final config = getConfigForDate(date);
       if (config != null && config.crossMidnightCutoff.isNotEmpty) {
         return config.crossMidnightCutoff;
       }
@@ -261,13 +304,13 @@ class WorkShift {
     if (!isRotation) {
       return workingDays.contains(date.weekday);
     }
-    final config = weeklySchedule[date.weekday];
+    final config = getConfigForDate(date);
     return config?.isWorkingDay ?? false;
   }
 
   String getStartTimeForDate(DateTime date) {
     if (!isRotation) return startTime;
-    final config = weeklySchedule[date.weekday];
+    final config = getConfigForDate(date);
     return config?.startTime ?? '00:00';
   }
 
@@ -275,7 +318,7 @@ class WorkShift {
     if (!isRotation) {
       return endTime;
     }
-    final config = weeklySchedule[date.weekday];
+    final config = getConfigForDate(date);
     return config?.endTime ?? endTime;
   }
 
@@ -283,7 +326,7 @@ class WorkShift {
     if (!isRotation) {
       return breakStart;
     }
-    final config = weeklySchedule[date.weekday];
+    final config = getConfigForDate(date);
     return config?.breakStart ?? breakStart;
   }
 
@@ -291,7 +334,7 @@ class WorkShift {
     if (!isRotation) {
       return breakEnd;
     }
-    final config = weeklySchedule[date.weekday];
+    final config = getConfigForDate(date);
     return config?.breakEnd ?? breakEnd;
   }
 
@@ -299,7 +342,7 @@ class WorkShift {
     if (!isRotation) {
       return breakDurationMinutes;
     }
-    final config = weeklySchedule[date.weekday];
+    final config = getConfigForDate(date);
     return config?.breakDurationMinutes ?? breakDurationMinutes;
   }
 
@@ -315,6 +358,9 @@ class WorkShift {
     int? breakDurationMinutes,
     List<int>? workingDays,
     bool? isRotation,
+    int? rotationDays,
+    String? rotationStartDate,
+    Map<int, DayShiftConfig>? rotationSchedule,
     Map<int, DayShiftConfig>? weeklySchedule,
     bool? isOvernight,
     String? crossMidnightCutoff,
@@ -331,13 +377,17 @@ class WorkShift {
       breakDurationMinutes: breakDurationMinutes ?? this.breakDurationMinutes,
       workingDays: workingDays ?? this.workingDays,
       isRotation: isRotation ?? this.isRotation,
-      weeklySchedule: weeklySchedule ?? this.weeklySchedule,
+      rotationDays: rotationDays ?? this.rotationDays,
+      rotationStartDate: rotationStartDate ?? this.rotationStartDate,
+      rotationSchedule: rotationSchedule ?? weeklySchedule ?? this.rotationSchedule,
+      weeklySchedule: weeklySchedule ?? rotationSchedule ?? this.weeklySchedule,
       isOvernight: isOvernight ?? this.isOvernight,
       crossMidnightCutoff: crossMidnightCutoff ?? this.crossMidnightCutoff,
     );
   }
 
   Map<String, dynamic> toMap() {
+    final scheduleMap = rotationSchedule.map((key, value) => MapEntry(key.toString(), value.toMap()));
     return {
       'id': id,
       'name': name,
@@ -350,24 +400,33 @@ class WorkShift {
       'breakDurationMinutes': breakDurationMinutes,
       'workingDays': workingDays,
       'isRotation': isRotation,
-      'weeklySchedule': weeklySchedule.map((key, value) => MapEntry(key.toString(), value.toMap())),
+      'rotationDays': rotationDays,
+      'rotationStartDate': rotationStartDate,
+      'rotationSchedule': scheduleMap,
+      'weeklySchedule': scheduleMap,
       'isOvernight': isOvernight,
       'crossMidnightCutoff': crossMidnightCutoff,
     };
   }
 
   factory WorkShift.fromMap(Map<String, dynamic> map, String docId) {
-    Map<int, DayShiftConfig> parsedWeeklySchedule = {};
-    if (map['weeklySchedule'] != null) {
+    Map<int, DayShiftConfig> parsedSchedule = {};
+    if (map['rotationSchedule'] != null) {
+      final rsMap = map['rotationSchedule'] as Map<String, dynamic>;
+      rsMap.forEach((key, value) {
+        parsedSchedule[int.parse(key)] = DayShiftConfig.fromMap(Map<String, dynamic>.from(value));
+      });
+    } else if (map['weeklySchedule'] != null) {
       final wsMap = map['weeklySchedule'] as Map<String, dynamic>;
       wsMap.forEach((key, value) {
-        parsedWeeklySchedule[int.parse(key)] = DayShiftConfig.fromMap(Map<String, dynamic>.from(value));
+        parsedSchedule[int.parse(key)] = DayShiftConfig.fromMap(Map<String, dynamic>.from(value));
       });
     }
 
     final start = map['startTime'] ?? '';
     final end = map['endTime'] ?? '';
     final autoOvernight = isTimeCrossMidnight(start, end);
+    final rotDays = (map['rotationDays'] as num?)?.toInt() ?? (parsedSchedule.isNotEmpty ? parsedSchedule.length : 7);
 
     return WorkShift(
       id: map['id'] ?? docId,
@@ -381,7 +440,10 @@ class WorkShift {
       breakDurationMinutes: (map['breakDurationMinutes'] as num?)?.toInt() ?? 0,
       workingDays: List<int>.from(map['workingDays'] ?? [1, 2, 3, 4, 5]),
       isRotation: map['isRotation'] ?? false,
-      weeklySchedule: parsedWeeklySchedule,
+      rotationDays: rotDays,
+      rotationStartDate: map['rotationStartDate'] ?? '',
+      rotationSchedule: parsedSchedule,
+      weeklySchedule: parsedSchedule,
       isOvernight: map['isOvernight'] ?? autoOvernight,
       crossMidnightCutoff: map['crossMidnightCutoff'] ?? '',
     );

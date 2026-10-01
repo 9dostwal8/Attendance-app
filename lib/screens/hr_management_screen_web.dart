@@ -592,6 +592,17 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
     Holiday? holiday,
     WorkLocation? location,
   }) {
+    if (shift != null ||
+        (structure == null &&
+            group == null &&
+            employee == null &&
+            holiday == null &&
+            location == null &&
+            _activeTab == HrTab.shifts)) {
+      showShiftDialog(context, shift: shift);
+      return;
+    }
+
     final provider = Provider.of<AttendanceProvider>(context, listen: false);
     final isEditing =
         (structure != null ||

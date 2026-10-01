@@ -91,10 +91,14 @@ class _HrShiftsTabState extends State<HrShiftsTab> {
     };
 
     int activeDaysCount = 0;
-    for (final day in weekDays) {
-      if (shift.isRotation) {
-        if (shift.weeklySchedule[day]?.isWorkingDay == true) activeDaysCount++;
-      } else {
+    if (shift.isRotation) {
+      final totalDays = shift.rotationDays > 0 ? shift.rotationDays : 7;
+      for (int i = 1; i <= totalDays; i++) {
+        final cfg = shift.rotationSchedule[i] ?? shift.weeklySchedule[i];
+        if (cfg?.isWorkingDay == true) activeDaysCount++;
+      }
+    } else {
+      for (final day in weekDays) {
         if (shift.workingDays.contains(day)) activeDaysCount++;
       }
     }
@@ -157,13 +161,38 @@ class _HrShiftsTabState extends State<HrShiftsTab> {
                             ),
                           ),
                           child: Text(
-                            shift.isRotation ? 'Weekly Rotation' : 'Fixed Schedule',
+                            shift.isRotation
+                                ? (shift.rotationDays == 7 && shift.rotationStartDate.isEmpty
+                                    ? 'Weekly Rotation'
+                                    : '${shift.rotationDays}-Day Rotation')
+                                : 'Fixed Schedule',
                             style: TextStyle(
                               fontSize: 10.5,
                               fontWeight: FontWeight.w600,
                               color: shift.isRotation
                                   ? const Color(0xFF8B5CF6)
                                   : const Color(0xFF10B981),
+                            ),
+                          ),
+                        ),
+                        if (shift.isRotation && shift.rotationStartDate.isNotEmpty) ...[
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF3B82F6).withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Text(
+                              'Starts: ${shift.rotationStartDate}',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF60A5FA),
+                              ),
                             ),
                           ),
                         ),
@@ -345,7 +374,7 @@ class _HrShiftsTabState extends State<HrShiftsTab> {
                 child: Row(
                   children: [
                     Text(
-                      'Days:',
+                      shift.isRotation ? 'Cycle:' : 'Days:',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
@@ -354,42 +383,71 @@ class _HrShiftsTabState extends State<HrShiftsTab> {
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: weekDays.map((dayNum) {
-                          final bool isWorkDay;
-                          if (shift.isRotation) {
-                            isWorkDay = shift.weeklySchedule[dayNum]?.isWorkingDay == true;
-                          } else {
-                            isWorkDay = shift.workingDays.contains(dayNum);
-                          }
-                          return Container(
-                            margin: const EdgeInsets.only(right: 5),
-                            width: 22,
-                            height: 22,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: isWorkDay
-                                  ? (shift.isRotation
-                                      ? const Color(0xFF8B5CF6)
-                                      : const Color(0xFF2E65FF))
-                                  : (isDark
-                                      ? Colors.white.withValues(alpha: 0.08)
-                                      : Colors.grey.shade300),
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              dayShort[dayNum] ?? '',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: isWorkDay
-                                    ? Colors.white
-                                    : (isDark ? Colors.white38 : Colors.grey.shade600),
-                              ),
-                            ),
-                          );
-                        }).toList(),
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          children: shift.isRotation
+                              ? List.generate(shift.rotationDays > 0 ? shift.rotationDays : 7, (idx) {
+                                  final dayNum = idx + 1;
+                                  final cfg = shift.rotationSchedule[dayNum] ?? shift.weeklySchedule[dayNum];
+                                  final isWork = cfg?.isWorkingDay == true;
+                                  return Tooltip(
+                                    message: 'Day $dayNum: ${isWork ? '${cfg?.startTime} - ${cfg?.endTime}' : 'Day Off'}',
+                                    child: Container(
+                                      margin: const EdgeInsets.only(right: 5),
+                                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                                      height: 22,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(11),
+                                        color: isWork
+                                            ? const Color(0xFF8B5CF6)
+                                            : (isDark
+                                                ? Colors.white.withValues(alpha: 0.08)
+                                                : Colors.grey.shade300),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        'D$dayNum',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: isWork
+                                              ? Colors.white
+                                              : (isDark ? Colors.white38 : Colors.grey.shade600),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                })
+                              : weekDays.map((dayNum) {
+                                  final isWorkDay = shift.workingDays.contains(dayNum);
+                                  return Container(
+                                    margin: const EdgeInsets.only(right: 5),
+                                    width: 22,
+                                    height: 22,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: isWorkDay
+                                          ? const Color(0xFF2E65FF)
+                                          : (isDark
+                                              ? Colors.white.withValues(alpha: 0.08)
+                                              : Colors.grey.shade300),
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      dayShort[dayNum] ?? '',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: isWorkDay
+                                            ? Colors.white
+                                            : (isDark ? Colors.white38 : Colors.grey.shade600),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                        ),
                       ),
                     ),
                     Container(
@@ -400,7 +458,9 @@ class _HrShiftsTabState extends State<HrShiftsTab> {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        '$activeDaysCount Days/Wk',
+                        shift.isRotation
+                            ? '$activeDaysCount/${shift.rotationDays > 0 ? shift.rotationDays : 7} Days'
+                            : '$activeDaysCount Days/Wk',
                         style: TextStyle(
                           fontSize: 10.5,
                           fontWeight: FontWeight.w600,
@@ -570,19 +630,35 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
       : [6, 7, 1, 2, 3, 4, 5];
 
   bool isRotation = shift?.isRotation ?? false;
+  int rotationDays = shift != null && shift.rotationDays > 0 ? shift.rotationDays : 3;
+  final rotationStartDateController = TextEditingController(
+    text: shift?.rotationStartDate.isNotEmpty == true
+        ? shift!.rotationStartDate
+        : '${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}-${DateTime.now().day.toString().padLeft(2, '0')}',
+  );
   bool isOvernight = shift?.isOvernight ?? false;
   final crossMidnightCutoffController = TextEditingController(text: shift?.crossMidnightCutoff ?? '');
-  Map<int, DayShiftConfig> weeklySchedule = shift != null && shift.weeklySchedule.isNotEmpty
-      ? Map.from(shift.weeklySchedule)
-      : {
-          6: DayShiftConfig(isWorkingDay: true, startTime: '08:00', endTime: '16:00'),
-          7: DayShiftConfig(isWorkingDay: true, startTime: '08:00', endTime: '16:00'),
-          1: DayShiftConfig(isWorkingDay: true, startTime: '08:00', endTime: '16:00'),
-          2: DayShiftConfig(isWorkingDay: true, startTime: '08:00', endTime: '16:00'),
-          3: DayShiftConfig(isWorkingDay: true, startTime: '08:00', endTime: '16:00'),
-          4: DayShiftConfig(isWorkingDay: true, startTime: '08:00', endTime: '16:00'),
-          5: DayShiftConfig(isWorkingDay: false, startTime: '08:00', endTime: '16:00'),
-        };
+  
+  Map<int, DayShiftConfig> rotationSchedule = {};
+  if (shift != null && shift.rotationSchedule.isNotEmpty) {
+    rotationSchedule = Map.from(shift.rotationSchedule);
+  } else if (shift != null && shift.weeklySchedule.isNotEmpty) {
+    rotationSchedule = Map.from(shift.weeklySchedule);
+  } else {
+    // Default 3-day cycle: Day 1 Work, Day 2 Work, Day 3 Off
+    rotationSchedule = {
+      1: DayShiftConfig(isWorkingDay: true, startTime: '08:00', endTime: '16:00'),
+      2: DayShiftConfig(isWorkingDay: true, startTime: '08:00', endTime: '16:00'),
+      3: DayShiftConfig(isWorkingDay: false, startTime: '08:00', endTime: '16:00'),
+    };
+  }
+  for (int i = 1; i <= rotationDays; i++) {
+    rotationSchedule[i] ??= DayShiftConfig(
+      isWorkingDay: i != rotationDays,
+      startTime: '08:00',
+      endTime: '16:00',
+    );
+  }
 
   int? calculateMinutesDifference(String startStr, String endStr) {
     final startParts = startStr.trim().split(':');
@@ -679,12 +755,12 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Weekly Rotation Shift',
+                          'Rotating Shift Cycle',
                           style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                         ),
                         SizedBox(height: 2),
                         Text(
-                          'Configure different hours for each weekday',
+                          'Shift schedule repeats continuously every N days (e.g. 3 days, 4 days)',
                           style: TextStyle(fontSize: 11, color: Colors.grey),
                         ),
                       ],
@@ -883,133 +959,423 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                   ],
                 ),
               ] else ...[
-                // Weekly Schedule (Rotation)
-                const Text(
-                  'Weekly Schedule',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                // Rotation Cycle Settings
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF8B5CF6).withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF8B5CF6).withValues(alpha: 0.3)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.sync_rounded, color: Color(0xFF8B5CF6), size: 18),
+                              SizedBox(width: 8),
+                              Text(
+                                'Rotation Cycle Length',
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF8B5CF6).withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'Repeats Every $rotationDays Days',
+                              style: const TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF8B5CF6),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: [2, 3, 4, 5, 6, 7].map((days) {
+                                final isSelected = rotationDays == days;
+                                return ChoiceChip(
+                                  label: Text('$days Days'),
+                                  selected: isSelected,
+                                  selectedColor: const Color(0xFF8B5CF6),
+                                  backgroundColor: isDark ? Colors.white10 : Colors.grey.shade200,
+                                  labelStyle: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                    color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
+                                  ),
+                                  onSelected: (selected) {
+                                    if (selected) {
+                                      setDialogState(() {
+                                        rotationDays = days;
+                                        for (int i = 1; i <= rotationDays; i++) {
+                                          rotationSchedule[i] ??= DayShiftConfig(
+                                            isWorkingDay: i != rotationDays,
+                                            startTime: '08:00',
+                                            endTime: '16:00',
+                                          );
+                                        }
+                                      });
+                                    }
+                                  },
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: isDark ? Colors.white24 : Colors.grey.shade300),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.remove, size: 16),
+                                  onPressed: rotationDays > 2
+                                      ? () {
+                                          setDialogState(() {
+                                            rotationDays--;
+                                          });
+                                        }
+                                      : null,
+                                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                  padding: EdgeInsets.zero,
+                                ),
+                                Text(
+                                  '$rotationDays',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.add, size: 16),
+                                  onPressed: rotationDays < 31
+                                      ? () {
+                                          setDialogState(() {
+                                            rotationDays++;
+                                            rotationSchedule[rotationDays] ??= DayShiftConfig(
+                                              isWorkingDay: false,
+                                              startTime: '08:00',
+                                              endTime: '16:00',
+                                            );
+                                          });
+                                        }
+                                      : null,
+                                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                  padding: EdgeInsets.zero,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: () async {
+                          DateTime initial = DateTime.now();
+                          if (rotationStartDateController.text.isNotEmpty) {
+                            try {
+                              initial = DateTime.parse(rotationStartDateController.text);
+                            } catch (_) {}
+                          }
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: initial,
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2035),
+                          );
+                          if (picked != null) {
+                            final y = picked.year.toString();
+                            final m = picked.month.toString().padLeft(2, '0');
+                            final d = picked.day.toString().padLeft(2, '0');
+                            setDialogState(() {
+                              rotationStartDateController.text = '$y-$m-$d';
+                            });
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: isDark ? Colors.white24 : Colors.grey.shade300),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.calendar_today_rounded, size: 16, color: Color(0xFF8B5CF6)),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Cycle Anchor Date (Day 1 starts on)',
+                                      style: TextStyle(fontSize: 10, color: Colors.grey),
+                                    ),
+                                    Text(
+                                      rotationStartDateController.text.isEmpty
+                                          ? 'Select Start Date'
+                                          : rotationStartDateController.text,
+                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.edit_calendar_outlined, size: 16, color: Colors.grey),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Day 1 begins on this date. The schedule will repeat every $rotationDays days continuously.',
+                        style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: isDark ? Colors.white60 : Colors.black54),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                Text(
+                  'Rotation Schedule ($rotationDays-Day Cycle)',
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                ...[
-                  {'label': 'Saturday', 'value': 6},
-                  {'label': 'Sunday', 'value': 7},
-                  {'label': 'Monday', 'value': 1},
-                  {'label': 'Tuesday', 'value': 2},
-                  {'label': 'Wednesday', 'value': 3},
-                  {'label': 'Thursday', 'value': 4},
-                  {'label': 'Friday', 'value': 5},
-                ].map((dayMap) {
-                  final dayIndex = dayMap['value'] as int;
-                  final dayLabel = dayMap['label'] as String;
-                  final config = weeklySchedule[dayIndex] ??
+                ...List.generate(rotationDays, (idx) {
+                  final dayIndex = idx + 1;
+                  final config = rotationSchedule[dayIndex] ??
                       DayShiftConfig(isWorkingDay: true, startTime: '08:00', endTime: '16:00');
+                  final isAutoOvernight = WorkShift.isTimeCrossMidnight(config.startTime, config.endTime);
+                  final isDayOvernight = config.isOvernight || isAutoOvernight;
 
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: config.isWorkingDay
+                            ? const Color(0xFF8B5CF6).withValues(alpha: 0.35)
+                            : (isDark ? Colors.white12 : Colors.grey.shade300),
+                      ),
+                    ),
+                    child: Column(
                       children: [
-                        SizedBox(
-                          width: 80,
-                          child: Text(
-                            dayLabel,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                          ),
-                        ),
-                        Switch(
-                          value: config.isWorkingDay,
-                          activeThumbColor: const Color(0xFF8B5CF6),
-                          onChanged: (val) {
-                            setDialogState(() {
-                              weeklySchedule[dayIndex] = DayShiftConfig(
-                                isWorkingDay: val,
-                                startTime: config.startTime,
-                                endTime: config.endTime,
-                                breakStart: config.breakStart,
-                                breakEnd: config.breakEnd,
-                                breakDurationMinutes: config.breakDurationMinutes,
-                              );
-                            });
-                          },
-                        ),
-                        if (config.isWorkingDay) ...[
-                          Expanded(
-                            child: InkWell(
-                              onTap: () async {
-                                final parts = config.startTime.split(':');
-                                final init = TimeOfDay(
-                                  hour: parts.length == 2 ? int.tryParse(parts[0]) ?? 8 : 8,
-                                  minute: parts.length == 2 ? int.tryParse(parts[1]) ?? 0 : 0,
-                                );
-                                final picked = await showTimePicker(context: context, initialTime: init);
-                                if (picked != null) {
-                                  final hh = picked.hour.toString().padLeft(2, '0');
-                                  final mm = picked.minute.toString().padLeft(2, '0');
-                                  setDialogState(() {
-                                    weeklySchedule[dayIndex] = DayShiftConfig(
-                                      isWorkingDay: config.isWorkingDay,
-                                      startTime: '$hh:$mm',
-                                      endTime: config.endTime,
-                                      breakStart: config.breakStart,
-                                      breakEnd: config.breakEnd,
-                                      breakDurationMinutes: config.breakDurationMinutes,
-                                    );
-                                  });
-                                }
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: Colors.white24),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: config.isWorkingDay
+                                    ? const Color(0xFF8B5CF6).withValues(alpha: 0.15)
+                                    : Colors.grey.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                'Day $dayIndex',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                  color: config.isWorkingDay
+                                      ? const Color(0xFF8B5CF6)
+                                      : Colors.grey,
                                 ),
-                                child: Text(config.startTime, style: const TextStyle(fontSize: 12)),
                               ),
                             ),
-                          ),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 4),
-                            child: Text('-', style: TextStyle(fontSize: 12)),
-                          ),
-                          Expanded(
-                            child: InkWell(
-                              onTap: () async {
-                                final parts = config.endTime.split(':');
-                                final init = TimeOfDay(
-                                  hour: parts.length == 2 ? int.tryParse(parts[0]) ?? 16 : 16,
-                                  minute: parts.length == 2 ? int.tryParse(parts[1]) ?? 0 : 0,
-                                );
-                                final picked = await showTimePicker(context: context, initialTime: init);
-                                if (picked != null) {
-                                  final hh = picked.hour.toString().padLeft(2, '0');
-                                  final mm = picked.minute.toString().padLeft(2, '0');
-                                  setDialogState(() {
-                                    weeklySchedule[dayIndex] = DayShiftConfig(
-                                      isWorkingDay: config.isWorkingDay,
-                                      startTime: config.startTime,
-                                      endTime: '$hh:$mm',
-                                      breakStart: config.breakStart,
-                                      breakEnd: config.breakEnd,
-                                      breakDurationMinutes: config.breakDurationMinutes,
-                                    );
-                                  });
-                                }
+                            const SizedBox(width: 8),
+                            Switch(
+                              value: config.isWorkingDay,
+                              activeThumbColor: const Color(0xFF8B5CF6),
+                              onChanged: (val) {
+                                setDialogState(() {
+                                  rotationSchedule[dayIndex] = DayShiftConfig(
+                                    isWorkingDay: val,
+                                    startTime: config.startTime,
+                                    endTime: config.endTime,
+                                    breakStart: config.breakStart,
+                                    breakEnd: config.breakEnd,
+                                    breakDurationMinutes: config.breakDurationMinutes,
+                                    isOvernight: config.isOvernight,
+                                    crossMidnightCutoff: config.crossMidnightCutoff,
+                                  );
+                                });
                               },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: Colors.white24),
-                                ),
-                                child: Text(config.endTime, style: const TextStyle(fontSize: 12)),
+                            ),
+                            Text(
+                              config.isWorkingDay ? 'Working' : 'Day Off',
+                              style: TextStyle(
+                                color: config.isWorkingDay ? (isDark ? Colors.white70 : Colors.black87) : Colors.grey,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
+                            const Spacer(),
+                            if (config.isWorkingDay) ...[
+                              InkWell(
+                                borderRadius: BorderRadius.circular(6),
+                                onTap: () async {
+                                  final parts = config.startTime.split(':');
+                                  final init = TimeOfDay(
+                                    hour: parts.length == 2 ? int.tryParse(parts[0]) ?? 8 : 8,
+                                    minute: parts.length == 2 ? int.tryParse(parts[1]) ?? 0 : 0,
+                                  );
+                                  final picked = await showTimePicker(context: context, initialTime: init);
+                                  if (picked != null) {
+                                    final hh = picked.hour.toString().padLeft(2, '0');
+                                    final mm = picked.minute.toString().padLeft(2, '0');
+                                    setDialogState(() {
+                                      final newStart = '$hh:$mm';
+                                      final autoOver = WorkShift.isTimeCrossMidnight(newStart, config.endTime);
+                                      rotationSchedule[dayIndex] = DayShiftConfig(
+                                        isWorkingDay: true,
+                                        startTime: newStart,
+                                        endTime: config.endTime,
+                                        breakStart: config.breakStart,
+                                        breakEnd: config.breakEnd,
+                                        breakDurationMinutes: config.breakDurationMinutes,
+                                        isOvernight: config.isOvernight || autoOver,
+                                        crossMidnightCutoff: config.crossMidnightCutoff.isNotEmpty ? config.crossMidnightCutoff : (autoOver ? '03:00' : ''),
+                                      );
+                                    });
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: isDark ? Colors.white24 : Colors.grey.shade400),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.login_rounded, size: 12, color: Colors.greenAccent),
+                                      const SizedBox(width: 4),
+                                      Text(config.startTime, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 4),
+                                child: Text('-', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                              ),
+                              InkWell(
+                                borderRadius: BorderRadius.circular(6),
+                                onTap: () async {
+                                  final parts = config.endTime.split(':');
+                                  final init = TimeOfDay(
+                                    hour: parts.length == 2 ? int.tryParse(parts[0]) ?? 16 : 16,
+                                    minute: parts.length == 2 ? int.tryParse(parts[1]) ?? 0 : 0,
+                                  );
+                                  final picked = await showTimePicker(context: context, initialTime: init);
+                                  if (picked != null) {
+                                    final hh = picked.hour.toString().padLeft(2, '0');
+                                    final mm = picked.minute.toString().padLeft(2, '0');
+                                    setDialogState(() {
+                                      final newEnd = '$hh:$mm';
+                                      final autoOver = WorkShift.isTimeCrossMidnight(config.startTime, newEnd);
+                                      rotationSchedule[dayIndex] = DayShiftConfig(
+                                        isWorkingDay: true,
+                                        startTime: config.startTime,
+                                        endTime: newEnd,
+                                        breakStart: config.breakStart,
+                                        breakEnd: config.breakEnd,
+                                        breakDurationMinutes: config.breakDurationMinutes,
+                                        isOvernight: config.isOvernight || autoOver,
+                                        crossMidnightCutoff: config.crossMidnightCutoff.isNotEmpty ? config.crossMidnightCutoff : (autoOver ? '03:00' : ''),
+                                      );
+                                    });
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: isDark ? Colors.white24 : Colors.grey.shade400),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.logout_rounded, size: 12, color: Colors.orangeAccent),
+                                      const SizedBox(width: 4),
+                                      Text(config.endTime, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        if (config.isWorkingDay && isDayOvernight) ...[
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              const SizedBox(width: 6),
+                              const Icon(Icons.nightlight_round, size: 12, color: Color(0xFF818CF8)),
+                              const SizedBox(width: 4),
+                              const Text(
+                                'Overnight (Crosses midnight)',
+                                style: TextStyle(fontSize: 11, color: Color(0xFF818CF8), fontWeight: FontWeight.w500),
+                              ),
+                              const Spacer(),
+                              InkWell(
+                                onTap: () async {
+                                  final cutoff = config.crossMidnightCutoff.isNotEmpty ? config.crossMidnightCutoff : '03:00';
+                                  final parts = cutoff.split(':');
+                                  final init = TimeOfDay(
+                                    hour: parts.length == 2 ? int.tryParse(parts[0]) ?? 3 : 3,
+                                    minute: parts.length == 2 ? int.tryParse(parts[1]) ?? 0 : 0,
+                                  );
+                                  final picked = await showTimePicker(context: context, initialTime: init);
+                                  if (picked != null) {
+                                    final hh = picked.hour.toString().padLeft(2, '0');
+                                    final mm = picked.minute.toString().padLeft(2, '0');
+                                    setDialogState(() {
+                                      rotationSchedule[dayIndex] = DayShiftConfig(
+                                        isWorkingDay: true,
+                                        startTime: config.startTime,
+                                        endTime: config.endTime,
+                                        breakStart: config.breakStart,
+                                        breakEnd: config.breakEnd,
+                                        breakDurationMinutes: config.breakDurationMinutes,
+                                        isOvernight: true,
+                                        crossMidnightCutoff: '$hh:$mm',
+                                      );
+                                    });
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(color: const Color(0xFF818CF8).withValues(alpha: 0.5)),
+                                  ),
+                                  child: Text(
+                                    'Cutoff: ${config.crossMidnightCutoff.isNotEmpty ? config.crossMidnightCutoff : "03:00"}',
+                                    style: const TextStyle(fontSize: 10, color: Color(0xFF818CF8)),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ] else
-                          const Expanded(
-                            child: Text(
-                              'Day Off',
-                              style: TextStyle(color: Colors.grey, fontSize: 12),
-                            ),
-                          ),
+                        ],
                       ],
                     ),
                   );
@@ -1085,7 +1451,10 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
             breakDurationMinutes: breakMins,
             workingDays: workingDays,
             isRotation: isRotation,
-            weeklySchedule: weeklySchedule,
+            rotationDays: isRotation ? rotationDays : 7,
+            rotationStartDate: isRotation ? rotationStartDateController.text.trim() : '',
+            rotationSchedule: isRotation ? rotationSchedule : {},
+            weeklySchedule: isRotation ? rotationSchedule : {},
             isOvernight: isOvernight || WorkShift.isTimeCrossMidnight(startController.text.trim(), endController.text.trim()),
             crossMidnightCutoff: crossMidnightCutoffController.text.trim(),
           );
