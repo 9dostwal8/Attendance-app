@@ -2,7 +2,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter_zk/flutter_zk.dart';
+import 'package:attendance_app/services/zkteco/zk_protocol/flutter_zk.dart';
 
 void main() async {
   const port = 5055;

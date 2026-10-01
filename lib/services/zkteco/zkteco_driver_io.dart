@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_zk/flutter_zk.dart';
+import 'zk_protocol/flutter_zk.dart';
 import 'zkteco_driver.dart';
 import 'zkteco_models.dart';
 
