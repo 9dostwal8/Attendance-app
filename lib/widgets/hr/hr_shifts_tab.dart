@@ -195,7 +195,7 @@ class _HrShiftsTabState extends State<HrShiftsTab> {
                               ),
                             ),
                           ),
-                        ),
+                        ],
                         if (shift.isOvernight || (!shift.isRotation && WorkShift.isTimeCrossMidnight(shift.startTime, shift.endTime))) ...[
                           const SizedBox(width: 5),
                           Container(
@@ -715,6 +715,7 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
     icon: Icons.access_time_rounded,
     content: StatefulBuilder(
       builder: (context, setDialogState) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         void updateBreakDuration() {
           final diff = calculateMinutesDifference(
             breakStartController.text,
