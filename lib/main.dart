@@ -8,6 +8,8 @@ import 'firebase_options.dart';
 import 'providers/attendance_provider.dart';
 import 'screens/main_navigation_screen.dart';
 import 'screens/login_screen.dart';
+import 'services/firebase_service.dart';
+import 'services/zkteco_service.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -51,14 +53,29 @@ final GlobalKey<ScaffoldMessengerState> rootScaffoldMessengerKey =
 final GlobalKey<NavigatorState> rootNavigatorKey =
     GlobalKey<NavigatorState>();
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  late final AttendanceProvider _attendanceProvider;
+
+  @override
+  void initState() {
+    super.initState();
+    _attendanceProvider = AttendanceProvider();
+    ZkTecoService.instance.init(_attendanceProvider, FirebaseService());
+  }
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AttendanceProvider()),
+        ChangeNotifierProvider.value(value: _attendanceProvider),
+        ChangeNotifierProvider.value(value: ZkTecoService.instance),
       ],
       child: Consumer<AttendanceProvider>(
         builder: (context, provider, child) {

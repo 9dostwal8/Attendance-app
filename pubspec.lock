@@ -145,6 +145,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.19.1"
+  convert:
+    dependency: transitive
+    description:
+      name: convert
+      sha256: b30acd5944035672bc15c6b7a8b47d773e41e2f17de064350988c5d02adb1c68
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.1.2"
   cross_file:
     dependency: transitive
     description:
@@ -416,6 +424,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  flutter_zk:
+    dependency: "direct main"
+    description:
+      name: flutter_zk
+      sha256: "72f065348482c7953b2718accd03e3ec9ec2ec780a95cd2f0b5b65a9a889b605"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.4"
   geoclue:
     dependency: transitive
     description:

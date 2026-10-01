@@ -17,6 +17,7 @@ import '../widgets/hr/hr_locations_tab.dart';
 import '../widgets/hr/hr_holidays_tab.dart';
 import '../widgets/hr/hr_employees_tab.dart';
 import '../widgets/hr/hr_daily_report_tab.dart';
+import '../widgets/hr/hr_device_tab.dart';
 
 
 class HrManagementScreenWeb extends StatefulWidget {
@@ -74,6 +75,8 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
         return provider.translate('payroll');
       case HrTab.dailyReport:
         return provider.translate('daily_report');
+      case HrTab.device:
+        return provider.translate('device');
     }
   }
 
@@ -213,6 +216,11 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                                   icon: Icons.bar_chart,
                                   label: provider.translate('daily_report'),
                                 ),
+                                _buildGridTab(
+                                  tab: HrTab.device,
+                                  icon: Icons.fingerprint,
+                                  label: provider.translate('device'),
+                                ),
                               ],
                             ),
                           ),
@@ -316,7 +324,7 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
   }
 
   Widget _buildAddNewButton() {
-    if (_activeTab == HrTab.payroll || _activeTab == HrTab.dailyReport)
+    if (_activeTab == HrTab.payroll || _activeTab == HrTab.dailyReport || _activeTab == HrTab.device)
       // ignore: curly_braces_in_flow_control_structures
       return const SizedBox.shrink();
     String label = '';
@@ -341,6 +349,7 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
         break;
       case HrTab.payroll:
       case HrTab.dailyReport:
+      case HrTab.device:
         break;
     }
 
@@ -522,6 +531,8 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
         return _buildPayrollList(provider);
       case HrTab.dailyReport:
         return HrDailyReportTab(searchQuery: _searchQuery);
+      case HrTab.device:
+        return const HrDeviceTab();
     }
   }
 
