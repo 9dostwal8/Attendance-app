@@ -302,14 +302,29 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
               ],
             ),
             if (!isMobile) const Spacer() else const SizedBox(height: 12),
-            NeuButton(
-              onPressed: () => _showUserFormDialog(context: context, provider: provider),
-              icon: const Icon(Icons.person_add_alt_1_rounded, size: 16),
-              label: 'Add User',
-              variant: NeuButtonVariant.primary,
-              height: 38,
-              fontSize: 13,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                NeuButton(
+                  onPressed: () => _showResequenceConfirm(context, provider),
+                  icon: const Icon(Icons.format_list_numbered_rounded, size: 16),
+                  label: 'Re-sequence IDs (1, 2, 3...)',
+                  variant: NeuButtonVariant.navy,
+                  height: 38,
+                  fontSize: 12.5,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                ),
+                NeuButton(
+                  onPressed: () => _showUserFormDialog(context: context, provider: provider),
+                  icon: const Icon(Icons.person_add_alt_1_rounded, size: 16),
+                  label: 'Add User',
+                  variant: NeuButtonVariant.primary,
+                  height: 38,
+                  fontSize: 13,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                ),
+              ],
             ),
           ],
         );
@@ -490,6 +505,26 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                                             fontSize: 13.5,
                                             fontWeight: FontWeight.bold,
                                             color: textColor,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF2E65FF).withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(6),
+                                            border: Border.all(
+                                              color: const Color(0xFF2E65FF).withValues(alpha: 0.35),
+                                              width: 0.8,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            'ID: ${employee.id}',
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF2E65FF),
+                                            ),
                                           ),
                                         ),
                                         if (isUserDisabled)
@@ -781,6 +816,9 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
   }) {
     final isEditing = employee != null;
     final nowStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final userIdController = TextEditingController(
+      text: employee != null ? employee.id : provider.getNextEmployeeId(),
+    );
     final nameController = TextEditingController(text: employee?.name ?? '');
     final emailController = TextEditingController(text: employee?.email ?? '');
     final positionController = TextEditingController(text: employee?.position ?? '');
@@ -832,13 +870,38 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TextField(
-                  controller: nameController,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(
-                    labelText: 'Full Name *',
-                    labelStyle: TextStyle(color: Colors.white70),
-                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 4,
+                      child: TextField(
+                        controller: userIdController,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        keyboardType: TextInputType.text,
+                        decoration: InputDecoration(
+                          labelText: 'User ID *',
+                          labelStyle: const TextStyle(color: Colors.white70),
+                          prefixIcon: const Icon(Icons.tag_rounded, size: 18, color: Color(0xFF2E65FF)),
+                          helperText: isEditing ? 'Device/System ID' : 'Auto-sequence ID',
+                          helperStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 7,
+                      child: TextField(
+                        controller: nameController,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: const InputDecoration(
+                          labelText: 'Full Name *',
+                          labelStyle: TextStyle(color: Colors.white70),
+                          prefixIcon: Icon(Icons.person_outline, size: 18, color: Colors.white60),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -1154,13 +1217,29 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
           height: 38,
           padding: const EdgeInsets.symmetric(horizontal: 18),
           onPressed: () {
+            final enteredId = userIdController.text.trim().isNotEmpty
+                ? userIdController.text.trim()
+                : (employee != null ? employee.id : provider.getNextEmployeeId());
             final name = nameController.text.trim();
             final email = emailController.text.trim();
             final pos = positionController.text.trim();
 
-            if (name.isEmpty || email.isEmpty) {
+            if (enteredId.isEmpty || name.isEmpty || email.isEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Name and Email are required.')),
+                const SnackBar(content: Text('User ID, Name, and Email are required.')),
+              );
+              return;
+            }
+
+            final conflict = provider.employees.where(
+              (e) => e.id.toLowerCase() == enteredId.toLowerCase() && (employee == null || e.id != employee.id),
+            ).firstOrNull;
+            if (conflict != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('User ID "$enteredId" is already used by ${conflict.name}. Please enter a unique ID.'),
+                  backgroundColor: Colors.redAccent,
+                ),
               );
               return;
             }
@@ -1311,6 +1390,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                 );
               }
               newOrUpdatedEmp = employee.copyWith(
+                id: enteredId,
                 name: name,
                 email: email,
                 position: pos.isNotEmpty ? pos : 'Team Member',
@@ -1328,7 +1408,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                 workingHours: employee.workingHours > 0 ? employee.workingHours : 160.0,
                 salaryHistory: sHistory,
               );
-              provider.updateEmployee(newOrUpdatedEmp);
+              provider.updateEmployee(newOrUpdatedEmp, oldId: employee.id);
             } else {
               List<SalaryHistoryEntry> initialHistory = [];
               if (salaryVal > 0) {
@@ -1343,7 +1423,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                 );
               }
               newOrUpdatedEmp = CompanyEmployee(
-                id: 'emp_${DateTime.now().millisecondsSinceEpoch}',
+                id: enteredId,
                 name: name,
                 email: email,
                 position: pos.isNotEmpty ? pos : 'Team Member',
@@ -1371,6 +1451,43 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                 backgroundColor: const Color(0xFF10B981),
               ),
             );
+          },
+        ),
+      ],
+    );
+  }
+
+  void _showResequenceConfirm(BuildContext context, AttendanceProvider provider) {
+    showGlassDialog(
+      context: context,
+      title: 'Re-sequence User IDs',
+      subtitle: 'Number all employees 1, 2, 3...',
+      icon: Icons.format_list_numbered_rounded,
+      content: const Text(
+        'This will automatically update all employees to sequential simple numbers starting from 1 (1, 2, 3, 4...) and migrate their attendance history and requests. Are you sure you want to proceed?',
+        style: TextStyle(color: Colors.white, fontSize: 13, height: 1.4),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+        ),
+        NeuButton(
+          label: 'Re-sequence Now',
+          variant: NeuButtonVariant.primary,
+          height: 38,
+          padding: const EdgeInsets.symmetric(horizontal: 18),
+          onPressed: () async {
+            Navigator.pop(context);
+            await provider.resequenceEmployeeIds();
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('All employee IDs have been re-sequenced to 1, 2, 3... successfully!'),
+                  backgroundColor: Color(0xFF10B981),
+                ),
+              );
+            }
           },
         ),
       ],

@@ -2516,29 +2516,133 @@ class AttendanceProvider with ChangeNotifier {
     await _firebaseService.deleteEmployee(strId);
   }
 
-  Future<void> updateEmployee(dynamic emp) async {
-    if (emp is CompanyEmployee) {
-      final index = _employees.indexWhere((e) => e.id == emp.id);
-      if (index != -1) {
-        _employees[index] = emp;
-      } else {
-        _employees.add(emp);
+  /// Generates the next sequential numeric user ID ('1', '2', '3', ...).
+  String getNextEmployeeId() {
+    int maxId = 0;
+    for (final emp in _employees) {
+      final cleanId = emp.id.trim();
+      // 1. Direct integer parse
+      final directNum = int.tryParse(cleanId);
+      if (directNum != null) {
+        // Exclude massive timestamp values (e.g. > 1,000,000)
+        if (directNum > maxId && directNum < 1000000) {
+          maxId = directNum;
+        }
+        continue;
       }
-      notifyListeners();
-      await _firebaseService.saveEmployee(emp);
+
+      // 2. Prefixed integer parse like emp_1, emp_2, USR_3
+      final matches = RegExp(r'\d+').allMatches(cleanId);
+      for (final m in matches) {
+        final val = int.tryParse(m.group(0)!);
+        if (val != null && val > maxId && val < 1000000) {
+          maxId = val;
+        }
+      }
+    }
+    return (maxId + 1).toString();
+  }
+
+  Future<void> updateEmployee(dynamic emp, {String? oldId}) async {
+    if (emp is CompanyEmployee) {
+      final targetOldId = (oldId != null && oldId.trim().isNotEmpty) ? oldId.trim() : emp.id;
+      final isIdChanged = targetOldId != emp.id;
+
+      if (isIdChanged) {
+        // Remove old entry
+        _employees.removeWhere((e) => e.id == targetOldId);
+        final newIndex = _employees.indexWhere((e) => e.id == emp.id);
+        if (newIndex != -1) {
+          _employees[newIndex] = emp;
+        } else {
+          _employees.add(emp);
+        }
+
+        // Update current employeeId if this was the logged-in user
+        if (_employeeId == targetOldId) {
+          _employeeId = emp.id;
+        }
+
+        // Migrate local requests map
+        final oldReqs = _allRequestsMap.remove(targetOldId);
+        if (oldReqs != null) {
+          _allRequestsMap[emp.id] = oldReqs.map((r) => r.copyWith(employeeId: emp.id)).toList();
+        }
+
+        // Migrate local records if active
+        final updatedList = _records.map((r) {
+          if (r.employeeId == targetOldId) {
+            return r.copyWith(employeeId: emp.id);
+          }
+          return r;
+        }).toList();
+        _records.clear();
+        _records.addAll(updatedList);
+
+        notifyListeners();
+
+        // Migrate remote Firebase data
+        await _firebaseService.migrateEmployeeId(targetOldId, emp.id);
+        await _firebaseService.deleteEmployee(targetOldId);
+        await _firebaseService.saveEmployee(emp);
+      } else {
+        final index = _employees.indexWhere((e) => e.id == emp.id);
+        if (index != -1) {
+          _employees[index] = emp;
+        } else {
+          _employees.add(emp);
+        }
+        notifyListeners();
+        await _firebaseService.saveEmployee(emp);
+      }
     }
   }
 
   Future<void> addEmployee(dynamic emp) async {
     if (emp is CompanyEmployee) {
-      final index = _employees.indexWhere((e) => e.id == emp.id);
+      var toAdd = emp;
+      // If no ID or auto-generated epoch timestamp ID, assign sequential simple number
+      if (toAdd.id.trim().isEmpty ||
+          (toAdd.id.startsWith('emp_') && toAdd.id.length > 10) ||
+          (toAdd.id.startsWith('USR_') && toAdd.id.length > 10)) {
+        toAdd = toAdd.copyWith(id: getNextEmployeeId());
+      }
+
+      final index = _employees.indexWhere((e) => e.id == toAdd.id);
       if (index != -1) {
-        _employees[index] = emp;
+        _employees[index] = toAdd;
       } else {
-        _employees.add(emp);
+        _employees.add(toAdd);
       }
       notifyListeners();
-      await _firebaseService.saveEmployee(emp);
+      await _firebaseService.saveEmployee(toAdd);
+    }
+  }
+
+  /// Re-sequences all employee IDs to simple numbers 1, 2, 3... in sequence.
+  Future<void> resequenceEmployeeIds() async {
+    // Sort employees: keep order of existing numeric IDs or startDate
+    final sorted = List<CompanyEmployee>.from(_employees);
+    sorted.sort((a, b) {
+      final numA = int.tryParse(a.id) ?? int.tryParse(a.id.replaceAll(RegExp(r'[^0-9]'), '')) ?? 999999;
+      final numB = int.tryParse(b.id) ?? int.tryParse(b.id.replaceAll(RegExp(r'[^0-9]'), '')) ?? 999999;
+      if (numA != numB) return numA.compareTo(numB);
+      return a.startDate.compareTo(b.startDate);
+    });
+
+    int sequence = 1;
+    for (final emp in sorted) {
+      // Don't modify super admin account if present
+      if (emp.id == 'admin_super_account') continue;
+
+      final newId = sequence.toString();
+      sequence++;
+
+      if (emp.id != newId) {
+        final oldId = emp.id;
+        final updatedEmp = emp.copyWith(id: newId);
+        await updateEmployee(updatedEmp, oldId: oldId);
+      }
     }
   }
 

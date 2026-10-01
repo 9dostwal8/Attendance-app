@@ -3474,7 +3474,7 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                         } else {
                           provider.addEmployee(
                             CompanyEmployee(
-                              id: 'emp_${DateTime.now().millisecondsSinceEpoch}',
+                              id: provider.getNextEmployeeId(),
                               name: nameController.text.trim(),
                               email: emailVal,
                               position: newPos,

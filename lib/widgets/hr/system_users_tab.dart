@@ -566,7 +566,9 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Text(
+                                    Row(
+                                       children: [
+                                         Text(
                                       user.name,
                                       style: TextStyle(
                                         fontSize: 13.5,
@@ -574,6 +576,28 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
                                         color: textColor,
                                       ),
                                     ),
+                                         const SizedBox(width: 8),
+                                         Container(
+                                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                           decoration: BoxDecoration(
+                                             color: const Color(0xFF2E65FF).withValues(alpha: 0.15),
+                                             borderRadius: BorderRadius.circular(6),
+                                             border: Border.all(
+                                               color: const Color(0xFF2E65FF).withValues(alpha: 0.35),
+                                               width: 0.8,
+                                             ),
+                                           ),
+                                           child: Text(
+                                             'ID: ${user.id}',
+                                             style: const TextStyle(
+                                               fontSize: 10,
+                                               fontWeight: FontWeight.bold,
+                                               color: Color(0xFF2E65FF),
+                                             ),
+                                           ),
+                                         ),
+                                       ],
+                                     ),
                                     Text(
                                       user.email,
                                       style: TextStyle(
@@ -980,6 +1004,7 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
     BuildContext context,
     AttendanceProvider provider,
   ) {
+    final userIdCtrl = TextEditingController(text: provider.getNextEmployeeId());
     final nameCtrl = TextEditingController();
     final emailCtrl = TextEditingController();
     final posCtrl = TextEditingController(text: 'System Administrator');
@@ -997,12 +1022,33 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(
-                  controller: nameCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Full Name',
-                    prefixIcon: Icon(Icons.person_outline),
-                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 4,
+                      child: TextField(
+                        controller: userIdCtrl,
+                        keyboardType: TextInputType.text,
+                        decoration: const InputDecoration(
+                          labelText: 'User ID *',
+                          prefixIcon: Icon(Icons.tag_rounded, size: 18),
+                          helperText: 'Auto-sequence ID',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 7,
+                      child: TextField(
+                        controller: nameCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Full Name *',
+                          prefixIcon: Icon(Icons.person_outline),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -1066,17 +1112,34 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
         ),
         NeuButton(
           onPressed: () {
-            if (nameCtrl.text.trim().isEmpty || emailCtrl.text.trim().isEmpty) {
+            final enteredId = userIdCtrl.text.trim().isNotEmpty
+                ? userIdCtrl.text.trim()
+                : provider.getNextEmployeeId();
+
+            if (enteredId.isEmpty || nameCtrl.text.trim().isEmpty || emailCtrl.text.trim().isEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Please enter full name and email'),
+                  content: Text('Please enter User ID, full name and email'),
+                ),
+              );
+              return;
+            }
+
+            final conflict = provider.employees.where(
+              (e) => e.id.toLowerCase() == enteredId.toLowerCase(),
+            ).firstOrNull;
+            if (conflict != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('User ID "' + enteredId + '" is already in use by ' + conflict.name + '.'),
+                  backgroundColor: Colors.redAccent,
                 ),
               );
               return;
             }
 
             final newEmp = CompanyEmployee(
-              id: 'USR_${DateTime.now().millisecondsSinceEpoch}',
+              id: enteredId,
               name: nameCtrl.text.trim(),
               email: emailCtrl.text.trim(),
               position: posCtrl.text.trim(),

@@ -342,6 +342,71 @@ class FirebaseService {
     }
   }
 
+  /// Migrates all attendance records, requests, and adjustments from oldId to newId
+  Future<void> migrateEmployeeId(String oldId, String newId) async {
+    if (!isAvailable || oldId.trim() == newId.trim()) return;
+    final cleanOld = oldId.trim();
+    final cleanNew = newId.trim();
+
+    try {
+      // 1. Migrate Attendance Records
+      final recordsSnap = await _firestore
+          .collection('attendance_records')
+          .doc(cleanOld)
+          .collection('user_records')
+          .get();
+
+      for (var doc in recordsSnap.docs) {
+        final data = Map<String, dynamic>.from(doc.data());
+        data['employeeId'] = cleanNew;
+        await _firestore
+            .collection('attendance_records')
+            .doc(cleanNew)
+            .collection('user_records')
+            .doc(doc.id)
+            .set(data);
+        await doc.reference.delete();
+      }
+      try {
+        await _firestore.collection('attendance_records').doc(cleanOld).delete();
+      } catch (_) {}
+
+      // 2. Migrate Requests
+      final requestsSnap = await _firestore
+          .collection('requests')
+          .doc(cleanOld)
+          .collection('user_requests')
+          .get();
+
+      for (var doc in requestsSnap.docs) {
+        final data = Map<String, dynamic>.from(doc.data());
+        data['employeeId'] = cleanNew;
+        await _firestore
+            .collection('requests')
+            .doc(cleanNew)
+            .collection('user_requests')
+            .doc(doc.id)
+            .set(data);
+        await doc.reference.delete();
+      }
+      try {
+        await _firestore.collection('requests').doc(cleanOld).delete();
+      } catch (_) {}
+
+      // 3. Migrate Payroll Adjustments
+      final adjSnap = await _firestore
+          .collection('payroll_adjustments')
+          .where('employeeId', isEqualTo: cleanOld)
+          .get();
+
+      for (var doc in adjSnap.docs) {
+        await doc.reference.update({'employeeId': cleanNew});
+      }
+    } catch (e) {
+      debugPrint('Error migrating employee data from $cleanOld to $cleanNew: $e');
+    }
+  }
+
   // --- AttendanceRecord CRUD ---
   Future<List<AttendanceRecord>> getUserRecords(String employeeId) async {
     if (!isAvailable) return [];
