@@ -765,8 +765,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  _buildDayRequestsButton(provider, compiledData),
-                                  const SizedBox(width: 10),
                                   _buildExportButton(provider, compiledData),
                                   const SizedBox(width: 12),
                                   _buildAddRequestButton(provider),
@@ -782,20 +780,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         children: [
                           Row(
                             children: [
-                              if (provider.currentEmployee != null)
+                              if (provider.currentEmployee != null) ...[
                                 Expanded(
                                   child: _buildEmployeeDropdown(provider, [
                                     provider.currentEmployee!,
                                     ...subordinates,
                                   ]),
                                 ),
-                              const SizedBox(width: 8),
-                              _buildDayRequestsButton(
-                                provider,
-                                compiledData,
-                                isCompact: true,
-                              ),
-                              const SizedBox(width: 8),
+                                const SizedBox(width: 8),
+                              ],
                               _buildExportButton(provider, compiledData),
                               const SizedBox(width: 12),
                               _buildAddRequestButton(provider),
@@ -1914,120 +1907,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
           profile: provider.companyProfile,
         );
       },
-    );
-  }
-
-  Widget _buildDayRequestsButton(
-    AttendanceProvider provider,
-    List<Map<String, dynamic>> compiledData, {
-    bool isCompact = false,
-  }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isSelected = _selectedDate != null;
-
-    final selectedRow = isSelected
-        ? compiledData.cast<Map<String, dynamic>?>().firstWhere(
-            (r) =>
-                r != null &&
-                DateUtils.isSameDay(r['date'] as DateTime, _selectedDate),
-            orElse: () => null,
-          )
-        : null;
-
-    final List<Request> requests = selectedRow != null
-        ? ((selectedRow['requests'] as List<Request>?) ?? [])
-        : [];
-
-    final count = requests.length;
-
-    if (isCompact) {
-      return Stack(
-        clipBehavior: Clip.none,
-        children: [
-          NeuIconButton(
-            size: 44,
-            variant: isSelected ? NeuButtonVariant.navy : NeuButtonVariant.whitePill,
-            tooltip: 'Day Requests',
-            icon: const Icon(Icons.assignment_outlined, size: 20),
-            onPressed: () {
-              if (isSelected && selectedRow != null) {
-                _showDayRequestsDialog(context, provider, selectedRow);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Click on any day row in the table first.'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-              }
-            },
-          ),
-          if (isSelected && count > 0)
-            Positioned(
-              top: -2,
-              right: -2,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFFF4B4B),
-                  shape: BoxShape.circle,
-                ),
-                constraints: const BoxConstraints(
-                  minWidth: 16,
-                  minHeight: 16,
-                ),
-                child: Text(
-                  '$count',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 9,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      );
-    }
-
-    if (!isSelected) {
-      return Tooltip(
-        message: 'Click on any day row in the table to view its requests',
-        child: NeuButton(
-          onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Click on any day row in the table first.'),
-                duration: Duration(seconds: 2),
-              ),
-            );
-          },
-          icon: Icon(
-            Icons.assignment_outlined,
-            color: isDark ? Colors.white38 : const Color(0xFF64748B).withValues(alpha: 0.5),
-          ),
-          label: provider.translate('requests'),
-          variant: NeuButtonVariant.whitePill,
-          height: 44,
-          fontSize: 13,
-        ),
-      );
-    }
-
-    return NeuButton(
-      onPressed: () {
-        if (selectedRow != null) {
-          _showDayRequestsDialog(context, provider, selectedRow);
-        }
-      },
-      icon: const Icon(Icons.assignment_outlined),
-      label: count > 0
-          ? '${provider.translate('requests')} ($count)'
-          : provider.translate('requests'),
-      variant: NeuButtonVariant.navy,
-      height: 44,
-      fontSize: 13,
     );
   }
 
