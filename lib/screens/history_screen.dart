@@ -205,7 +205,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             : 1020; // Default 17:00
 
         int dayShiftDurMins = shiftEndMinutes - shiftStartMinutes;
-        if (dayShiftDurMins < 0 || shift.isOvernightForDate(date)) {
+        if (dayShiftDurMins <= 0 || shift.isOvernightForDate(date)) {
           dayShiftDurMins += 24 * 60;
         }
         final shiftWorkHoursStr = formatMinutes(dayShiftDurMins);
@@ -451,7 +451,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               shiftEndMinutes ~/ 60,
               shiftEndMinutes % 60,
             );
-            if (shiftEnd.isBefore(shiftStart) || shift.isOvernightForDate(date)) {
+            if (shiftEnd.isBefore(shiftStart) || shiftEnd.isAtSameMomentAs(shiftStart) || shift.isOvernightForDate(date)) {
               shiftEnd = shiftEnd.add(const Duration(days: 1));
             }
 

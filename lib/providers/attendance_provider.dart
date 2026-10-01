@@ -1351,7 +1351,7 @@ class AttendanceProvider with ChangeNotifier {
           shiftEndMins ~/ 60,
           shiftEndMins % 60,
         );
-        if (shiftEnd.isBefore(shiftStart) || shift.isOvernightForDate(date)) {
+        if (shiftEnd.isBefore(shiftStart) || shiftEnd.isAtSameMomentAs(shiftStart) || shift.isOvernightForDate(date)) {
           shiftEnd = shiftEnd.add(const Duration(days: 1));
         }
 

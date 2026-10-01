@@ -113,9 +113,12 @@ class _CustomCalendarState extends State<CustomCalendar> {
     }
 
     // Expected duration vs actual
-    final expectedDurationMinutes = shiftEndMinutes >= shiftStartMinutes
-        ? (shiftEndMinutes - shiftStartMinutes)
-        : (24 * 60 - shiftStartMinutes + shiftEndMinutes);
+    final int expectedDurationMinutes;
+    if (shift.isOvernightForDate(date) || shiftEndMinutes <= shiftStartMinutes) {
+      expectedDurationMinutes = (24 * 60) - shiftStartMinutes + shiftEndMinutes;
+    } else {
+      expectedDurationMinutes = shiftEndMinutes - shiftStartMinutes;
+    }
     final netExpectedDuration =
         expectedDurationMinutes - shift.getBreakDurationForDate(date);
 
@@ -143,7 +146,7 @@ class _CustomCalendarState extends State<CustomCalendar> {
         shiftEndMinutes ~/ 60,
         shiftEndMinutes % 60,
       );
-      if (shiftEnd.isBefore(shiftStart)) {
+      if (shiftEnd.isBefore(shiftStart) || shiftEnd.isAtSameMomentAs(shiftStart) || shift.isOvernightForDate(date)) {
         shiftEnd = shiftEnd.add(const Duration(days: 1));
       }
 

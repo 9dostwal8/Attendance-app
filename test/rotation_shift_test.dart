@@ -76,6 +76,54 @@ void main() {
     });
   });
 
+  group('24-Hour & Next-Day Rotation Shifts (08:00 AM to 08:00 AM)', () {
+    final shift24h = WorkShift(
+      id: 'shift_24h_cycle',
+      name: '24h On, 48h Off Rotation',
+      startTime: '08:00',
+      endTime: '08:00',
+      isRotation: true,
+      rotationDays: 3, // 1 day on (24h), 2 days off
+      rotationStartDate: '2026-10-01',
+      rotationSchedule: {
+        1: DayShiftConfig(
+          isWorkingDay: true,
+          startTime: '08:00',
+          endTime: '08:00', // 24-hour shift ends next morning at 08:00
+          isOvernight: true,
+          crossMidnightCutoff: '09:30',
+        ),
+        2: DayShiftConfig(isWorkingDay: false, startTime: '08:00', endTime: '16:00'),
+        3: DayShiftConfig(isWorkingDay: false, startTime: '08:00', endTime: '16:00'),
+      },
+    );
+
+    test('Correctly identifies 08:00 to 08:00 as cross-midnight / 24h', () {
+      expect(WorkShift.isTimeCrossMidnight('08:00', '08:00'), isTrue);
+      expect(WorkShift.calculateDefaultCutoff('08:00'), '09:30');
+    });
+
+    test('Day 1 is recognized as overnight/24-hour shift of 1440 minutes (24 hours)', () {
+      final d1 = DateTime(2026, 10, 1);
+      expect(shift24h.isWorkingDay(d1), isTrue);
+      expect(shift24h.isOvernightForDate(d1), isTrue);
+      expect(shift24h.getCrossMidnightCutoffForDate(d1), '09:30');
+      expect(shift24h.getShiftDurationMinutesForDate(d1), 1440); // 24 hours
+    });
+
+    test('Days 2 and 3 are days off, and Day 4 repeats 24h shift', () {
+      final d2 = DateTime(2026, 10, 2);
+      final d3 = DateTime(2026, 10, 3);
+      final d4 = DateTime(2026, 10, 4);
+
+      expect(shift24h.isWorkingDay(d2), isFalse);
+      expect(shift24h.isWorkingDay(d3), isFalse);
+      expect(shift24h.isWorkingDay(d4), isTrue);
+      expect(shift24h.isOvernightForDate(d4), isTrue);
+      expect(shift24h.getShiftDurationMinutesForDate(d4), 1440);
+    });
+  });
+
   group('Legacy 7-Day Weekly Schedule Compatibility', () {
     test('Defaults to weekday mapping when rotationStartDate is empty', () {
       final legacyWeeklyShift = WorkShift(

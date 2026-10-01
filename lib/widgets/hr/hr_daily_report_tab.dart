@@ -287,7 +287,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
         shiftEndMinutes ~/ 60,
         shiftEndMinutes % 60,
       );
-      if (shiftEnd.isBefore(shiftStart) || shift.isOvernightForDate(date)) {
+      if (shiftEnd.isBefore(shiftStart) || shiftEnd.isAtSameMomentAs(shiftStart) || shift.isOvernightForDate(date)) {
         shiftEnd = shiftEnd.add(const Duration(days: 1));
       }
 

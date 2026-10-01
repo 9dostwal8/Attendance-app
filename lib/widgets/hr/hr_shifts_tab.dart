@@ -392,8 +392,11 @@ class _HrShiftsTabState extends State<HrShiftsTab> {
                                   final dayNum = idx + 1;
                                   final cfg = shift.rotationSchedule[dayNum] ?? shift.weeklySchedule[dayNum];
                                   final isWork = cfg?.isWorkingDay == true;
+                                  final is24h = isWork && cfg?.startTime == cfg?.endTime;
+                                  final isOver = isWork && (cfg?.isOvernight == true || WorkShift.isTimeCrossMidnight(cfg?.startTime ?? '', cfg?.endTime ?? ''));
+                                  final durNotice = is24h ? ' (+1 Day, 24 Hours)' : (isOver ? ' (+1 Day)' : '');
                                   return Tooltip(
-                                    message: 'Day $dayNum: ${isWork ? '${cfg?.startTime} - ${cfg?.endTime}' : 'Day Off'}',
+                                    message: 'Day $dayNum: ${isWork ? '${cfg?.startTime} - ${cfg?.endTime}$durNotice' : 'Day Off'}',
                                     child: Container(
                                       margin: const EdgeInsets.only(right: 5),
                                       padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -1244,6 +1247,7 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                                     setDialogState(() {
                                       final newStart = '$hh:$mm';
                                       final autoOver = WorkShift.isTimeCrossMidnight(newStart, config.endTime);
+                                      final defCutoff = WorkShift.calculateDefaultCutoff(config.endTime);
                                       rotationSchedule[dayIndex] = DayShiftConfig(
                                         isWorkingDay: true,
                                         startTime: newStart,
@@ -1252,7 +1256,7 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                                         breakEnd: config.breakEnd,
                                         breakDurationMinutes: config.breakDurationMinutes,
                                         isOvernight: config.isOvernight || autoOver,
-                                        crossMidnightCutoff: config.crossMidnightCutoff.isNotEmpty ? config.crossMidnightCutoff : (autoOver ? '03:00' : ''),
+                                        crossMidnightCutoff: config.crossMidnightCutoff.isNotEmpty ? config.crossMidnightCutoff : (autoOver ? defCutoff : ''),
                                       );
                                     });
                                   }
@@ -1292,6 +1296,7 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                                     setDialogState(() {
                                       final newEnd = '$hh:$mm';
                                       final autoOver = WorkShift.isTimeCrossMidnight(config.startTime, newEnd);
+                                      final defCutoff = WorkShift.calculateDefaultCutoff(newEnd);
                                       rotationSchedule[dayIndex] = DayShiftConfig(
                                         isWorkingDay: true,
                                         startTime: config.startTime,
@@ -1300,7 +1305,7 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                                         breakEnd: config.breakEnd,
                                         breakDurationMinutes: config.breakDurationMinutes,
                                         isOvernight: config.isOvernight || autoOver,
-                                        crossMidnightCutoff: config.crossMidnightCutoff.isNotEmpty ? config.crossMidnightCutoff : (autoOver ? '03:00' : ''),
+                                        crossMidnightCutoff: config.crossMidnightCutoff.isNotEmpty ? config.crossMidnightCutoff : (autoOver ? defCutoff : ''),
                                       );
                                     });
                                   }
@@ -1329,20 +1334,27 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                           Row(
                             children: [
                               const SizedBox(width: 6),
-                              const Icon(Icons.nightlight_round, size: 12, color: Color(0xFF818CF8)),
-                              const SizedBox(width: 4),
-                              const Text(
-                                'Overnight (Crosses midnight)',
-                                style: TextStyle(fontSize: 11, color: Color(0xFF818CF8), fontWeight: FontWeight.w500),
+                              Icon(
+                                config.startTime == config.endTime ? Icons.all_inclusive_rounded : Icons.nightlight_round,
+                                size: 13,
+                                color: const Color(0xFF818CF8),
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                config.startTime == config.endTime
+                                    ? '24-Hour Shift (Ends next day at ${config.endTime})'
+                                    : 'Continues to next day (+1d)',
+                                style: const TextStyle(fontSize: 11, color: Color(0xFF818CF8), fontWeight: FontWeight.w600),
                               ),
                               const Spacer(),
                               InkWell(
                                 onTap: () async {
-                                  final cutoff = config.crossMidnightCutoff.isNotEmpty ? config.crossMidnightCutoff : '03:00';
+                                  final defCutoff = WorkShift.calculateDefaultCutoff(config.endTime);
+                                  final cutoff = config.crossMidnightCutoff.isNotEmpty ? config.crossMidnightCutoff : defCutoff;
                                   final parts = cutoff.split(':');
                                   final init = TimeOfDay(
-                                    hour: parts.length == 2 ? int.tryParse(parts[0]) ?? 3 : 3,
-                                    minute: parts.length == 2 ? int.tryParse(parts[1]) ?? 0 : 0,
+                                    hour: parts.length == 2 ? int.tryParse(parts[0]) ?? 9 : 9,
+                                    minute: parts.length == 2 ? int.tryParse(parts[1]) ?? 30 : 30,
                                   );
                                   final picked = await showTimePicker(context: context, initialTime: init);
                                   if (picked != null) {
@@ -1368,9 +1380,12 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                                     borderRadius: BorderRadius.circular(4),
                                     border: Border.all(color: const Color(0xFF818CF8).withValues(alpha: 0.5)),
                                   ),
-                                  child: Text(
-                                    'Cutoff: ${config.crossMidnightCutoff.isNotEmpty ? config.crossMidnightCutoff : "03:00"}',
-                                    style: const TextStyle(fontSize: 10, color: Color(0xFF818CF8)),
+                                  child: Tooltip(
+                                    message: 'Checkouts before this cutoff calculate to Day $dayIndex',
+                                    child: Text(
+                                      'Cutoff: ${config.crossMidnightCutoff.isNotEmpty ? config.crossMidnightCutoff : WorkShift.calculateDefaultCutoff(config.endTime)}',
+                                      style: const TextStyle(fontSize: 10, color: Color(0xFF818CF8), fontWeight: FontWeight.bold),
+                                    ),
                                   ),
                                 ),
                               ),

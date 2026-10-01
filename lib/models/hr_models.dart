@@ -227,9 +227,23 @@ class WorkShift {
     if (sParts.length >= 2 && eParts.length >= 2) {
       final sMins = (int.tryParse(sParts[0]) ?? 0) * 60 + (int.tryParse(sParts[1]) ?? 0);
       final eMins = (int.tryParse(eParts[0]) ?? 0) * 60 + (int.tryParse(eParts[1]) ?? 0);
-      return eMins < sMins;
+      return eMins <= sMins; // <= catches 24-hour shifts like 08:00 to 08:00 next day
     }
     return false;
+  }
+
+  /// Calculates a sensible default cutoff time (1.5h after shift end).
+  static String calculateDefaultCutoff(String endStr) {
+    final eParts = endStr.trim().split(':');
+    if (eParts.length >= 2) {
+      final eH = int.tryParse(eParts[0]) ?? 8;
+      final eM = int.tryParse(eParts[1]) ?? 0;
+      final cutoffMins = eH * 60 + eM + 90;
+      final cH = (cutoffMins ~/ 60) % 24;
+      final cM = cutoffMins % 60;
+      return '${cH.toString().padLeft(2, '0')}:${cM.toString().padLeft(2, '0')}';
+    }
+    return '03:00';
   }
 
   /// Calculates which day (1 to rotationDays) of the rotation cycle a given calendar date falls on.
@@ -286,18 +300,8 @@ class WorkShift {
     if (crossMidnightCutoff.isNotEmpty) {
       return crossMidnightCutoff;
     }
-    // Default fallback: 1 hour after end time if cross-midnight, or '03:00'
     final endStr = getEndTimeForDate(date);
-    final eParts = endStr.trim().split(':');
-    if (eParts.length >= 2) {
-      final eH = int.tryParse(eParts[0]) ?? 2;
-      final eM = int.tryParse(eParts[1]) ?? 0;
-      final cutoffMins = eH * 60 + eM + 60;
-      final cH = (cutoffMins ~/ 60) % 24;
-      final cM = cutoffMins % 60;
-      return '${cH.toString().padLeft(2, '0')}:${cM.toString().padLeft(2, '0')}';
-    }
-    return '03:00';
+    return calculateDefaultCutoff(endStr);
   }
 
   bool isWorkingDay(DateTime date) {
@@ -344,6 +348,27 @@ class WorkShift {
     }
     final config = getConfigForDate(date);
     return config?.breakDurationMinutes ?? breakDurationMinutes;
+  }
+
+  /// Returns shift duration in minutes for a given date, accurately handling overnight and 24h shifts (e.g. 08:00 to 08:00 = 1440 mins).
+  int getShiftDurationMinutesForDate(DateTime date) {
+    final sStr = getStartTimeForDate(date);
+    final eStr = getEndTimeForDate(date);
+    final sParts = sStr.trim().split(':');
+    final eParts = eStr.trim().split(':');
+    if (sParts.length < 2 || eParts.length < 2) return 480;
+
+    final sMins = (int.tryParse(sParts[0]) ?? 0) * 60 + (int.tryParse(sParts[1]) ?? 0);
+    final eMins = (int.tryParse(eParts[0]) ?? 0) * 60 + (int.tryParse(eParts[1]) ?? 0);
+
+    if (isOvernightForDate(date) || eMins <= sMins) {
+      if (eMins <= sMins) {
+        return (24 * 60) - sMins + eMins;
+      } else {
+        return (24 * 60) + (eMins - sMins);
+      }
+    }
+    return eMins - sMins;
   }
 
   WorkShift copyWith({
