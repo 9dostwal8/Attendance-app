@@ -55,6 +55,7 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
       const HrManagementScreen(isEmbedded: true, initialTab: HrTab.payroll),
       const HrManagementScreen(isEmbedded: true, initialTab: HrTab.dailyReport),
       const RequestsScreen(initialSubordinateTab: true), // index 13: Approvals
+      const HrManagementScreen(isEmbedded: true, initialTab: HrTab.device), // index 14: Device (ZKTeco)
     ];
     _loadSavedTab();
   }
@@ -243,6 +244,7 @@ class MainNavigationScreenState extends State<MainNavigationScreen> {
                                 _buildPopupMenuItem(10, provider.translate('locations'), Icons.location_on),
                                 _buildPopupMenuItem(11, provider.translate('hr_payroll'), Icons.attach_money),
                                 _buildPopupMenuItem(12, provider.translate('daily_report'), Icons.bar_chart),
+                                _buildPopupMenuItem(14, provider.translate('device'), Icons.fingerprint),
                               ],
                             ),
                           ),
