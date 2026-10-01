@@ -189,17 +189,17 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
               margin: const EdgeInsets.only(bottom: 16),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                color: const Color(0xFF2E65FF).withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
+                border: Border.all(color: const Color(0xFF2E65FF).withValues(alpha: 0.35)),
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.info_outline, color: Color(0xFFF59E0B)),
+                  Icon(Icons.hub_outlined, color: Color(0xFF2E65FF), size: 24),
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'ZKTeco device local socket sync is active when managing this app on Windows Desktop. Settings configured here are synced across your organization.',
+                      'Web Browser Mode: To communicate with your local ZKTeco device from Chrome/Edge, simply run "start_zk_bridge.bat" on this computer (or run the app natively on Windows Desktop: flutter run -d windows).',
                       style: TextStyle(fontSize: 13, height: 1.4),
                     ),
                   ),
