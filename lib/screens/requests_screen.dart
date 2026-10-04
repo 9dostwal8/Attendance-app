@@ -2020,25 +2020,10 @@ class _RequestsScreenState extends State<RequestsScreen> {
                           reqDate = DateFormat('yyyy-MM-dd').parse(dateVal);
                         } catch (_) {}
 
-                        final startTimeStr = shift.getStartTimeForDate(reqDate);
-                        final endTimeStr = shift.getEndTimeForDate(reqDate);
-
-                        final partsStart = startTimeStr.split(':');
-                        final partsEnd = endTimeStr.split(':');
-                        final startMins = partsStart.length >= 2
-                            ? int.parse(partsStart[0]) * 60 +
-                                  int.parse(partsStart[1])
-                            : 540;
-                        final endMins = partsEnd.length >= 2
-                            ? int.parse(partsEnd[0]) * 60 +
-                                  int.parse(partsEnd[1])
-                            : 1020;
-                        int expected = endMins >= startMins
-                            ? endMins - startMins
-                            : (24 * 60 - startMins + endMins);
-                        int netMins =
-                            expected - shift.getBreakDurationForDate(reqDate);
-                        double hoursPerDay = netMins / 60.0;
+                        final shiftMins =
+                            shift.getShiftDurationMinutesForDate(reqDate);
+                        double hoursPerDay =
+                            shiftMins > 0 ? (shiftMins / 60.0) : 8.0;
                         double requestedHours = days * hoursPerDay;
 
                         if (requestedHours >

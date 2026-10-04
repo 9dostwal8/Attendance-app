@@ -53,6 +53,9 @@ class AttendanceProvider with ChangeNotifier {
         _position = match.position;
         _email = match.email;
         _department = match.structureId ?? match.position;
+        if (match.avatarUrl != null && match.avatarUrl!.isNotEmpty) {
+          _avatarPath = match.avatarUrl;
+        }
         final langPref = match.languagePreference;
         if (langPref.isNotEmpty && _currentLanguage != langPref) {
           _currentLanguage = langPref;
@@ -131,6 +134,10 @@ class AttendanceProvider with ChangeNotifier {
         if (savedPosition != null && savedPosition.isNotEmpty) {
           _position = savedPosition;
           _userTitle = savedPosition;
+        }
+        final savedAvatar = prefs.getString('user_avatar_$_employeeId');
+        if (savedAvatar != null && savedAvatar.isNotEmpty) {
+          _avatarPath = savedAvatar;
         }
         _syncCurrentEmployeeInfo();
         notifyListeners();
@@ -333,7 +340,7 @@ class AttendanceProvider with ChangeNotifier {
     return _position.isNotEmpty ? _position : 'General';
   }
   String get position => _position;
-  String? get avatarPath => _avatarPath;
+  String? get avatarPath => _avatarPath ?? currentEmployee?.avatarUrl;
 
   bool get isClockedIn => _isClockedIn;
   AttendanceRecord? get activeRecord => _activeRecord;
@@ -1173,6 +1180,7 @@ class AttendanceProvider with ChangeNotifier {
     DateTime date, {
     required CompanyEmployee emp,
     List<AttendanceRecord>? recordsPool,
+    List<Request>? requestsPool,
   }) {
     final pool = recordsPool ??
         ((emp.id == _employeeId)
@@ -1922,8 +1930,45 @@ class AttendanceProvider with ChangeNotifier {
   List<Request> getRequestsForEmployee(String empId) =>
       _allRequestsMap[empId] ?? [];
 
-  // Profile screen stubs
-  Future<void> updateProfileImage(dynamic file) async {}
+  // Profile image management
+  Future<void> updateProfileImage(dynamic file) async {
+    String? base64OrUrl;
+    if (file is String?) {
+      base64OrUrl = file;
+    }
+
+    _avatarPath = base64OrUrl;
+
+    // 1. Update in-memory employee list and current employee
+    final empIndex = _employees.indexWhere((e) => e.id == _employeeId);
+    if (empIndex != -1) {
+      final updatedEmp = _employees[empIndex].copyWith(
+        avatarUrl: base64OrUrl,
+        overrideAvatarUrl: true,
+      );
+      _employees[empIndex] = updatedEmp;
+
+      // 2. Persist to Firestore
+      if (_firebaseService.isAvailable) {
+        await _firebaseService.saveEmployee(updatedEmp);
+      }
+    }
+
+    // 3. Persist to SharedPreferences so it survives restarts/offline
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (base64OrUrl != null && base64OrUrl.isNotEmpty) {
+        await prefs.setString('user_avatar_$_employeeId', base64OrUrl);
+      } else {
+        await prefs.remove('user_avatar_$_employeeId');
+      }
+    } catch (e) {
+      debugPrint('Error saving user avatar to prefs: $e');
+    }
+
+    notifyListeners();
+  }
+
   Future<void> switchProfile(String userId) async {
     final emp = _employees.firstWhere(
       (e) => e.id == userId,
@@ -1935,6 +1980,7 @@ class AttendanceProvider with ChangeNotifier {
     _email = emp.email;
     _department = emp.structureId ?? '';
     _position = emp.position;
+    _avatarPath = emp.avatarUrl;
 
     _records.clear();
     _isClockedIn = false;
@@ -2044,6 +2090,119 @@ class AttendanceProvider with ChangeNotifier {
     return emp.groupId;
   }
 
+  /// Calculates the hours deducted for an approved leave request
+  double calculateRequestLeaveHours(Request req, CompanyEmployee emp) {
+    if (req.type != 'Annual Leave') return 0.0;
+
+    final durStr = req.duration.trim().toLowerCase();
+
+    // 1. Direct hours check: e.g. "4 hours", "8 hrs", "8h"
+    final hourMatch = RegExp(r'(\d+(?:\.\d+)?)\s*(?:hour|hr|h\b)').firstMatch(durStr);
+    if (hourMatch != null) {
+      final h = double.tryParse(hourMatch.group(1)!);
+      if (h != null && h > 0) return h;
+    }
+
+    // 2. Day count check: e.g. "1 Day", "2 Days", "3 days"
+    double days = 1.0;
+    final dayMatch = RegExp(r'(\d+(?:\.\d+)?)\s*(?:day)').firstMatch(durStr);
+    if (dayMatch != null) {
+      days = double.tryParse(dayMatch.group(1)!) ?? 1.0;
+    } else if (RegExp(r'^\d+(\.\d+)?$').hasMatch(durStr)) {
+      days = double.tryParse(durStr) ?? 1.0;
+    } else if (durStr.contains('half')) {
+      days = 0.5;
+    } else if (req.date.contains(' - ')) {
+      final parts = req.date.split(' - ');
+      try {
+        DateTime? d1;
+        DateTime? d2;
+        try {
+          d1 = DateFormat('yyyy-MM-dd').parse(parts[0].trim());
+        } catch (_) {
+          try {
+            d1 = DateFormat('MMMM d, yyyy').parse(parts[0].trim());
+          } catch (_) {}
+        }
+        try {
+          d2 = DateFormat('yyyy-MM-dd').parse(parts[1].trim());
+        } catch (_) {
+          try {
+            d2 = DateFormat('MMMM d, yyyy').parse(parts[1].trim());
+          } catch (_) {}
+        }
+        if (d1 != null && d2 != null) {
+          final diff = d2.difference(d1).inDays + 1;
+          if (diff > 0) days = diff.toDouble();
+        }
+      } catch (_) {}
+    }
+
+    DateTime reqDate = DateTime.now();
+    try {
+      final cleanDateStr = req.date.split(' - ').first.trim();
+      reqDate = DateFormat('yyyy-MM-dd').parse(cleanDateStr);
+    } catch (_) {
+      try {
+        final cleanDateStr = req.date.split(' - ').first.trim();
+        reqDate = DateFormat('MMMM d, yyyy').parse(cleanDateStr);
+      } catch (_) {}
+    }
+
+    final groupId = getGroupIdForDate(emp, reqDate);
+    final group = _groups.where((g) => g.id == groupId).firstOrNull;
+    final shift = _shifts.where((s) => s.id == group?.shiftId).firstOrNull;
+
+    double hoursPerDay = 8.0;
+    if (shift != null) {
+      final shiftMins = shift.getShiftDurationMinutesForDate(reqDate);
+      if (shiftMins > 0) {
+        hoursPerDay = shiftMins / 60.0;
+      }
+    } else if (emp.workingHours > 0) {
+      hoursPerDay = (emp.workingHours / 20.0).clamp(4.0, 12.0);
+    }
+
+    return days * hoursPerDay;
+  }
+
+  /// Adjusts employee's annual leave balance when a request is approved or un-approved
+  Future<void> _adjustAnnualLeaveBalance({
+    required Request request,
+    required String empId,
+    required bool isApproval, // true to deduct, false to refund
+  }) async {
+    if (request.type != 'Annual Leave') return;
+
+    final empIndex = _employees.indexWhere((e) => e.id == empId);
+    if (empIndex == -1) return;
+
+    final emp = _employees[empIndex];
+    final hours = calculateRequestLeaveHours(request, emp);
+    if (hours <= 0) return;
+
+    double newBalance = emp.annualLeaveBalance;
+    if (isApproval) {
+      newBalance = (newBalance - hours).clamp(0.0, 9999.0);
+    } else {
+      newBalance = (newBalance + hours).clamp(0.0, 9999.0);
+    }
+
+    // Only update if balance actually changed
+    if ((newBalance - emp.annualLeaveBalance).abs() > 0.001) {
+      final updatedEmp = emp.copyWith(annualLeaveBalance: newBalance);
+      _employees[empIndex] = updatedEmp;
+      notifyListeners();
+      if (_firebaseService.isAvailable) {
+        try {
+          await _firebaseService.saveEmployee(updatedEmp);
+        } catch (e) {
+          debugPrint('Error updating annual leave balance in Firebase: $e');
+        }
+      }
+    }
+  }
+
   Future<void> submitRequest(
     dynamic type,
     dynamic date,
@@ -2126,6 +2285,10 @@ class AttendanceProvider with ChangeNotifier {
     if (_firebaseService.isAvailable) {
       await _firebaseService.saveRequest(empId, newReq);
     }
+
+    if (status == 'Approved') {
+      await _adjustAnnualLeaveBalance(request: newReq, empId: empId, isApproval: true);
+    }
   }
 
   Future<void> deleteRequest(dynamic a, [dynamic b]) async {
@@ -2137,12 +2300,19 @@ class AttendanceProvider with ChangeNotifier {
         empId = found.employeeId!;
       }
     }
+    final targetReq = _allCompanyRequests.where((r) => r.id == rId).firstOrNull ??
+        _allRequestsMap[empId]?.where((r) => r.id == rId).firstOrNull;
+
     _allRequestsMap[empId]?.removeWhere((r) => r.id == rId);
     _allCompanyRequests.removeWhere((r) => r.id == rId);
     notifyListeners();
 
     if (_firebaseService.isAvailable) {
       await _firebaseService.deleteRequest(empId, rId);
+    }
+
+    if (targetReq != null && targetReq.status == 'Approved') {
+      await _adjustAnnualLeaveBalance(request: targetReq, empId: empId, isApproval: false);
     }
   }
 
@@ -2173,6 +2343,7 @@ class AttendanceProvider with ChangeNotifier {
 
     final existing = _allCompanyRequests.where((r) => r.id == reqId).firstOrNull ??
         _allRequestsMap[empId]?.where((r) => r.id == reqId).firstOrNull;
+    final oldStatus = existing?.status;
 
     String finalStatus = targetStatus;
     String? supBy = existing?.supervisorActionBy;
@@ -2279,6 +2450,15 @@ class AttendanceProvider with ChangeNotifier {
 
     notifyListeners();
 
+    final reqForBalance = updatedReq ?? existing;
+    if (reqForBalance != null) {
+      if (finalStatus == 'Approved' && oldStatus != 'Approved') {
+        await _adjustAnnualLeaveBalance(request: reqForBalance, empId: empId, isApproval: true);
+      } else if (oldStatus == 'Approved' && finalStatus != 'Approved') {
+        await _adjustAnnualLeaveBalance(request: reqForBalance, empId: empId, isApproval: false);
+      }
+    }
+
     if (updatedReq != null && _firebaseService.isAvailable) {
       await _firebaseService.saveRequest(empId, updatedReq);
 
@@ -2287,8 +2467,14 @@ class AttendanceProvider with ChangeNotifier {
         if (finalStatus == 'Approved') {
           // When request gets final approval
           final approvedByLabel = hrBy != null ? 'HR Management' : 'your Supervisor';
-          final messageText =
+          String messageText =
               'Your request for ${updatedReq.type} on ${updatedReq.date} has been approved by $approvedByLabel.';
+          if (updatedReq.type == 'Annual Leave') {
+            final emp = _employees.where((e) => e.id == empId).firstOrNull;
+            if (emp != null) {
+              messageText += ' Remaining annual leave balance: ${emp.annualLeaveBalance.toStringAsFixed(1)} hours.';
+            }
+          }
           await sendChatMessage(empId, messageText);
         } else if (finalStatus == 'Pending HR') {
           // When Supervisor approves and it moves to HR Manager
@@ -2483,6 +2669,79 @@ class AttendanceProvider with ChangeNotifier {
     return null;
   }
 
+  /// Upsert an AttendanceRecord directly into local state for immediate reactivity
+  void upsertRecordLocally(AttendanceRecord record) {
+    final cleanEmpId = record.employeeId?.trim().toLowerCase();
+
+    // 1. Update in _allCompanyRecords
+    final idxAll = _allCompanyRecords.indexWhere((r) =>
+        r.employeeId?.trim().toLowerCase() == cleanEmpId &&
+        r.checkIn.year == record.checkIn.year &&
+        r.checkIn.month == record.checkIn.month &&
+        r.checkIn.day == record.checkIn.day &&
+        r.checkIn.hour == record.checkIn.hour &&
+        r.checkIn.minute == record.checkIn.minute);
+    if (idxAll != -1) {
+      _allCompanyRecords[idxAll] = record;
+    } else {
+      _allCompanyRecords.insert(0, record);
+    }
+
+    // 2. If for currently logged-in user, also update _records
+    if (cleanEmpId != null && cleanEmpId == _employeeId.trim().toLowerCase()) {
+      final idx = _records.indexWhere((r) =>
+          r.checkIn.year == record.checkIn.year &&
+          r.checkIn.month == record.checkIn.month &&
+          r.checkIn.day == record.checkIn.day &&
+          r.checkIn.hour == record.checkIn.hour &&
+          r.checkIn.minute == record.checkIn.minute);
+      if (idx != -1) {
+        _records[idx] = record;
+      } else {
+        _records.insert(0, record);
+      }
+    }
+
+    recalculateAllStats();
+    notifyListeners();
+  }
+
+  /// Delete a punch session from local state and remote Firebase
+  Future<void> deletePunchSession({
+    required String employeeId,
+    required AttendanceRecord record,
+    String? reason,
+  }) async {
+    final cleanEmpId = employeeId.trim().toLowerCase();
+
+    // 1. Remove from _allCompanyRecords
+    _allCompanyRecords.removeWhere((r) =>
+        (r.employeeId?.trim().toLowerCase() == cleanEmpId) &&
+        r.checkIn.year == record.checkIn.year &&
+        r.checkIn.month == record.checkIn.month &&
+        r.checkIn.day == record.checkIn.day &&
+        r.checkIn.hour == record.checkIn.hour &&
+        r.checkIn.minute == record.checkIn.minute);
+
+    // 2. Remove from _records if currently logged-in user
+    if (cleanEmpId == _employeeId.trim().toLowerCase()) {
+      _records.removeWhere((r) =>
+          r.checkIn.year == record.checkIn.year &&
+          r.checkIn.month == record.checkIn.month &&
+          r.checkIn.day == record.checkIn.day &&
+          r.checkIn.hour == record.checkIn.hour &&
+          r.checkIn.minute == record.checkIn.minute);
+    }
+
+    recalculateAllStats();
+    notifyListeners();
+
+    // 3. Delete from Firebase
+    if (_firebaseService.isAvailable) {
+      await _firebaseService.deleteRecord(employeeId, record);
+    }
+  }
+
   // HR Management
   List<CompanyEmployee> getEmployeesInStructure(dynamic structId) {
     return _employees.where((e) => e.structureId == structId).toList();
@@ -2558,9 +2817,10 @@ class AttendanceProvider with ChangeNotifier {
           _employees.add(emp);
         }
 
-        // Update current employeeId if this was the logged-in user
+        // Update current employeeId and avatar if this was the logged-in user
         if (_employeeId == targetOldId) {
           _employeeId = emp.id;
+          _avatarPath = emp.avatarUrl;
         }
 
         // Migrate local requests map
@@ -2591,6 +2851,9 @@ class AttendanceProvider with ChangeNotifier {
           _employees[index] = emp;
         } else {
           _employees.add(emp);
+        }
+        if (emp.id == _employeeId) {
+          _avatarPath = emp.avatarUrl;
         }
         notifyListeners();
         await _firebaseService.saveEmployee(emp);

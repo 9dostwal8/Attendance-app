@@ -112,3 +112,79 @@ class ZkSyncSummary {
     this.details = const [],
   });
 }
+
+class ZkDeviceConfig {
+  final String id;
+  final String name;
+  final String ip;
+  final int port;
+  final int password;
+  final bool isEnabled;
+  final DateTime? lastSyncTime;
+  final String lastSyncStatus;
+  final ZkDeviceInfo? cachedInfo;
+
+  const ZkDeviceConfig({
+    required this.id,
+    required this.name,
+    required this.ip,
+    this.port = 4370,
+    this.password = 0,
+    this.isEnabled = true,
+    this.lastSyncTime,
+    this.lastSyncStatus = 'Not synced yet',
+    this.cachedInfo,
+  });
+
+  ZkDeviceConfig copyWith({
+    String? id,
+    String? name,
+    String? ip,
+    int? port,
+    int? password,
+    bool? isEnabled,
+    DateTime? lastSyncTime,
+    String? lastSyncStatus,
+    ZkDeviceInfo? cachedInfo,
+  }) {
+    return ZkDeviceConfig(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      ip: ip ?? this.ip,
+      port: port ?? this.port,
+      password: password ?? this.password,
+      isEnabled: isEnabled ?? this.isEnabled,
+      lastSyncTime: lastSyncTime ?? this.lastSyncTime,
+      lastSyncStatus: lastSyncStatus ?? this.lastSyncStatus,
+      cachedInfo: cachedInfo ?? this.cachedInfo,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'ip': ip,
+      'port': port,
+      'password': password,
+      'isEnabled': isEnabled,
+      'lastSyncTime': lastSyncTime?.toIso8601String(),
+      'lastSyncStatus': lastSyncStatus,
+    };
+  }
+
+  factory ZkDeviceConfig.fromMap(Map<String, dynamic> map) {
+    return ZkDeviceConfig(
+      id: map['id']?.toString() ?? '',
+      name: map['name']?.toString() ?? 'ZKTeco Device',
+      ip: map['ip']?.toString() ?? '192.168.1.201',
+      port: (map['port'] as num?)?.toInt() ?? 4370,
+      password: (map['password'] as num?)?.toInt() ?? 0,
+      isEnabled: map['isEnabled'] as bool? ?? true,
+      lastSyncTime: map['lastSyncTime'] != null
+          ? DateTime.tryParse(map['lastSyncTime'].toString())
+          : null,
+      lastSyncStatus: map['lastSyncStatus']?.toString() ?? 'Not synced yet',
+    );
+  }
+}

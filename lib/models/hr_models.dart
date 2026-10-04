@@ -136,6 +136,7 @@ class DayShiftConfig {
   final int breakDurationMinutes;
   final bool isOvernight;
   final String crossMidnightCutoff; // "HH:mm" e.g., "03:00"
+  final bool isSpecialShift;
 
   DayShiftConfig({
     required this.isWorkingDay,
@@ -146,6 +147,7 @@ class DayShiftConfig {
     this.breakDurationMinutes = 0,
     this.isOvernight = false,
     this.crossMidnightCutoff = '',
+    this.isSpecialShift = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -158,6 +160,7 @@ class DayShiftConfig {
       'breakDurationMinutes': breakDurationMinutes,
       'isOvernight': isOvernight,
       'crossMidnightCutoff': crossMidnightCutoff,
+      'isSpecialShift': isSpecialShift,
     };
   }
 
@@ -174,6 +177,7 @@ class DayShiftConfig {
       breakDurationMinutes: (map['breakDurationMinutes'] as num?)?.toInt() ?? 0,
       isOvernight: map['isOvernight'] ?? autoOvernight,
       crossMidnightCutoff: map['crossMidnightCutoff'] ?? '',
+      isSpecialShift: map['isSpecialShift'] ?? (map['shiftType'] == 'special'),
     );
   }
 }
@@ -196,6 +200,7 @@ class WorkShift {
   final Map<int, DayShiftConfig> rotationSchedule; // 1 to rotationDays
   final bool isOvernight;
   final String crossMidnightCutoff; // "HH:mm" e.g., "03:00" (Checkouts up to this cutoff calculate to previous date)
+  final bool isSpecialShift; // Special shift: pairs 2nd punch (even on next day) as clock-out and credits to start day
 
   WorkShift({
     required this.id,
@@ -215,6 +220,7 @@ class WorkShift {
     Map<int, DayShiftConfig>? weeklySchedule,
     this.isOvernight = false,
     this.crossMidnightCutoff = '',
+    this.isSpecialShift = false,
   })  : rotationDays = rotationDays ?? (rotationSchedule?.length ?? (weeklySchedule?.length ?? 7)),
         rotationSchedule = rotationSchedule ?? weeklySchedule ?? const {};
 
@@ -278,6 +284,22 @@ class WorkShift {
     if (!isRotation) return null;
     final dayNum = getRotationDayForDate(date);
     return rotationSchedule[dayNum] ?? weeklySchedule[dayNum];
+  }
+
+  bool isSpecialShiftForDate(DateTime date) {
+    if (isSpecialShift) {
+      if (!isRotation) return true;
+      final config = getConfigForDate(date);
+      return config == null || config.isWorkingDay;
+    }
+    if (isRotation) {
+      final config = getConfigForDate(date);
+      if (config != null && config.isSpecialShift) return true;
+      if (config != null && config.isWorkingDay && isTimeCrossMidnight(config.startTime, config.endTime)) {
+        if (config.startTime == config.endTime) return true;
+      }
+    }
+    return false;
   }
 
   bool isOvernightForDate(DateTime date) {
@@ -361,12 +383,10 @@ class WorkShift {
     final sMins = (int.tryParse(sParts[0]) ?? 0) * 60 + (int.tryParse(sParts[1]) ?? 0);
     final eMins = (int.tryParse(eParts[0]) ?? 0) * 60 + (int.tryParse(eParts[1]) ?? 0);
 
-    if (isOvernightForDate(date) || eMins <= sMins) {
-      if (eMins <= sMins) {
-        return (24 * 60) - sMins + eMins;
-      } else {
-        return (24 * 60) + (eMins - sMins);
-      }
+    if (eMins < sMins) {
+      return (24 * 60) - sMins + eMins;
+    } else if (eMins == sMins) {
+      return 24 * 60;
     }
     return eMins - sMins;
   }
@@ -389,6 +409,7 @@ class WorkShift {
     Map<int, DayShiftConfig>? weeklySchedule,
     bool? isOvernight,
     String? crossMidnightCutoff,
+    bool? isSpecialShift,
   }) {
     return WorkShift(
       id: id ?? this.id,
@@ -408,6 +429,7 @@ class WorkShift {
       weeklySchedule: weeklySchedule ?? rotationSchedule ?? this.weeklySchedule,
       isOvernight: isOvernight ?? this.isOvernight,
       crossMidnightCutoff: crossMidnightCutoff ?? this.crossMidnightCutoff,
+      isSpecialShift: isSpecialShift ?? this.isSpecialShift,
     );
   }
 
@@ -431,6 +453,7 @@ class WorkShift {
       'weeklySchedule': scheduleMap,
       'isOvernight': isOvernight,
       'crossMidnightCutoff': crossMidnightCutoff,
+      'isSpecialShift': isSpecialShift,
     };
   }
 
@@ -471,6 +494,7 @@ class WorkShift {
       weeklySchedule: parsedSchedule,
       isOvernight: map['isOvernight'] ?? autoOvernight,
       crossMidnightCutoff: map['crossMidnightCutoff'] ?? '',
+      isSpecialShift: map['isSpecialShift'] ?? (map['shiftType'] == 'special'),
     );
   }
 }

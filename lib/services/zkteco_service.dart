@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -21,10 +22,10 @@ class ZkTecoService extends ChangeNotifier {
 
   late final ZkDeviceDriver _driver;
 
-  // Configuration
-  String _deviceIp = '192.168.1.201';
-  int _devicePort = 4370;
-  int _devicePassword = 0;
+  // Multi-Device Configuration
+  List<ZkDeviceConfig> _devices = [];
+
+  // Global Settings
   bool _autoSyncEnabled = false;
   int _autoSyncIntervalMinutes = 15;
   int _cooldownMinutes = 3;
@@ -40,11 +41,18 @@ class ZkTecoService extends ChangeNotifier {
   final List<String> _syncLogs = [];
 
   Timer? _autoSyncTimer;
+  AttendanceProvider? _cachedProvider;
+  FirebaseService? _cachedFirebase;
 
   // Getters
-  String get deviceIp => _deviceIp;
-  int get devicePort => _devicePort;
-  int get devicePassword => _devicePassword;
+  List<ZkDeviceConfig> get devices => List.unmodifiable(_devices);
+  List<ZkDeviceConfig> get enabledDevices => _devices.where((d) => d.isEnabled).toList();
+
+  // Backward compatibility getters (referring to the first device)
+  String get deviceIp => _devices.isNotEmpty ? _devices.first.ip : '192.168.1.201';
+  int get devicePort => _devices.isNotEmpty ? _devices.first.port : 4370;
+  int get devicePassword => _devices.isNotEmpty ? _devices.first.password : 0;
+
   bool get autoSyncEnabled => _autoSyncEnabled;
   int get autoSyncIntervalMinutes => _autoSyncIntervalMinutes;
   int get cooldownMinutes => _cooldownMinutes;
@@ -58,13 +66,12 @@ class ZkTecoService extends ChangeNotifier {
   List<ZkDeviceUser> get cachedUsers => _cachedUsers;
   List<String> get syncLogs => List.unmodifiable(_syncLogs);
 
-  /// Initialize service and load saved preferences
+  /// Initialize service and load saved devices and preferences
   Future<void> init(AttendanceProvider? provider, FirebaseService? firebase) async {
+    _cachedProvider = provider;
+    _cachedFirebase = firebase;
     try {
       final prefs = await SharedPreferences.getInstance();
-      _deviceIp = prefs.getString('zk_device_ip') ?? '192.168.1.201';
-      _devicePort = prefs.getInt('zk_device_port') ?? 4370;
-      _devicePassword = prefs.getInt('zk_device_password') ?? 0;
       _autoSyncEnabled = prefs.getBool('zk_auto_sync') ?? false;
       _autoSyncIntervalMinutes = prefs.getInt('zk_auto_sync_interval') ?? 15;
       _cooldownMinutes = prefs.getInt('zk_cooldown_minutes') ?? 3;
@@ -75,6 +82,8 @@ class ZkTecoService extends ChangeNotifier {
         _lastSyncStatus = prefs.getString('zk_last_sync_status') ?? 'Idle';
       }
 
+      await _loadDevicesFromPrefs(prefs);
+
       if (_autoSyncEnabled && provider != null && firebase != null) {
         startAutoSync(provider, firebase);
       }
@@ -84,34 +93,141 @@ class ZkTecoService extends ChangeNotifier {
     }
   }
 
-  /// Save settings
+  Future<void> _loadDevicesFromPrefs(SharedPreferences prefs) async {
+    final jsonStr = prefs.getString('zk_devices_list');
+    if (jsonStr != null && jsonStr.isNotEmpty) {
+      try {
+        final list = jsonDecode(jsonStr) as List<dynamic>;
+        _devices = list
+            .map((item) => ZkDeviceConfig.fromMap(item as Map<String, dynamic>))
+            .toList();
+      } catch (e) {
+        debugPrint('Error loading zk_devices_list: $e');
+      }
+    }
+
+    if (_devices.isEmpty) {
+      // Migrate from legacy single device keys if available
+      final legacyIp = prefs.getString('zk_device_ip') ?? '192.168.1.201';
+      final legacyPort = prefs.getInt('zk_device_port') ?? 4370;
+      final legacyPassword = prefs.getInt('zk_device_password') ?? 0;
+      _devices = [
+        ZkDeviceConfig(
+          id: 'dev_${DateTime.now().millisecondsSinceEpoch}',
+          name: 'Main Terminal',
+          ip: legacyIp,
+          port: legacyPort,
+          password: legacyPassword,
+          isEnabled: true,
+        ),
+      ];
+      await _saveDevicesToPrefs();
+    }
+  }
+
+  Future<void> _saveDevicesToPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jsonStr = jsonEncode(_devices.map((d) => d.toMap()).toList());
+      await prefs.setString('zk_devices_list', jsonStr);
+
+      if (_devices.isNotEmpty) {
+        final first = _devices.first;
+        await prefs.setString('zk_device_ip', first.ip);
+        await prefs.setInt('zk_device_port', first.port);
+        await prefs.setInt('zk_device_password', first.password);
+      }
+    } catch (e) {
+      debugPrint('Error saving zk_devices_list: $e');
+    }
+  }
+
+  /// Add a new ZKTeco device
+  Future<void> addDevice(ZkDeviceConfig device) async {
+    _devices.add(device);
+    await _saveDevicesToPrefs();
+    _addLog('Added new device: "${device.name}" (${device.ip}:${device.port})');
+    notifyListeners();
+  }
+
+  /// Update an existing ZKTeco device
+  Future<void> updateDevice(ZkDeviceConfig device) async {
+    final idx = _devices.indexWhere((d) => d.id == device.id);
+    if (idx != -1) {
+      _devices[idx] = device;
+      await _saveDevicesToPrefs();
+      _addLog('Updated device: "${device.name}" (${device.ip}:${device.port})');
+      notifyListeners();
+    }
+  }
+
+  /// Delete a device by ID
+  Future<void> deleteDevice(String deviceId) async {
+    final idx = _devices.indexWhere((d) => d.id == deviceId);
+    if (idx != -1) {
+      final name = _devices[idx].name;
+      _devices.removeAt(idx);
+      await _saveDevicesToPrefs();
+      _addLog('Deleted device: "$name"');
+      notifyListeners();
+    }
+  }
+
+  /// Toggle device enable status
+  Future<void> toggleDevice(String deviceId, bool isEnabled) async {
+    final idx = _devices.indexWhere((d) => d.id == deviceId);
+    if (idx != -1) {
+      _devices[idx] = _devices[idx].copyWith(isEnabled: isEnabled);
+      await _saveDevicesToPrefs();
+      _addLog('Device "${_devices[idx].name}" is now ${isEnabled ? "enabled" : "disabled"}.');
+      notifyListeners();
+    }
+  }
+
+  /// Save global settings
   Future<void> saveSettings({
-    required String ip,
-    required int port,
-    required int password,
+    String? ip,
+    int? port,
+    int? password,
     required bool autoSync,
     required int intervalMinutes,
     required int cooldownMinutes,
     AttendanceProvider? provider,
     FirebaseService? firebase,
   }) async {
-    _deviceIp = ip.trim();
-    _devicePort = port;
-    _devicePassword = password;
     _autoSyncEnabled = autoSync;
     _autoSyncIntervalMinutes = intervalMinutes;
     _cooldownMinutes = cooldownMinutes;
 
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('zk_device_ip', _deviceIp);
-    await prefs.setInt('zk_device_port', _devicePort);
-    await prefs.setInt('zk_device_password', _devicePassword);
     await prefs.setBool('zk_auto_sync', _autoSyncEnabled);
     await prefs.setInt('zk_auto_sync_interval', _autoSyncIntervalMinutes);
     await prefs.setInt('zk_cooldown_minutes', _cooldownMinutes);
 
-    if (_autoSyncEnabled && provider != null && firebase != null) {
-      startAutoSync(provider, firebase);
+    if (ip != null && ip.trim().isNotEmpty) {
+      if (_devices.isNotEmpty) {
+        _devices[0] = _devices[0].copyWith(
+          ip: ip.trim(),
+          port: port ?? _devices[0].port,
+          password: password ?? _devices[0].password,
+        );
+      } else {
+        _devices.add(ZkDeviceConfig(
+          id: 'dev_${DateTime.now().millisecondsSinceEpoch}',
+          name: 'Main Terminal',
+          ip: ip.trim(),
+          port: port ?? 4370,
+          password: password ?? 0,
+        ));
+      }
+      await _saveDevicesToPrefs();
+    }
+
+    final p = provider ?? _cachedProvider;
+    final f = firebase ?? _cachedFirebase;
+
+    if (_autoSyncEnabled && p != null && f != null) {
+      startAutoSync(p, f);
     } else {
       stopAutoSync();
     }
@@ -119,40 +235,45 @@ class ZkTecoService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Test connection to the ZKTeco device
-  Future<ZkDeviceInfo> testConnection({String? ip, int? port, int? password}) async {
+  /// Test connection to a specific device
+  Future<ZkDeviceInfo> testDeviceConnection(ZkDeviceConfig device) async {
     _isConnecting = true;
     notifyListeners();
 
-    final targetIp = (ip ?? _deviceIp).trim();
-    final targetPort = port ?? _devicePort;
-    final targetPassword = password ?? _devicePassword;
-
     try {
-      _addLog('Testing connection to $targetIp:$targetPort...');
+      _addLog('Testing connection to [${device.name}] (${device.ip}:${device.port})...');
       final info = await _driver.testConnection(
-        ip: targetIp,
-        port: targetPort,
-        password: targetPassword,
+        ip: device.ip,
+        port: device.port,
+        password: device.password,
         timeoutSeconds: 8,
       );
 
+      final idx = _devices.indexWhere((d) => d.id == device.id);
+      if (idx != -1) {
+        _devices[idx] = _devices[idx].copyWith(cachedInfo: info);
+      }
       _cachedDeviceInfo = info;
+
       if (info.isConnected) {
-        _addLog('Connected successfully to ${info.deviceName} (SN: ${info.serialNumber})');
+        _addLog('✓ Connected to [${device.name}]: ${info.deviceName} (SN: ${info.serialNumber})');
       } else {
-        _addLog('Connection failed: ${info.errorMessage ?? "Unknown error"}');
+        _addLog('✗ Connection failed to [${device.name}]: ${info.errorMessage ?? "Unreachable"}');
       }
       return info;
     } catch (e) {
       final info = ZkDeviceInfo(
         isConnected: false,
-        ip: targetIp,
-        port: targetPort,
+        ip: device.ip,
+        port: device.port,
         errorMessage: e.toString(),
       );
+      final idx = _devices.indexWhere((d) => d.id == device.id);
+      if (idx != -1) {
+        _devices[idx] = _devices[idx].copyWith(cachedInfo: info);
+      }
       _cachedDeviceInfo = info;
-      _addLog('Connection error: $e');
+      _addLog('✗ Connection error for [${device.name}]: $e');
       return info;
     } finally {
       _isConnecting = false;
@@ -160,27 +281,102 @@ class ZkTecoService extends ChangeNotifier {
     }
   }
 
-  /// Fetch users registered on the device
-  Future<List<ZkDeviceUser>> fetchUsers() async {
+  /// Test connection to all devices
+  Future<Map<String, ZkDeviceInfo>> testAllConnections() async {
+    _isConnecting = true;
+    notifyListeners();
+
+    final results = <String, ZkDeviceInfo>{};
+    for (var dev in _devices) {
+      try {
+        _addLog('Testing [${dev.name}] (${dev.ip})...');
+        final info = await _driver.testConnection(
+          ip: dev.ip,
+          port: dev.port,
+          password: dev.password,
+          timeoutSeconds: 6,
+        );
+        results[dev.id] = info;
+        final idx = _devices.indexWhere((d) => d.id == dev.id);
+        if (idx != -1) {
+          _devices[idx] = _devices[idx].copyWith(cachedInfo: info);
+        }
+        if (info.isConnected) {
+          _addLog('✓ [${dev.name}] Online: ${info.deviceName} (${info.serialNumber})');
+        } else {
+          _addLog('✗ [${dev.name}] Offline: ${info.errorMessage ?? "Unreachable"}');
+        }
+      } catch (e) {
+        final errInfo = ZkDeviceInfo(
+          isConnected: false,
+          ip: dev.ip,
+          port: dev.port,
+          errorMessage: e.toString(),
+        );
+        results[dev.id] = errInfo;
+        final idx = _devices.indexWhere((d) => d.id == dev.id);
+        if (idx != -1) {
+          _devices[idx] = _devices[idx].copyWith(cachedInfo: errInfo);
+        }
+        _addLog('✗ [${dev.name}] Error: $e');
+      }
+    }
+
+    _isConnecting = false;
+    notifyListeners();
+    return results;
+  }
+
+  /// Backward-compatible testConnection
+  Future<ZkDeviceInfo> testConnection({String? ip, int? port, int? password}) async {
+    final targetIp = ip ?? deviceIp;
+    final targetPort = port ?? devicePort;
+    final targetPassword = password ?? devicePassword;
+
+    final matchingDev = _devices.cast<ZkDeviceConfig?>().firstWhere(
+          (d) => d != null && d.ip == targetIp,
+          orElse: () => null,
+        );
+
+    final dev = matchingDev ??
+        ZkDeviceConfig(
+          id: 'temp',
+          name: 'Device ($targetIp)',
+          ip: targetIp,
+          port: targetPort,
+          password: targetPassword,
+        );
+
+    return testDeviceConnection(dev);
+  }
+
+  /// Fetch users registered on a specific device (or first device)
+  Future<List<ZkDeviceUser>> fetchUsers({ZkDeviceConfig? device}) async {
+    final target = device ?? (_devices.isNotEmpty ? _devices.first : null);
+    if (target == null) {
+      throw Exception('No ZKTeco device configured.');
+    }
+
     try {
-      _addLog('Fetching users from device at $_deviceIp...');
+      _addLog('Fetching users from [${target.name}] (${target.ip})...');
       final users = await _driver.getUsers(
-        ip: _deviceIp,
-        port: _devicePort,
-        password: _devicePassword,
+        ip: target.ip,
+        port: target.port,
+        password: target.password,
       );
       _cachedUsers = users;
-      _addLog('Found ${users.length} users registered on device.');
+      _addLog('Found ${users.length} users registered on [${target.name}].');
       notifyListeners();
       return users;
     } catch (e) {
-      _addLog('Failed to fetch users: $e');
+      _addLog('Failed to fetch users from [${target.name}]: $e');
       rethrow;
     }
   }
 
-  /// Sync attendance punches from the ZKTeco device
-  Future<ZkSyncSummary> syncAttendances({
+  /// Sync punches from a single specific device
+  Future<ZkSyncSummary> syncDevice(
+    ZkDeviceConfig device, {
     required AttendanceProvider provider,
     required FirebaseService firebase,
     DateTime? fromDate,
@@ -198,25 +394,33 @@ class ZkTecoService extends ChangeNotifier {
     notifyListeners();
 
     final now = DateTime.now();
-    final defaultFrom = _lastSyncTime != null
-        ? _lastSyncTime!.subtract(const Duration(days: 2)) // buffer for overnight shifts
-        : DateTime(now.year, now.month, 1);
+    final defaultFrom = device.lastSyncTime != null
+        ? device.lastSyncTime!.subtract(const Duration(days: 7))
+        : DateTime(now.year, now.month - 2, 1);
     final targetFrom = fromDate ?? defaultFrom;
     final targetTo = toDate ?? now;
 
-    _addLog('Starting attendance sync from ${targetFrom.toLocal()} to ${targetTo.toLocal()}...');
+    _addLog('Syncing punches from [${device.name}] (${device.ip}:${device.port})...');
 
     try {
-      // 1. Fetch raw punch logs from the machine
       final punches = await _driver.getAttendanceLogs(
-        ip: _deviceIp,
-        port: _devicePort,
-        password: _devicePassword,
+        ip: device.ip,
+        port: device.port,
+        password: device.password,
         fromDate: targetFrom,
         toDate: targetTo,
       );
 
-      _addLog('Fetched ${punches.length} raw punches from device.');
+      _addLog('[${device.name}] Fetched ${punches.length} raw punches.');
+
+      final idx = _devices.indexWhere((d) => d.id == device.id);
+      if (idx != -1) {
+        _devices[idx] = _devices[idx].copyWith(
+          lastSyncTime: now,
+          lastSyncStatus: 'Fetched ${punches.length} logs at ${now.toString().substring(11, 16)}',
+        );
+      }
+      await _saveDevicesToPrefs();
 
       if (punches.isEmpty) {
         final summary = ZkSyncSummary(
@@ -225,13 +429,12 @@ class ZkTecoService extends ChangeNotifier {
           newRecordsCreated: 0,
           recordsUpdated: 0,
           syncTime: now,
-          message: 'Device connected. No new attendance logs found.',
+          message: '[${device.name}] Connected. No new attendance logs found.',
         );
         _finishSync(summary);
         return summary;
       }
 
-      // 2. Run smart shift-aware pairing engine
       final summary = await _pairAndSavePunches(
         punches: punches,
         provider: provider,
@@ -244,11 +447,136 @@ class ZkTecoService extends ChangeNotifier {
       final summary = ZkSyncSummary(
         success: false,
         syncTime: DateTime.now(),
-        message: 'Sync failed: $e',
+        message: '[${device.name}] Sync failed: $e',
+      );
+      final idx = _devices.indexWhere((d) => d.id == device.id);
+      if (idx != -1) {
+        _devices[idx] = _devices[idx].copyWith(
+          lastSyncStatus: 'Failed: $e',
+        );
+      }
+      await _saveDevicesToPrefs();
+      _finishSync(summary);
+      return summary;
+    }
+  }
+
+  /// Sync attendance punches across ALL enabled ZKTeco devices simultaneously
+  Future<ZkSyncSummary> syncAllDevices({
+    required AttendanceProvider provider,
+    required FirebaseService firebase,
+    DateTime? fromDate,
+    DateTime? toDate,
+  }) async {
+    if (_isSyncing) {
+      return ZkSyncSummary(
+        success: false,
+        syncTime: DateTime.now(),
+        message: 'Sync is already in progress.',
+      );
+    }
+
+    final activeDevices = enabledDevices;
+    if (activeDevices.isEmpty) {
+      return ZkSyncSummary(
+        success: false,
+        syncTime: DateTime.now(),
+        message: 'No enabled ZKTeco devices configured.',
+      );
+    }
+
+    _isSyncing = true;
+    notifyListeners();
+
+    final now = DateTime.now();
+    final defaultFrom = _lastSyncTime != null
+        ? _lastSyncTime!.subtract(const Duration(days: 7))
+        : DateTime(now.year, now.month - 2, 1);
+    final targetFrom = fromDate ?? defaultFrom;
+    final targetTo = toDate ?? now;
+
+    _addLog('Starting multi-device sync across ${activeDevices.length} active devices...');
+
+    final allPunches = <ZkRawPunch>[];
+    final successDeviceNames = <String>[];
+    final failedDeviceNames = <String>[];
+
+    for (var dev in activeDevices) {
+      try {
+        _addLog('[${dev.name}] Fetching punches from ${dev.ip}:${dev.port}...');
+        final punches = await _driver.getAttendanceLogs(
+          ip: dev.ip,
+          port: dev.port,
+          password: dev.password,
+          fromDate: targetFrom,
+          toDate: targetTo,
+        );
+
+        allPunches.addAll(punches);
+        successDeviceNames.add(dev.name);
+
+        final idx = _devices.indexWhere((d) => d.id == dev.id);
+        if (idx != -1) {
+          _devices[idx] = _devices[idx].copyWith(
+            lastSyncTime: now,
+            lastSyncStatus: 'Fetched ${punches.length} logs at ${now.toString().substring(11, 16)}',
+          );
+        }
+        _addLog('[${dev.name}] ✓ Fetched ${punches.length} punches.');
+      } catch (e) {
+        failedDeviceNames.add('${dev.name} ($e)');
+        final idx = _devices.indexWhere((d) => d.id == dev.id);
+        if (idx != -1) {
+          _devices[idx] = _devices[idx].copyWith(
+            lastSyncStatus: 'Failed: $e',
+          );
+        }
+        _addLog('[${dev.name}] ✗ Fetch error: $e');
+      }
+    }
+
+    await _saveDevicesToPrefs();
+
+    if (allPunches.isEmpty) {
+      final summary = ZkSyncSummary(
+        success: failedDeviceNames.isEmpty,
+        totalPunchesFetched: 0,
+        newRecordsCreated: 0,
+        recordsUpdated: 0,
+        syncTime: now,
+        message: failedDeviceNames.isEmpty
+            ? 'Synced ${successDeviceNames.length} devices. No new punches found.'
+            : 'Synced ${successDeviceNames.length} devices. Failed: ${failedDeviceNames.join(", ")}',
       );
       _finishSync(summary);
       return summary;
     }
+
+    _addLog('Aggregated ${allPunches.length} total punches across ${successDeviceNames.length} devices. Running smart pairing engine...');
+
+    final summary = await _pairAndSavePunches(
+      punches: allPunches,
+      provider: provider,
+      firebase: firebase,
+    );
+
+    _finishSync(summary);
+    return summary;
+  }
+
+  /// Backward-compatible alias for syncAllDevices
+  Future<ZkSyncSummary> syncAttendances({
+    required AttendanceProvider provider,
+    required FirebaseService firebase,
+    DateTime? fromDate,
+    DateTime? toDate,
+  }) async {
+    return syncAllDevices(
+      provider: provider,
+      firebase: firebase,
+      fromDate: fromDate,
+      toDate: toDate,
+    );
   }
 
   /// Smart shift-aware punch pairing engine
@@ -327,7 +655,6 @@ class ZkTecoService extends ChangeNotifier {
               r.checkIn.minute == pTime.minute);
 
           if (exists) {
-            // Already recorded, find it to see if it's open
             final rec = existingRecords.firstWhere((r) =>
                 r.checkIn.year == pTime.year &&
                 r.checkIn.month == pTime.month &&
@@ -349,6 +676,8 @@ class ZkTecoService extends ChangeNotifier {
           currentOpenRecord = newRec;
           existingRecords.add(newRec);
 
+          provider.upsertRecordLocally(newRec);
+
           if (firebase.isAvailable) {
             try {
               await firebase.saveRecord(emp.id, newRec);
@@ -362,17 +691,14 @@ class ZkTecoService extends ChangeNotifier {
           // An open session exists
           final elapsed = pTime.difference(currentOpenRecord.checkIn);
 
-          // If punch is after checkIn
           if (elapsed.isNegative) {
             continue;
           }
 
-          // If punch is within cooldown of checkIn, ignore
           if (elapsed.inMinutes < _cooldownMinutes) {
             continue;
           }
 
-          // Get shift for the day of checkIn
           final workDate = DateTime(
             currentOpenRecord.checkIn.year,
             currentOpenRecord.checkIn.month,
@@ -380,24 +706,23 @@ class ZkTecoService extends ChangeNotifier {
           );
           final shift = provider.getShiftForDate(emp, workDate);
           final isOvernight = shift.isOvernightForDate(workDate);
+          final isSpecial = shift.isSpecialShiftForDate(workDate);
 
-          // Maximum reasonable shift span:
-          // Standard shift: max 18 hours.
-          // Overnight / 24h shift: max 30 hours.
-          final maxAllowedHours = isOvernight ? 32 : 18;
+          // Pairing window: Special shifts (12h or 24h) pair up to 48 hours; overnight 32h; standard 18h
+          final maxAllowedHours = isSpecial ? 48 : (isOvernight ? 32 : 18);
 
           if (elapsed.inHours <= maxAllowedHours) {
-            // This punch pairs as Clock Out!
+            // Clock Out
             final completedRecord = currentOpenRecord.copyWith(
               checkOut: pTime,
               employeeId: emp.id,
             );
 
-            // Update in list
             final idx = existingRecords.indexOf(currentOpenRecord);
             if (idx != -1) {
               existingRecords[idx] = completedRecord;
             }
+            provider.upsertRecordLocally(completedRecord);
 
             if (firebase.isAvailable) {
               try {
@@ -410,11 +735,9 @@ class ZkTecoService extends ChangeNotifier {
               }
             }
 
-            currentOpenRecord = null; // Session closed!
+            currentOpenRecord = null;
           } else {
-            // The open session was too long ago (> 32 hours), meaning the employee
-            // forgot to punch out yesterday. Do not merge with this new punch!
-            // Start a new Clock In session instead:
+            // Expired open session -> new Clock In
             currentOpenRecord = null;
 
             final newRec = AttendanceRecord(
@@ -424,6 +747,7 @@ class ZkTecoService extends ChangeNotifier {
             );
             currentOpenRecord = newRec;
             existingRecords.add(newRec);
+            provider.upsertRecordLocally(newRec);
 
             if (firebase.isAvailable) {
               try {
@@ -452,16 +776,13 @@ class ZkTecoService extends ChangeNotifier {
     );
   }
 
-  /// Match device User ID with CompanyEmployee
   CompanyEmployee? _findMatchingEmployee(String deviceUserId, List<CompanyEmployee> employees) {
     final cleanId = deviceUserId.trim().toLowerCase();
 
-    // 1. Direct ID match
     for (var emp in employees) {
       if (emp.id.trim().toLowerCase() == cleanId) return emp;
     }
 
-    // 2. Numeric match (e.g. device has "1" or "001", emp has "emp_1" or "1")
     final numericOnly = cleanId.replaceAll(RegExp(r'[^0-9]'), '');
     if (numericOnly.isNotEmpty) {
       final parsedNum = int.tryParse(numericOnly);
@@ -473,7 +794,6 @@ class ZkTecoService extends ChangeNotifier {
       }
     }
 
-    // 3. Name match
     for (var emp in employees) {
       if (emp.name.trim().toLowerCase() == cleanId) return emp;
     }
@@ -509,8 +829,8 @@ class ZkTecoService extends ChangeNotifier {
       Duration(minutes: _autoSyncIntervalMinutes),
       (_) async {
         if (!_isSyncing) {
-          debugPrint('Auto-syncing ZKTeco punches...');
-          await syncAttendances(provider: provider, firebase: firebase);
+          debugPrint('Auto-syncing all ZKTeco devices...');
+          await syncAllDevices(provider: provider, firebase: firebase);
         }
       },
     );

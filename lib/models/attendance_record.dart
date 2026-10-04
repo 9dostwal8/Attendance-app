@@ -16,7 +16,7 @@ class AttendanceRecord {
     final tIn = DateTime(checkIn.year, checkIn.month, checkIn.day, checkIn.hour, checkIn.minute);
     if (checkOut == null) {
       final now = DateTime.now();
-      if (now.difference(tIn).inHours.abs() >= 24) {
+      if (now.difference(tIn).inHours.abs() >= 48) {
         return Duration.zero;
       }
       final tNow = DateTime(now.year, now.month, now.day, now.hour, now.minute);

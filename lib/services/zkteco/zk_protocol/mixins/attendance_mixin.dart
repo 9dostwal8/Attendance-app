@@ -130,28 +130,16 @@ mixin AttendanceMixin on ConnectionMixin, NetworkMixin, DeviceInformationMixin {
 
     debugLog("Successfully parsed ${attendances.length} attendance records");
 
-    final now = DateTime.now();
-    fromDate ??= DateTime(now.year, now.month, 1);
-    toDate ??= now;
-
-    final normalizedFromDate = DateTime(
-      fromDate.year,
-      fromDate.month,
-      fromDate.day,
-    );
-    final normalizedToDate = DateTime(
-      toDate.year,
-      toDate.month,
-      toDate.day,
-      23,
-      59,
-      59,
-      999,
-    );
+    final normalizedFromDate = fromDate != null
+        ? DateTime(fromDate.year, fromDate.month, fromDate.day)
+        : null;
+    final normalizedToDate = toDate != null
+        ? DateTime(toDate.year, toDate.month, toDate.day, 23, 59, 59, 999)
+        : null;
 
     var filteredAttendances = attendances.where((att) {
-      final isAfterFrom = !att.timestamp.isBefore(normalizedFromDate);
-      final isBeforeTo = !att.timestamp.isAfter(normalizedToDate);
+      final isAfterFrom = normalizedFromDate == null || !att.timestamp.isBefore(normalizedFromDate);
+      final isBeforeTo = normalizedToDate == null || !att.timestamp.isAfter(normalizedToDate);
       return isAfterFrom && isBeforeTo;
     }).toList();
 

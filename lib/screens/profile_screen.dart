@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../models/hr_models.dart';
@@ -527,12 +528,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             offset: const Offset(0, 6),
                           ),
                         ],
-                        image: avatarProvider != null
-                            ? DecorationImage(image: avatarProvider, fit: BoxFit.cover)
-                            : null,
                       ),
-                      child: avatarProvider == null
-                          ? Center(
+                      clipBehavior: Clip.antiAlias,
+                      child: avatarProvider != null
+                          ? Image(
+                              image: avatarProvider,
+                              fit: BoxFit.cover,
+                              width: 96,
+                              height: 96,
+                              errorBuilder: (context, error, stackTrace) => Center(
+                                child: Text(
+                                  initials,
+                                  style: const TextStyle(
+                                    color: Color(0xFF0A2342),
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : Center(
                               child: Text(
                                 initials,
                                 style: const TextStyle(
@@ -541,8 +556,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
-                            )
-                          : null,
+                            ),
                     ),
 
                     // Camera floating action badge (Signature Aqua-Cyan stadium circle)
@@ -1692,6 +1706,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Future<void> _processAndSaveImage(
+    XFile image,
+    AttendanceProvider provider,
+    BuildContext context,
+  ) async {
+    try {
+      final bytes = await image.readAsBytes();
+      String base64String;
+      try {
+        final decoded = img.decodeImage(bytes);
+        if (decoded != null) {
+          final resized = img.copyResize(decoded, width: 256, height: 256);
+          final compressed = img.encodeJpg(resized, quality: 80);
+          base64String = base64Encode(compressed);
+        } else {
+          base64String = base64Encode(bytes);
+        }
+      } catch (_) {
+        base64String = base64Encode(bytes);
+      }
+
+      await provider.updateProfileImage(base64String);
+
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile picture updated successfully!'),
+            backgroundColor: Color(0xFF00BD96),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error saving profile image: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update profile picture: $e'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
+  }
+
   // --- PHOTO PICKER SHEET ---
   void _showPhotoPickerSheet(BuildContext context, AttendanceProvider provider) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -1760,23 +1819,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Expanded(
                       child: GestureDetector(
                         onTap: () async {
-                          final picker = ImagePicker();
-                          final image = await picker.pickImage(
-                            source: ImageSource.camera,
-                            maxWidth: 300,
-                            maxHeight: 300,
-                            imageQuality: 80,
-                          );
-                          if (image != null) {
-                            final bytes = await image.readAsBytes();
-                            final base64String = base64Encode(bytes);
-                            provider.updateProfileImage(base64String);
+                          try {
+                            final picker = ImagePicker();
+                            final image = await picker.pickImage(
+                              source: ImageSource.camera,
+                              maxWidth: 512,
+                              maxHeight: 512,
+                              imageQuality: 85,
+                            );
+                            if (image != null && context.mounted) {
+                              await _processAndSaveImage(image, provider, context);
+                            }
+                          } catch (e) {
+                            debugPrint('Camera error: $e');
                             if (context.mounted) {
-                              Navigator.pop(context);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('Profile picture updated successfully!'),
-                                  backgroundColor: Color(0xFF00BD96),
+                                  content: Text('Camera not supported or available on this device. Please choose from gallery.'),
+                                  backgroundColor: Colors.orange,
                                 ),
                               );
                             }
@@ -1805,106 +1865,108 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ),
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(
-                                  Icons.photo_camera_rounded,
-                                  color: Color(0xFF0A2342),
-                                  size: 26,
-                                ),
+                              child: const Icon(
+                                Icons.photo_camera_rounded,
+                                color: Color(0xFF0A2342),
+                                size: 26,
                               ),
-                              const SizedBox(height: 10),
-                              Text(
-                                'Take Photo',
-                                style: TextStyle(
-                                  color: primaryTextColor,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                ),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              'Take Photo',
+                              style: TextStyle(
+                                color: primaryTextColor,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                    const SizedBox(width: 14),
+                  ),
+                  const SizedBox(width: 14),
 
-                    // Gallery option (Royal Navy)
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () async {
+                  // Gallery option (Royal Navy)
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () async {
+                        try {
                           final picker = ImagePicker();
                           final image = await picker.pickImage(
                             source: ImageSource.gallery,
-                            maxWidth: 300,
-                            maxHeight: 300,
-                            imageQuality: 80,
+                            maxWidth: 512,
+                            maxHeight: 512,
+                            imageQuality: 85,
                           );
-                          if (image != null) {
-                            final bytes = await image.readAsBytes();
-                            final base64String = base64Encode(bytes);
-                            provider.updateProfileImage(base64String);
-                            if (context.mounted) {
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Profile picture updated successfully!'),
-                                  backgroundColor: Color(0xFF00BD96),
-                                ),
-                              );
-                            }
+                          if (image != null && context.mounted) {
+                            await _processAndSaveImage(image, provider, context);
                           }
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 20),
-                          decoration: BoxDecoration(
+                        } catch (e) {
+                          debugPrint('Gallery picker error: $e');
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Failed to pick image: $e'),
+                                backgroundColor: const Color(0xFFEF4444),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 20),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF161F2E)
+                              : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
                             color: isDark
-                                ? const Color(0xFF161F2E)
-                                : const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: isDark
-                                  ? const Color(0xFF334155)
-                                  : const Color(0xFFE2E8F0),
+                                ? const Color(0xFF334155)
+                                : const Color(0xFFE2E8F0),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: const BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [Color(0xFF1E3DB8), Color(0xFF122684)],
+                                ),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.photo_library_rounded,
+                                color: Colors.white,
+                                size: 26,
+                              ),
                             ),
-                          ),
-                          child: Column(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: const BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [Color(0xFF1E3DB8), Color(0xFF122684)],
-                                  ),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.photo_library_rounded,
-                                  color: Colors.white,
-                                  size: 26,
-                                ),
+                            const SizedBox(height: 10),
+                            Text(
+                              'Choose Gallery',
+                              style: TextStyle(
+                                color: primaryTextColor,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
                               ),
-                              const SizedBox(height: 10),
-                              Text(
-                                'Choose Gallery',
-                                style: TextStyle(
-                                  color: primaryTextColor,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
+              ),
 
-                // Remove Photo Option (if user has avatar)
-                if (provider.avatarPath != null && provider.avatarPath!.isNotEmpty) ...[
-                  const SizedBox(height: 14),
-                  NeuButton(
-                    onPressed: () {
-                      provider.updateProfileImage(null);
+              // Remove Photo Option (if user has avatar)
+              if (provider.avatarPath != null && provider.avatarPath!.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                NeuButton(
+                  onPressed: () async {
+                    await provider.updateProfileImage(null);
+                    if (context.mounted) {
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
@@ -1912,20 +1974,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           backgroundColor: Color(0xFFEF4444),
                         ),
                       );
-                    },
-                    icon: const Icon(Icons.delete_outline_rounded, size: 18),
-                    label: 'Remove Photo',
-                    variant: NeuButtonVariant.danger,
-                    height: 44,
-                  ),
-                ],
+                    }
+                  },
+                  icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                  label: 'Remove Photo',
+                  variant: NeuButtonVariant.danger,
+                  height: 44,
+                ),
               ],
-            ),
+            ],
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
   // --- CHANGE PASSWORD DIALOG ---
   void _showChangePasswordDialog(

@@ -226,6 +226,55 @@ class _HrShiftsTabState extends State<HrShiftsTab> {
                             ),
                           ),
                         ],
+                        if (shift.isSpecialShift) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.stars_rounded, size: 12, color: Color(0xFF10B981)),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Special Shift',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF10B981),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ] else if (shift.isOvernight) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.nightlight_round, size: 12, color: Color(0xFFF59E0B)),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Cutoff: ${shift.crossMidnightCutoff.isNotEmpty ? shift.crossMidnightCutoff : "03:00"}',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFFF59E0B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                         if (!shift.isRotation) ...[
                           const SizedBox(width: 6),
                           Expanded(
@@ -352,7 +401,9 @@ class _HrShiftsTabState extends State<HrShiftsTab> {
                     child: _buildInfoChip(
                       icon: Icons.timer_outlined,
                       iconColor: const Color(0xFF06B6D4),
-                      label: 'Delay: ${shift.forgivenessOfDelay}m | Early: ${shift.earlyExit}m',
+                      label: shift.isSpecialShift
+                          ? 'Special Shift: Flexible (No delay/early exit penalties)'
+                          : 'Delay: ${shift.forgivenessOfDelay}m | Early: ${shift.earlyExit}m',
                       isDark: isDark,
                     ),
                   ),
@@ -640,6 +691,7 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
         : '${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}-${DateTime.now().day.toString().padLeft(2, '0')}',
   );
   bool isOvernight = shift?.isOvernight ?? false;
+  bool isSpecialShift = shift?.isSpecialShift ?? false;
   final crossMidnightCutoffController = TextEditingController(text: shift?.crossMidnightCutoff ?? '');
   
   Map<int, DayShiftConfig> rotationSchedule = {};
@@ -745,6 +797,137 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
               ),
               const SizedBox(height: 16),
 
+              // Shift Type Selector (Normal vs Special)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.grey.shade100,
+                  border: Border.all(color: isDark ? Colors.white12 : Colors.grey.shade300),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Shift Type',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(8),
+                            onTap: () {
+                              setDialogState(() {
+                                isSpecialShift = false;
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                color: !isSpecialShift
+                                    ? const Color(0xFF2E65FF)
+                                    : (isDark ? Colors.white10 : Colors.white),
+                                border: Border.all(
+                                  color: !isSpecialShift
+                                      ? const Color(0xFF2E65FF)
+                                      : (isDark ? Colors.white12 : Colors.grey.shade300),
+                                ),
+                              ),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.schedule_rounded,
+                                    size: 20,
+                                    color: !isSpecialShift ? Colors.white : Colors.grey,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '1. Normal Shift',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                      color: !isSpecialShift ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(8),
+                            onTap: () {
+                              setDialogState(() {
+                                isSpecialShift = true;
+                                isRotation = true;
+                                if (rotationDays < 3) rotationDays = 3;
+                                rotationSchedule[1] ??= DayShiftConfig(
+                                  isWorkingDay: true,
+                                  startTime: '08:00',
+                                  endTime: '08:00',
+                                  isSpecialShift: true,
+                                  isOvernight: true,
+                                );
+                                rotationSchedule[2] ??= DayShiftConfig(isWorkingDay: false);
+                                rotationSchedule[3] ??= DayShiftConfig(isWorkingDay: false);
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                color: isSpecialShift
+                                    ? const Color(0xFF10B981)
+                                    : (isDark ? Colors.white10 : Colors.white),
+                                border: Border.all(
+                                  color: isSpecialShift
+                                      ? const Color(0xFF10B981)
+                                      : (isDark ? Colors.white12 : Colors.grey.shade300),
+                                ),
+                              ),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.stars_rounded,
+                                    size: 20,
+                                    color: isSpecialShift ? Colors.white : Colors.grey,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '2. Special Shift',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                      color: isSpecialShift ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      !isSpecialShift
+                          ? 'Normal Shift: Standard hours (e.g. 09:00-17:00, or 17:00-01:00 overnight). Clock-outs before the cutoff time count towards previous day. Missing punches are sorted chronologically.'
+                          : 'Special Shift: Continuous/multi-day cycle (e.g. 24h work on Day 1, Days 2-3 rest). Clock-in on Day 1 waits for next punch across days as clock-out and credits all hours to Day 1.',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark ? Colors.white60 : Colors.black54,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
               // Rotation switch
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -775,6 +958,46 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                       onChanged: (val) {
                         setDialogState(() {
                           isRotation = val;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Special Shift switch (12h or 24h flexible, no delay/early exit penalties, deficit = shift time - work time)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.white12),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Special Shift (12h / 24h)',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Flexible / continuous shift. No delay or early exit penalties. Deficit calculated strictly as (shift time - work time).',
+                            style: TextStyle(fontSize: 11, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: isSpecialShift,
+                      activeThumbColor: const Color(0xFF10B981),
+                      onChanged: (val) {
+                        setDialogState(() {
+                          isSpecialShift = val;
                         });
                       },
                     ),
@@ -1218,6 +1441,7 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                                     breakDurationMinutes: config.breakDurationMinutes,
                                     isOvernight: config.isOvernight,
                                     crossMidnightCutoff: config.crossMidnightCutoff,
+                                    isSpecialShift: isSpecialShift || config.isSpecialShift,
                                   );
                                 });
                               },
@@ -1257,6 +1481,7 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                                         breakDurationMinutes: config.breakDurationMinutes,
                                         isOvernight: config.isOvernight || autoOver,
                                         crossMidnightCutoff: config.crossMidnightCutoff.isNotEmpty ? config.crossMidnightCutoff : (autoOver ? defCutoff : ''),
+                                        isSpecialShift: isSpecialShift || config.isSpecialShift,
                                       );
                                     });
                                   }
@@ -1306,6 +1531,7 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                                         breakDurationMinutes: config.breakDurationMinutes,
                                         isOvernight: config.isOvernight || autoOver,
                                         crossMidnightCutoff: config.crossMidnightCutoff.isNotEmpty ? config.crossMidnightCutoff : (autoOver ? defCutoff : ''),
+                                        isSpecialShift: isSpecialShift || config.isSpecialShift,
                                       );
                                     });
                                   }
@@ -1473,6 +1699,7 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
             weeklySchedule: isRotation ? rotationSchedule : {},
             isOvernight: isOvernight || WorkShift.isTimeCrossMidnight(startController.text.trim(), endController.text.trim()),
             crossMidnightCutoff: crossMidnightCutoffController.text.trim(),
+            isSpecialShift: isSpecialShift,
           );
 
           if (isEditing) {

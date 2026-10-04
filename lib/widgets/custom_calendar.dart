@@ -99,23 +99,27 @@ class _CustomCalendarState extends State<CustomCalendar> {
     final checkInMinutes =
         firstRecord.checkIn.hour * 60 + firstRecord.checkIn.minute;
 
-    // Delay check (late check-in based on first session)
-    final delay = checkInMinutes - shiftStartMinutes;
-    final isDelayed = delay > shift.forgivenessOfDelay;
+    final isSpecial = shift.isSpecialShiftForDate(date);
 
-    // Early exit check (based on last session checkout if completed)
+    // Delay check (late check-in based on first session) - disabled for special shifts
+    final delay = checkInMinutes - shiftStartMinutes;
+    final isDelayed = !isSpecial && (delay > shift.forgivenessOfDelay);
+
+    // Early exit check (based on last session checkout if completed) - disabled for special shifts
     bool isEarlyExit = false;
-    if (lastRecord.checkOut != null) {
+    if (!isSpecial && lastRecord.checkOut != null) {
       final checkOutMinutes =
           lastRecord.checkOut!.hour * 60 + lastRecord.checkOut!.minute;
       final earlyExit = shiftEndMinutes - checkOutMinutes;
       isEarlyExit = earlyExit > shift.earlyExit;
     }
 
-    // Expected duration vs actual
+    // Expected duration vs actual (handles 12h day/night, 24h, and standard)
     final int expectedDurationMinutes;
-    if (shift.isOvernightForDate(date) || shiftEndMinutes <= shiftStartMinutes) {
+    if (shiftEndMinutes < shiftStartMinutes) {
       expectedDurationMinutes = (24 * 60) - shiftStartMinutes + shiftEndMinutes;
+    } else if (shiftEndMinutes == shiftStartMinutes) {
+      expectedDurationMinutes = 24 * 60;
     } else {
       expectedDurationMinutes = shiftEndMinutes - shiftStartMinutes;
     }
@@ -174,7 +178,7 @@ class _CustomCalendarState extends State<CustomCalendar> {
 
     final isExtraTime = extraMinutes > 0;
 
-    final hasDeficit = isDelayed || isEarlyExit || isDeficit;
+    final hasDeficit = isSpecial ? isDeficit : (isDelayed || isEarlyExit || isDeficit);
 
     if (hasDeficit && isExtraTime) {
       return DayStatus.deficitAndExtraTime;
@@ -254,14 +258,12 @@ class _CustomCalendarState extends State<CustomCalendar> {
       }
     }
 
-    final expectedDurationMinutes = shiftEndMinutes >= shiftStartMinutes
-        ? (shiftEndMinutes - shiftStartMinutes)
-        : (24 * 60 - shiftStartMinutes + shiftEndMinutes);
+    final expectedDurationMinutes = shift.getShiftDurationMinutesForDate(date);
     final netExpectedDuration =
         expectedDurationMinutes - shift.getBreakDurationForDate(date);
 
     int deficitMinutes = 0;
-    if (status == DayStatus.deficit && totalMinutes < netExpectedDuration) {
+    if ((status == DayStatus.deficit || status == DayStatus.deficitAndExtraTime) && totalMinutes < netExpectedDuration) {
       deficitMinutes = netExpectedDuration - totalMinutes;
     }
 
@@ -1399,6 +1401,7 @@ class _CustomCalendarState extends State<CustomCalendar> {
                       date,
                       emp: emp,
                       recordsPool: attendanceProvider.records,
+                      requestsPool: attendanceProvider.requests,
                     )
                   : attendanceProvider.records
                       .where(

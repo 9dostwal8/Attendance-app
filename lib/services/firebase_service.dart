@@ -5,6 +5,7 @@ import '../models/hr_models.dart';
 import '../models/attendance_record.dart';
 import '../models/request_model.dart';
 import '../models/chat_message.dart';
+import '../models/deleted_punch_model.dart';
 
 class FirebaseService {
   // Check if Firebase is initialized
@@ -535,6 +536,76 @@ class FirebaseService {
           .delete();
     } catch (e) {
       debugPrint('Error deleting attendance record: $e');
+    }
+  }
+
+  // --- Deleted Punches CRUD ---
+  Future<List<DeletedPunch>> getDeletedPunches() async {
+    if (!isAvailable) return [];
+    try {
+      final snapshot = await _firestore.collection('deleted_punches').get();
+      final list = <DeletedPunch>[];
+      for (var doc in snapshot.docs) {
+        try {
+          list.add(DeletedPunch.fromMap(doc.data(), doc.id));
+        } catch (e) {
+          debugPrint('Error parsing DeletedPunch ${doc.id}: $e');
+        }
+      }
+      list.sort((a, b) => b.deletedAt.compareTo(a.deletedAt));
+      return list;
+    } catch (e) {
+      debugPrint('Error getting deleted punches: $e');
+      return [];
+    }
+  }
+
+  Stream<List<DeletedPunch>> streamDeletedPunches() {
+    if (!isAvailable) return Stream.value([]);
+    try {
+      return _firestore
+          .collection('deleted_punches')
+          .snapshots()
+          .map((snapshot) {
+        final list = <DeletedPunch>[];
+        for (var doc in snapshot.docs) {
+          try {
+            list.add(DeletedPunch.fromMap(doc.data(), doc.id));
+          } catch (e) {
+            debugPrint('Error parsing DeletedPunch ${doc.id}: $e');
+          }
+        }
+        list.sort((a, b) => b.deletedAt.compareTo(a.deletedAt));
+        return list;
+      }).handleError((e) {
+        debugPrint('Error streaming deleted punches: $e');
+        return <DeletedPunch>[];
+      });
+    } catch (e) {
+      debugPrint('Error starting streamDeletedPunches: $e');
+      return Stream.value([]);
+    }
+  }
+
+  Future<void> saveDeletedPunch(DeletedPunch punch) async {
+    if (!isAvailable) return;
+    try {
+      await _firestore
+          .collection('deleted_punches')
+          .doc(punch.id)
+          .set(punch.toMap(), SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Error saving deleted punch: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> removeDeletedPunch(String punchId) async {
+    if (!isAvailable) return;
+    try {
+      await _firestore.collection('deleted_punches').doc(punchId).delete();
+    } catch (e) {
+      debugPrint('Error removing deleted punch: $e');
     }
   }
 

@@ -194,6 +194,8 @@ void _addNewRequestHelper({
 Future<void> showNewRequestDialog({
   required BuildContext context,
   required AttendanceProvider provider,
+  String? initialEmployeeId,
+  DateTime? initialDate,
   VoidCallback? onSubmitted,
 }) {
   final currentUser =
@@ -221,16 +223,31 @@ Future<void> showNewRequestDialog({
   ];
 
   CompanyEmployee selectedEmployee = currentUser;
+  if (initialEmployeeId != null) {
+    final matched = selectableEmployees.where((e) => e.id == initialEmployeeId).firstOrNull ??
+        provider.employees.where((e) => e.id == initialEmployeeId).firstOrNull;
+    if (matched != null) {
+      selectedEmployee = matched;
+      if (!selectableEmployees.any((e) => e.id == matched.id)) {
+        selectableEmployees.add(matched);
+      }
+    }
+  }
 
   String selectedType = 'Annual Leave';
   String? selectedShiftId =
       provider.shifts.isNotEmpty ? provider.shifts.first.id : null;
   bool isClockIn = true;
   String? errorMessage;
+  final initialDateStr = initialDate != null
+      ? DateFormat('MMMM d, yyyy').format(initialDate)
+      : 'June 20 - June 22, 2026';
   final dateController = TextEditingController(
-    text: 'June 20 - June 22, 2026',
+    text: initialDateStr,
   );
-  final durController = TextEditingController(text: '2 Days');
+  final durController = TextEditingController(
+    text: initialDate != null ? '1 Day' : '2 Days',
+  );
   final timeController = TextEditingController(
     text: DateFormat('HH:mm').format(DateTime.now()),
   );
@@ -853,25 +870,10 @@ Future<void> showNewRequestDialog({
                         reqDate = DateFormat('yyyy-MM-dd').parse(dateVal);
                       } catch (_) {}
 
-                      final startTimeStr = shift.getStartTimeForDate(reqDate);
-                      final endTimeStr = shift.getEndTimeForDate(reqDate);
-
-                      final partsStart = startTimeStr.split(':');
-                      final partsEnd = endTimeStr.split(':');
-                      final startMins = partsStart.length >= 2
-                          ? int.parse(partsStart[0]) * 60 +
-                              int.parse(partsStart[1])
-                          : 540;
-                      final endMins = partsEnd.length >= 2
-                          ? int.parse(partsEnd[0]) * 60 +
-                              int.parse(partsEnd[1])
-                          : 1020;
-                      int expected = endMins >= startMins
-                          ? endMins - startMins
-                          : (24 * 60 - startMins + endMins);
-                      int netMins =
-                          expected - shift.getBreakDurationForDate(reqDate);
-                      double hoursPerDay = netMins / 60.0;
+                      final shiftMins =
+                          shift.getShiftDurationMinutesForDate(reqDate);
+                      double hoursPerDay =
+                          shiftMins > 0 ? (shiftMins / 60.0) : 8.0;
                       double requestedHours = days * hoursPerDay;
 
                       if (requestedHours >

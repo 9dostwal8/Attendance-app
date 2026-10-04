@@ -569,12 +569,40 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                                     color: textColor,
                                   ),
                                 ),
-                                Text(
-                                  'Dept: ${structure.name}',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: isDark ? Colors.white60 : Colors.black54,
-                                  ),
+                                Row(
+                                  children: [
+                                    Text(
+                                      'Dept: ${structure.name}',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: isDark ? Colors.white60 : Colors.black54,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.25), width: 0.8),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(Icons.beach_access_rounded, size: 10, color: Color(0xFF10B981)),
+                                          const SizedBox(width: 3),
+                                          Text(
+                                            '${employee.annualLeaveBalance.toStringAsFixed(1)}h',
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF10B981),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
@@ -777,13 +805,15 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Close', style: TextStyle(color: Colors.white70)),
+          child: Text('Close', style: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF64748B))),
         ),
       ],
     );
   }
 
   Widget _buildDetailRow(String label, String value, bool isDark) {
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtextColor = isDark ? Colors.white60 : const Color(0xFF64748B);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -791,17 +821,17 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
         children: [
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
-              color: Colors.white60,
+              color: subtextColor,
             ),
           ),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: textColor,
             ),
           ),
         ],
@@ -815,6 +845,17 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
     CompanyEmployee? employee,
   }) {
     final isEditing = employee != null;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtextColor = isDark ? Colors.white60 : const Color(0xFF64748B);
+    final labelColor = isDark ? Colors.white70 : const Color(0xFF475569);
+    final hintColor = isDark ? Colors.white38 : const Color(0xFF94A3B8);
+    final iconColor = isDark ? Colors.white60 : const Color(0xFF64748B);
+    final dropdownBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final cardBg = isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.03);
+    final borderColor = isDark ? Colors.white12 : Colors.black12;
+    final dividerColor = isDark ? Colors.white12 : Colors.black12;
+    final cancelColor = isDark ? Colors.white70 : const Color(0xFF64748B);
     final nowStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
     final userIdController = TextEditingController(
       text: employee != null ? employee.id : provider.getNextEmployeeId(),
@@ -825,6 +866,9 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
     final passwordController = TextEditingController(text: employee?.password ?? '');
     final phoneController = TextEditingController(text: employee?.phoneNumber ?? '');
     final salaryController = TextEditingController(text: employee?.basicSalary.toString() ?? '0');
+    final annualLeaveBalanceController = TextEditingController(
+      text: employee != null ? employee.annualLeaveBalance.toString() : '24.0',
+    );
     final groupStartDateController = TextEditingController(
       text: employee?.groupStartDate.isNotEmpty == true
           ? employee!.groupStartDate
@@ -877,14 +921,14 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                       flex: 4,
                       child: TextField(
                         controller: userIdController,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
                         keyboardType: TextInputType.text,
                         decoration: InputDecoration(
                           labelText: 'User ID *',
-                          labelStyle: const TextStyle(color: Colors.white70),
+                          labelStyle: TextStyle(color: labelColor),
                           prefixIcon: const Icon(Icons.tag_rounded, size: 18, color: Color(0xFF2E65FF)),
                           helperText: isEditing ? 'Device/System ID' : 'Auto-sequence ID',
-                          helperStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 10),
+                          helperStyle: TextStyle(color: subtextColor, fontSize: 10),
                         ),
                       ),
                     ),
@@ -893,11 +937,11 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                       flex: 7,
                       child: TextField(
                         controller: nameController,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(
+                        style: TextStyle(color: textColor),
+                        decoration: InputDecoration(
                           labelText: 'Full Name *',
-                          labelStyle: TextStyle(color: Colors.white70),
-                          prefixIcon: Icon(Icons.person_outline, size: 18, color: Colors.white60),
+                          labelStyle: TextStyle(color: labelColor),
+                          prefixIcon: Icon(Icons.person_outline, size: 18, color: iconColor),
                         ),
                       ),
                     ),
@@ -906,30 +950,30 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                 const SizedBox(height: 12),
                 TextField(
                   controller: emailController,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: textColor),
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Email Address *',
-                    labelStyle: TextStyle(color: Colors.white70),
+                    labelStyle: TextStyle(color: labelColor),
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: positionController,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: textColor),
+                  decoration: InputDecoration(
                     labelText: 'Position / Job Title',
-                    labelStyle: TextStyle(color: Colors.white70),
+                    labelStyle: TextStyle(color: labelColor),
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: passwordController,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: textColor),
                   obscureText: true,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Login Password (optional)',
-                    labelStyle: TextStyle(color: Colors.white70),
+                    labelStyle: TextStyle(color: labelColor),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -937,16 +981,16 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                 // Role Selection Dropdown
                 DropdownButtonFormField<String>(
                   initialValue: selectedRole,
-                  dropdownColor: const Color(0xFF1E293B),
-                  style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(
+                  dropdownColor: dropdownBg,
+                  style: TextStyle(color: textColor),
+                  decoration: InputDecoration(
                     labelText: 'Access Role *',
-                    labelStyle: TextStyle(color: Colors.white70),
+                    labelStyle: TextStyle(color: labelColor),
                   ),
-                  items: const [
-                    DropdownMenuItem(value: 'employee', child: Text('Employee')),
-                    DropdownMenuItem(value: 'supervisor', child: Text('Supervisor')),
-                    DropdownMenuItem(value: 'hr', child: Text('HR / Admin')),
+                  items: [
+                    DropdownMenuItem(value: 'employee', child: Text('Employee', style: TextStyle(color: textColor))),
+                    DropdownMenuItem(value: 'supervisor', child: Text('Supervisor', style: TextStyle(color: textColor))),
+                    DropdownMenuItem(value: 'hr', child: Text('HR / Admin', style: TextStyle(color: textColor))),
                   ],
                   onChanged: (val) {
                     if (val != null) {
@@ -959,16 +1003,16 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                 // Structure Dropdown
                 DropdownButtonFormField<String?>(
                   initialValue: selectedStructure,
-                  dropdownColor: const Color(0xFF1E293B),
-                  style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(
+                  dropdownColor: dropdownBg,
+                  style: TextStyle(color: textColor),
+                  decoration: InputDecoration(
                     labelText: 'Structure / Department',
-                    labelStyle: TextStyle(color: Colors.white70),
+                    labelStyle: TextStyle(color: labelColor),
                   ),
                   items: [
-                    const DropdownMenuItem(value: null, child: Text('None (Unassigned)')),
+                    DropdownMenuItem(value: null, child: Text('None (Unassigned)', style: TextStyle(color: textColor))),
                     ...provider.structures.map(
-                      (s) => DropdownMenuItem(value: s.id, child: Text(s.name)),
+                      (s) => DropdownMenuItem(value: s.id, child: Text(s.name, style: TextStyle(color: textColor))),
                     ),
                   ],
                   onChanged: (val) {
@@ -980,19 +1024,19 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                 // Group / Shift Dropdown
                 DropdownButtonFormField<String?>(
                   initialValue: selectedGroup,
-                  dropdownColor: const Color(0xFF1E293B),
-                  style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(
+                  dropdownColor: dropdownBg,
+                  style: TextStyle(color: textColor),
+                  decoration: InputDecoration(
                     labelText: 'Employee Group (Shift)',
-                    labelStyle: TextStyle(color: Colors.white70),
+                    labelStyle: TextStyle(color: labelColor),
                   ),
                   items: [
-                    const DropdownMenuItem(value: null, child: Text('None (Standard)')),
+                    DropdownMenuItem(value: null, child: Text('None (Standard)', style: TextStyle(color: textColor))),
                     ...provider.groups.map(
                       (g) {
                         final shift = provider.shifts.where((s) => s.id == g.shiftId).firstOrNull;
                         final shiftName = shift != null ? ' (${shift.name})' : '';
-                        return DropdownMenuItem(value: g.id, child: Text('${g.name}$shiftName'));
+                        return DropdownMenuItem(value: g.id, child: Text('${g.name}$shiftName', style: TextStyle(color: textColor)));
                       },
                     ),
                   ],
@@ -1011,9 +1055,9 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.04),
+                      color: cardBg,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.white12),
+                      border: Border.all(color: borderColor),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1022,10 +1066,10 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                           children: [
                             const Icon(Icons.date_range_rounded, size: 16, color: Color(0xFF2E65FF)),
                             const SizedBox(width: 6),
-                            const Text(
+                            Text(
                               'Shift Change Effective Dates',
                               style: TextStyle(
-                                color: Colors.white,
+                                color: textColor,
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -1045,12 +1089,18 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                                     firstDate: DateTime(2000),
                                     lastDate: DateTime(2100),
                                     builder: (context, child) => Theme(
-                                      data: ThemeData.dark().copyWith(
-                                        colorScheme: const ColorScheme.dark(
-                                          primary: Color(0xFF2E65FF),
-                                          surface: Color(0xFF1E293B),
-                                        ),
-                                      ),
+                                      data: isDark
+                                          ? ThemeData.dark().copyWith(
+                                              colorScheme: const ColorScheme.dark(
+                                                primary: Color(0xFF2E65FF),
+                                                surface: Color(0xFF1E293B),
+                                              ),
+                                            )
+                                          : ThemeData.light().copyWith(
+                                              colorScheme: const ColorScheme.light(
+                                                primary: Color(0xFF2E65FF),
+                                              ),
+                                            ),
                                       child: child!,
                                     ),
                                   );
@@ -1063,11 +1113,11 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                                 child: IgnorePointer(
                                   child: TextField(
                                     controller: groupStartDateController,
-                                    style: const TextStyle(color: Colors.white, fontSize: 13),
-                                    decoration: const InputDecoration(
+                                    style: TextStyle(color: textColor, fontSize: 13),
+                                    decoration: InputDecoration(
                                       labelText: 'Start Date *',
-                                      labelStyle: TextStyle(color: Colors.white70, fontSize: 12),
-                                      suffixIcon: Icon(Icons.calendar_today, size: 16, color: Colors.white60),
+                                      labelStyle: TextStyle(color: labelColor, fontSize: 12),
+                                      suffixIcon: Icon(Icons.calendar_today, size: 16, color: iconColor),
                                       isDense: true,
                                     ),
                                   ),
@@ -1085,12 +1135,18 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                                     firstDate: DateTime(2000),
                                     lastDate: DateTime(2100),
                                     builder: (context, child) => Theme(
-                                      data: ThemeData.dark().copyWith(
-                                        colorScheme: const ColorScheme.dark(
-                                          primary: Color(0xFF2E65FF),
-                                          surface: Color(0xFF1E293B),
-                                        ),
-                                      ),
+                                      data: isDark
+                                          ? ThemeData.dark().copyWith(
+                                              colorScheme: const ColorScheme.dark(
+                                                primary: Color(0xFF2E65FF),
+                                                surface: Color(0xFF1E293B),
+                                              ),
+                                            )
+                                          : ThemeData.light().copyWith(
+                                              colorScheme: const ColorScheme.light(
+                                                primary: Color(0xFF2E65FF),
+                                              ),
+                                            ),
                                       child: child!,
                                     ),
                                   );
@@ -1103,20 +1159,20 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                                 child: IgnorePointer(
                                   child: TextField(
                                     controller: groupEndDateController,
-                                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                                    style: TextStyle(color: textColor, fontSize: 13),
                                     decoration: InputDecoration(
                                       labelText: 'End Date (Optional)',
-                                      labelStyle: const TextStyle(color: Colors.white70, fontSize: 12),
+                                      labelStyle: TextStyle(color: labelColor, fontSize: 12),
                                       hintText: 'Ongoing',
-                                      hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 12),
+                                      hintStyle: TextStyle(color: hintColor, fontSize: 12),
                                       suffixIcon: groupEndDateController.text.isNotEmpty
                                           ? IconButton(
-                                              icon: const Icon(Icons.clear, size: 16, color: Colors.white60),
+                                              icon: Icon(Icons.clear, size: 16, color: iconColor),
                                               onPressed: () {
                                                 setDialogState(() => groupEndDateController.clear());
                                               },
                                             )
-                                          : const Icon(Icons.calendar_today, size: 16, color: Colors.white60),
+                                          : Icon(Icons.calendar_today, size: 16, color: iconColor),
                                       isDense: true,
                                     ),
                                   ),
@@ -1129,18 +1185,18 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                         Text(
                           'Days prior to this start date will keep their previous shift.',
                           style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.5),
+                            color: subtextColor,
                             fontSize: 10.5,
                             fontStyle: FontStyle.italic,
                           ),
                         ),
                         if (tempGroupHistory.length > 1) ...[
                           const SizedBox(height: 10),
-                          const Divider(color: Colors.white12, height: 1),
+                          Divider(color: dividerColor, height: 1),
                           const SizedBox(height: 8),
-                          const Text(
+                          Text(
                             'Recorded Shift Periods:',
-                            style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
+                            style: TextStyle(color: labelColor, fontSize: 11, fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 4),
                           ...tempGroupHistory.asMap().entries.map((entry) {
@@ -1158,7 +1214,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                                   Expanded(
                                     child: Text(
                                       '• $gTitle: ${h.startDate} to ${h.endDate.isEmpty ? 'Ongoing' : h.endDate}',
-                                      style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 11),
+                                      style: TextStyle(color: subtextColor, fontSize: 11),
                                     ),
                                   ),
                                   InkWell(
@@ -1182,19 +1238,32 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
 
                 TextField(
                   controller: phoneController,
-                  style: const TextStyle(color: Colors.white),
+                  style: TextStyle(color: textColor),
                   keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Phone Number',
-                    labelStyle: TextStyle(color: Colors.white70),
+                    labelStyle: TextStyle(color: labelColor),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: annualLeaveBalanceController,
+                  style: TextStyle(color: textColor),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: 'Annual Leave Balance (Hours)',
+                    labelStyle: TextStyle(color: labelColor),
+                    prefixIcon: const Icon(Icons.beach_access_rounded, size: 18, color: Color(0xFF10B981)),
+                    helperText: 'Remaining available annual leave in hours (e.g. 24h = 3 eight-hour workdays)',
+                    helperStyle: TextStyle(color: subtextColor, fontSize: 10),
                   ),
                 ),
                 const SizedBox(height: 12),
 
                 // Active / Suspended Switch
                 SwitchListTile(
-                  title: const Text('Suspend Account', style: TextStyle(color: Colors.white, fontSize: 13)),
-                  subtitle: const Text('Prevent login & clocking', style: TextStyle(color: Colors.white60, fontSize: 11)),
+                  title: Text('Suspend Account', style: TextStyle(color: textColor, fontSize: 13)),
+                  subtitle: Text('Prevent login & clocking', style: TextStyle(color: subtextColor, fontSize: 11)),
                   value: isDisabled,
                   activeThumbColor: Colors.redAccent,
                   onChanged: (val) {
@@ -1209,7 +1278,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+          child: Text('Cancel', style: TextStyle(color: cancelColor)),
         ),
         NeuButton(
           label: isEditing ? 'Save Changes' : 'Create User',
@@ -1245,6 +1314,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
             }
 
             final salaryVal = double.tryParse(salaryController.text) ?? 0.0;
+            final leaveBalanceVal = double.tryParse(annualLeaveBalanceController.text.trim()) ?? (employee?.annualLeaveBalance ?? 24.0);
 
             List<GroupHistoryEntry> gHistory = List<GroupHistoryEntry>.from(tempGroupHistory);
             String? finalGroupId = selectedGroup;
@@ -1404,6 +1474,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                 groupHistory: gHistory,
                 phoneNumber: phoneController.text.trim(),
                 disabled: isDisabled,
+                annualLeaveBalance: leaveBalanceVal,
                 basicSalary: salaryVal,
                 workingHours: employee.workingHours > 0 ? employee.workingHours : 160.0,
                 salaryHistory: sHistory,
@@ -1439,7 +1510,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                 basicSalary: salaryVal,
                 workingHours: 160.0,
                 salaryHistory: initialHistory,
-                annualLeaveBalance: 24.0,
+                annualLeaveBalance: leaveBalanceVal,
               );
               provider.addEmployee(newOrUpdatedEmp);
             }
@@ -1458,19 +1529,23 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
   }
 
   void _showResequenceConfirm(BuildContext context, AttendanceProvider provider) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final cancelColor = isDark ? Colors.white70 : const Color(0xFF64748B);
+
     showGlassDialog(
       context: context,
       title: 'Re-sequence User IDs',
       subtitle: 'Number all employees 1, 2, 3...',
       icon: Icons.format_list_numbered_rounded,
-      content: const Text(
+      content: Text(
         'This will automatically update all employees to sequential simple numbers starting from 1 (1, 2, 3, 4...) and migrate their attendance history and requests. Are you sure you want to proceed?',
-        style: TextStyle(color: Colors.white, fontSize: 13, height: 1.4),
+        style: TextStyle(color: textColor, fontSize: 13, height: 1.4),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+          child: Text('Cancel', style: TextStyle(color: cancelColor)),
         ),
         NeuButton(
           label: 'Re-sequence Now',
@@ -1495,16 +1570,23 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
   }
 
   void _showDeleteConfirm(BuildContext context, CompanyEmployee employee, AttendanceProvider provider) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final cancelColor = isDark ? Colors.white70 : const Color(0xFF64748B);
+
     showGlassDialog(
       context: context,
       title: 'Delete User Account',
       subtitle: 'Permanent Action',
       icon: Icons.delete_forever_rounded,
-      content: Text('Are you sure you want to delete ${employee.name} (${employee.email})? This action cannot be undone.'),
+      content: Text(
+        'Are you sure you want to delete ${employee.name} (${employee.email})? This action cannot be undone.',
+        style: TextStyle(color: textColor),
+      ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+          child: Text('Cancel', style: TextStyle(color: cancelColor)),
         ),
         NeuButton(
           onPressed: () {

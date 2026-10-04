@@ -7,6 +7,7 @@ import '../models/hr_models.dart';
 import '../widgets/glass_dialog.dart';
 import '../widgets/glass_container.dart';
 import '../widgets/neu_button.dart';
+import '../widgets/avatar_image_helper.dart';
 import 'map_picker_screen.dart';
 
 import 'hr_management_screen.dart';
@@ -4144,11 +4145,9 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                       children: [
                         CircleAvatar(
                           radius: 22,
-                          backgroundImage: employee.avatarUrl != null && employee.avatarUrl!.isNotEmpty
-                              ? NetworkImage(employee.avatarUrl!)
-                              : null,
+                          backgroundImage: getAvatarProvider(employee.avatarUrl),
                           backgroundColor: const Color(0xFF10B981).withValues(alpha: 0.15),
-                          child: (employee.avatarUrl == null || employee.avatarUrl!.isEmpty)
+                          child: (getAvatarProvider(employee.avatarUrl) == null)
                               ? Text(
                                   employee.name.isNotEmpty ? employee.name[0].toUpperCase() : '?',
                                   style: const TextStyle(

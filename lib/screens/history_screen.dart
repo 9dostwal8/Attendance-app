@@ -33,13 +33,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
   @override
   void initState() {
     super.initState();
-    if (_selectedEmployeeId != null && _selectedEmployeeId!.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        final provider = Provider.of<AttendanceProvider>(context, listen: false);
-        _loadSubordinateRecords(provider, _selectedEmployeeId!);
-      });
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final provider = Provider.of<AttendanceProvider>(context, listen: false);
+      final targetId = _selectedEmployeeId ?? provider.currentEmployee?.id ?? provider.employeeId;
+      if (targetId.isNotEmpty) {
+        _loadSubordinateRecords(provider, targetId);
+      }
+    });
   }
 
   @override
@@ -168,22 +169,34 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
       final activeEmpId = _selectedEmployeeId ?? provider.currentEmployee?.id ?? provider.employeeId;
       final isCurrentUser = activeEmpId == provider.currentEmployee?.id;
-      final recordsToCompile = _subordinateRecords.isNotEmpty
-          ? _subordinateRecords
-          : (isCurrentUser && provider.records.isNotEmpty
-              ? provider.records
-              : _subordinateRecords);
-      final requestsToCompile = _subordinateRequests.isNotEmpty
-          ? _subordinateRequests
-          : (isCurrentUser && provider.requests.isNotEmpty
-              ? provider.requests
-              : _subordinateRequests);
 
       // Resolve Employee and Shift
       final emp = provider.employees.firstWhere(
         (e) => e.id == activeEmpId,
         orElse: () => provider.currentEmployee ?? CompanyEmployee(id: activeEmpId, name: 'Employee', email: '', position: ''),
       );
+
+      final recordsToCompile = _subordinateRecords.isNotEmpty
+          ? _subordinateRecords
+          : (isCurrentUser && provider.records.isNotEmpty
+              ? provider.records
+              : provider.allCompanyRecords
+                  .where((r) =>
+                      r.employeeId != null &&
+                      (r.employeeId!.trim().toLowerCase() == activeEmpId.trim().toLowerCase() ||
+                       r.employeeId!.trim().toLowerCase() == emp.name.trim().toLowerCase()))
+                  .toList());
+      final requestsToCompile = _subordinateRequests.isNotEmpty
+          ? _subordinateRequests
+          : (isCurrentUser && provider.requests.isNotEmpty
+              ? provider.requests
+              : provider.allCompanyRequests
+                  .where((r) =>
+                      r.employeeId != null &&
+                      (r.employeeId!.trim().toLowerCase() == activeEmpId.trim().toLowerCase() ||
+                       r.employeeId!.trim().toLowerCase() == emp.name.trim().toLowerCase() ||
+                       r.employeeId!.trim().toLowerCase() == emp.email.trim().toLowerCase()))
+                  .toList());
 
       for (var date in datesInPeriod) {
         final activeGroupId = provider.getGroupIdForDate(emp, date);
@@ -204,16 +217,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
             ? int.parse(partsEnd[0]) * 60 + int.parse(partsEnd[1])
             : 1020; // Default 17:00
 
-        int dayShiftDurMins = shiftEndMinutes - shiftStartMinutes;
-        if (dayShiftDurMins <= 0 || shift.isOvernightForDate(date)) {
-          dayShiftDurMins += 24 * 60;
-        }
+        final dayShiftDurMins = shift.getShiftDurationMinutesForDate(date);
         final shiftWorkHoursStr = formatMinutes(dayShiftDurMins);
 
         final dateRecords = provider.getRecordsForDate(
           date,
           emp: emp,
           recordsPool: recordsToCompile,
+          requestsPool: requestsToCompile,
         );
 
         int totalActualMinutes = 0;
@@ -270,15 +281,56 @@ class _HistoryScreenState extends State<HistoryScreen> {
           }
         }
 
-        final dateStrForMissingPunch = DateFormat('MMMM d, yyyy').format(date);
-        final missingPunchReqs = requestsToCompile
-            .where(
-              (req) =>
-                  req.type == 'Missing Punch' &&
-                  req.date == dateStrForMissingPunch &&
-                  req.status == 'Approved',
-            )
-            .toList();
+        final isOvernightForMissing = shift.isOvernightForDate(date);
+        final cutoffStrForMissing = shift.getCrossMidnightCutoffForDate(date);
+        final cPartsForMissing = cutoffStrForMissing.split(':');
+        final cutoffMinsForMissing = (int.tryParse(cPartsForMissing[0]) ?? 3) * 60 +
+            (cPartsForMissing.length >= 2 ? (int.tryParse(cPartsForMissing[1]) ?? 0) : 0);
+
+        final missingPunchReqs = requestsToCompile.where((req) {
+          if (req.type != 'Missing Punch' &&
+              req.type != 'Forgot to Clock In' &&
+              req.type != 'Forgot to Clock Out') {
+            return false;
+          }
+          if (req.status != 'Approved') return false;
+
+          DateTime? rDate;
+          try {
+            final dStr = req.date.split(' - ').first.trim();
+            if (dStr.contains(',')) {
+              rDate = DateFormat('MMMM d, yyyy').parse(dStr);
+            } else if (dStr.contains('/')) {
+              final slashParts = dStr.split('/');
+              if (slashParts.length == 3) {
+                try {
+                  rDate = DateFormat('dd/MM/yyyy').parse(dStr);
+                } catch (_) {
+                  rDate = DateFormat('MM/dd/yyyy').parse(dStr);
+                }
+              }
+            } else {
+              rDate = DateTime.tryParse(dStr);
+            }
+          } catch (_) {}
+          if (rDate == null) return false;
+
+          if (DateUtils.isSameDay(rDate, date)) return true;
+
+          if (isOvernightForMissing &&
+              DateUtils.isSameDay(rDate, date.add(const Duration(days: 1)))) {
+            final dur = req.duration;
+            final timeStr = dur.replaceAll('Clock In:', '').replaceAll('Clock Out:', '').trim();
+            try {
+              final parsedTime = timeStr.contains('AM') || timeStr.contains('PM')
+                  ? DateFormat('hh:mm a').parse(timeStr)
+                  : DateFormat('HH:mm').parse(timeStr);
+              final punchMins = parsedTime.hour * 60 + parsedTime.minute;
+              return punchMins < cutoffMinsForMissing;
+            } catch (_) {}
+          }
+          return false;
+        }).toList();
         final hasApprovedMissingPunch = missingPunchReqs.isNotEmpty;
 
         List<String> missingPunchTimes = [];
@@ -491,8 +543,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
             }
           }
 
+          final isSpecial = shift.isSpecialShiftForDate(date);
+          if (isSpecial) {
+            dutyMinutes = totalActualMinutes > dayShiftDurMins ? dayShiftDurMins : totalActualMinutes;
+            extraTimeMinutes = totalActualMinutes > dayShiftDurMins ? (totalActualMinutes - dayShiftDurMins) : 0;
+            delayMinutes = 0;
+            earlyExitMinutes = 0;
+            penaltyAmount = 0.0;
+          }
+
           final isWeekendForDelay = !shift.isWorkingDay(date);
-          if (!isWeekendForDelay) {
+          if (!isSpecial && !isWeekendForDelay) {
             final hasOnlyOnePunch =
                 sortedRecords.length == 1 &&
                 (sortedRecords.first.checkIn == sortedRecords.first.checkOut ||
@@ -651,56 +712,72 @@ class _HistoryScreenState extends State<HistoryScreen> {
           }
         }
 
-        int deficitMinutes =
-            delayMinutes + earlyExitMinutes + unexcusedRestMinutes;
+        int deficitMinutes = 0;
         final isWeekendDay = !shift.isWorkingDay(date);
         final isFutureDay = date.isAfter(DateTime.now());
+        final isSpecialShiftDay = shift.isSpecialShiftForDate(date);
 
-        if (!isWeekendDay &&
-            !hasLeaveRequest &&
-            holiday == null &&
-            !hasApprovedMissingPunch &&
-            !isFutureDay) {
-          int shiftDur = shiftEndMinutes - shiftStartMinutes;
-          if (shiftDur < 0) shiftDur += 24 * 60;
+        if (isSpecialShiftDay) {
+          delayMinutes = 0;
+          earlyExitMinutes = 0;
+          penaltyAmount = 0.0;
+          if (!isWeekendDay && !hasLeaveRequest && holiday == null && !isFutureDay) {
+            if (totalActualMinutes < dayShiftDurMins) {
+              deficitMinutes = dayShiftDurMins - totalActualMinutes;
+            } else {
+              deficitMinutes = 0;
+            }
+          }
+        } else {
+          deficitMinutes =
+              delayMinutes + earlyExitMinutes + unexcusedRestMinutes;
 
-          int missingPunchDeficit = 0;
-          final hasOnlyOnePunch =
-              dateRecords.length == 1 &&
-              (dateRecords.first.checkIn == dateRecords.first.checkOut ||
-                  dateRecords.first.checkOut == null);
-          if (hasOnlyOnePunch) {
-            missingPunchDeficit = shiftDur;
-          } else {
-            for (var r in dateRecords) {
-              if (r.checkIn == r.checkOut) {
-                final outMinutes = r.checkOut!.hour * 60 + r.checkOut!.minute;
-                final clampedOut = outMinutes > shiftEndMinutes
-                    ? shiftEndMinutes
-                    : outMinutes;
-                if (clampedOut > shiftStartMinutes) {
-                  missingPunchDeficit += (clampedOut - shiftStartMinutes);
-                }
-              } else if (r.checkOut == null) {
-                final isToday = DateUtils.isSameDay(date, DateTime.now());
-                if (!isToday) {
-                  final inMinutes = r.checkIn.hour * 60 + r.checkIn.minute;
-                  final clampedIn = inMinutes < shiftStartMinutes
-                      ? shiftStartMinutes
-                      : inMinutes;
-                  if (shiftEndMinutes > clampedIn) {
-                    missingPunchDeficit += (shiftEndMinutes - clampedIn);
+          if (!isWeekendDay &&
+              !hasLeaveRequest &&
+              holiday == null &&
+              !hasApprovedMissingPunch &&
+              !isFutureDay) {
+            int shiftDur = shiftEndMinutes - shiftStartMinutes;
+            if (shiftDur < 0) shiftDur += 24 * 60;
+
+            int missingPunchDeficit = 0;
+            final hasOnlyOnePunch =
+                dateRecords.length == 1 &&
+                (dateRecords.first.checkIn == dateRecords.first.checkOut ||
+                    dateRecords.first.checkOut == null);
+            if (hasOnlyOnePunch) {
+              missingPunchDeficit = shiftDur;
+            } else {
+              for (var r in dateRecords) {
+                if (r.checkIn == r.checkOut) {
+                  final outMinutes = r.checkOut!.hour * 60 + r.checkOut!.minute;
+                  final clampedOut = outMinutes > shiftEndMinutes
+                      ? shiftEndMinutes
+                      : outMinutes;
+                  if (clampedOut > shiftStartMinutes) {
+                    missingPunchDeficit += (clampedOut - shiftStartMinutes);
+                  }
+                } else if (r.checkOut == null) {
+                  final isToday = DateUtils.isSameDay(date, DateTime.now());
+                  if (!isToday) {
+                    final inMinutes = r.checkIn.hour * 60 + r.checkIn.minute;
+                    final clampedIn = inMinutes < shiftStartMinutes
+                        ? shiftStartMinutes
+                        : inMinutes;
+                    if (shiftEndMinutes > clampedIn) {
+                      missingPunchDeficit += (shiftEndMinutes - clampedIn);
+                    }
                   }
                 }
               }
             }
-          }
 
-          if (!hasRecord) {
-            missingPunchDeficit += shiftDur;
-          }
+            if (!hasRecord) {
+              missingPunchDeficit += shiftDur;
+            }
 
-          deficitMinutes += missingPunchDeficit;
+            deficitMinutes += missingPunchDeficit;
+          }
         }
 
         compiledData.add({
@@ -1872,6 +1949,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
         showNewRequestDialog(
           context: context,
           provider: provider,
+          initialEmployeeId: _selectedEmployeeId,
+          initialDate: _selectedDate,
+          onSubmitted: () {
+            final activeEmpId = _selectedEmployeeId ?? provider.currentEmployee?.id ?? provider.employeeId;
+            _loadSubordinateRecords(provider, activeEmpId);
+          },
         );
       },
       icon: const Icon(Icons.add),
@@ -1920,7 +2003,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final translatedDay = provider.translate(dayNameEng);
     final formattedDateStr =
         '$translatedDay, ${_formatLocalizedDate(date, provider)}';
-    final requests = (rowData['requests'] as List<Request>?) ?? [];
+    final List<Request> requests = List<Request>.from(
+        (rowData['requests'] as List<Request>?) ?? []);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor =
         Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black;
@@ -1928,245 +2012,355 @@ class _HistoryScreenState extends State<HistoryScreen> {
     showDialog(
       context: context,
       builder: (ctx) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 580, maxHeight: 680),
-            child: Container(
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.12),
-                    blurRadius: 24,
-                    offset: const Offset(0, 8),
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 580, maxHeight: 680),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.12),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Dialog Header
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 20, 20, 16),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color:
-                                const Color(0xFF2E65FF).withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: const Icon(
-                            Icons.assignment_outlined,
-                            color: Color(0xFF2E65FF),
-                            size: 22,
-                          ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Dialog Header
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 20, 20, 16),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color:
+                                    const Color(0xFF2E65FF).withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: const Icon(
+                                Icons.assignment_outlined,
+                                color: Color(0xFF2E65FF),
+                                size: 22,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    provider.translate('requests'),
+                                    style: TextStyle(
+                                      color: textColor,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    formattedDateStr,
+                                    style: TextStyle(
+                                      color: textColor.withValues(alpha: 0.6),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () => Navigator.of(ctx).pop(),
+                              icon: const Icon(Icons.close),
+                              splashRadius: 20,
+                              color: textColor.withValues(alpha: 0.5),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                provider.translate('requests'),
-                                style: TextStyle(
-                                  color: textColor,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
+                      ),
+
+                      const Divider(height: 1, thickness: 1),
+
+                      // Day Summary Strip (Attendance Context)
+                      Container(
+                        color: textColor.withValues(alpha: isDark ? 0.04 : 0.02),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            if ((rowData['shiftName'] as String?)?.isNotEmpty ?? false)
+                              _buildDialogDayStat(
+                                label: provider.translate('shift'),
+                                value: (rowData['shiftWorkHours'] as String?)?.isNotEmpty ?? false
+                                    ? '${rowData['shiftName']} (${rowData['shiftWorkHours']})'
+                                    : '${rowData['shiftName']}',
+                                color: const Color(0xFF10B981),
+                              ),
+                            _buildDialogDayStat(
+                              label: provider.translate('attendance'),
+                              value: (rowData['isLeave'] as bool? ?? false) &&
+                                      !(rowData['hasRecord'] as bool)
+                                  ? '-'
+                                  : formatMinutes(rowData['attendance'] as int),
+                              color: const Color(0xFF2E65FF),
+                            ),
+                            _buildDialogDayStat(
+                              label: provider.translate('clock_time'),
+                              value: (rowData['clockTime'] as String).replaceAll(
+                                '\n',
+                                ', ',
+                              ),
+                              color: const Color(0xFF5B9BFF),
+                            ),
+                            _buildDialogDayStat(
+                              label: provider.translate('duty'),
+                              value: formatMinutes(rowData['duty'] as int),
+                              color: textColor.withValues(alpha: 0.7),
+                            ),
+                            _buildDialogDayStat(
+                              label: provider.translate('delay'),
+                              value: '${rowData['delay']}m',
+                              color: (rowData['delay'] as int) > 0
+                                  ? const Color(0xFFFF5C5C)
+                                  : textColor.withValues(alpha: 0.7),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const Divider(height: 1, thickness: 1),
+
+                      // Requests Content
+                      Flexible(
+                        child: requests.isEmpty
+                            ? Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 40,
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 64,
+                                      height: 64,
+                                      decoration: BoxDecoration(
+                                        color: textColor.withValues(alpha: 0.05),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        Icons.article_outlined,
+                                        size: 32,
+                                        color: textColor.withValues(alpha: 0.35),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      provider.translate('no_requests'),
+                                      style: TextStyle(
+                                        color: textColor,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      provider.translate('no_requests_for_date'),
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: textColor.withValues(alpha: 0.5),
+                                        fontSize: 13,
+                                        height: 1.4,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 20),
+                                    NeuButton(
+                                      onPressed: () {
+                                        Navigator.of(ctx).pop();
+                                        showNewRequestDialog(
+                                          context: context,
+                                          provider: provider,
+                                          initialEmployeeId: _selectedEmployeeId,
+                                          initialDate: date,
+                                          onSubmitted: () {
+                                            final activeEmpId = _selectedEmployeeId ?? provider.currentEmployee?.id ?? provider.employeeId;
+                                            _loadSubordinateRecords(provider, activeEmpId);
+                                          },
+                                        );
+                                      },
+                                      icon: const Icon(Icons.add),
+                                      label: provider.translate('new_request'),
+                                      height: 40,
+                                      fontSize: 13,
+                                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : ListView.separated(
+                                padding: const EdgeInsets.all(20),
+                                itemCount: requests.length,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 12),
+                                itemBuilder: (context, index) {
+                                  final req = requests[index];
+                                  return _buildRequestDetailCard(
+                                    req,
+                                    provider,
+                                    isDark,
+                                    textColor,
+                                    onDelete: () async {
+                                      final confirm = await showDialog<bool>(
+                                        context: dialogCtx,
+                                        builder: (c) => AlertDialog(
+                                          backgroundColor: isDark
+                                              ? const Color(0xFF1E293B)
+                                              : Colors.white,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(16),
+                                          ),
+                                          title: Row(
+                                            children: [
+                                              const Icon(
+                                                Icons.delete_outline,
+                                                color: Colors.redAccent,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                provider.translate('delete_request'),
+                                                style: TextStyle(
+                                                  color: textColor,
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          content: Text(
+                                            provider.translate(
+                                                'confirm_delete_request'),
+                                            style: TextStyle(
+                                              color: textColor
+                                                  .withValues(alpha: 0.8),
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.of(c).pop(false),
+                                              child: Text(
+                                                provider.translate('cancel'),
+                                                style: TextStyle(
+                                                  color: textColor
+                                                      .withValues(alpha: 0.6),
+                                                ),
+                                              ),
+                                            ),
+                                            ElevatedButton(
+                                              onPressed: () =>
+                                                  Navigator.of(c).pop(true),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor:
+                                                    Colors.redAccent,
+                                                foregroundColor: Colors.white,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
+                                              ),
+                                              child: Text(
+                                                  provider.translate('delete')),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+
+                                      if (confirm != true) return;
+
+                                      final empId = req.employeeId ??
+                                          _selectedEmployeeId ??
+                                          provider.currentEmployee?.id ??
+                                          provider.employeeId;
+
+                                      await provider.deleteRequest(empId, req.id);
+
+                                      setDialogState(() {
+                                        requests.removeWhere((r) => r.id == req.id);
+                                        rowData['requests'] = requests;
+                                      });
+
+                                      final activeEmpId = _selectedEmployeeId ??
+                                          provider.currentEmployee?.id ??
+                                          provider.employeeId;
+                                      _loadSubordinateRecords(provider, activeEmpId);
+
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              provider.translate(
+                                                  'request_deleted'),
+                                            ),
+                                            backgroundColor: Colors.redAccent,
+                                          ),
+                                        );
+                                      }
+                                    },
+                                  );
+                                },
+                              ),
+                      ),
+
+                      // Footer
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop(),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 10,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                formattedDateStr,
+                              child: Text(
+                                provider.translate('close'),
                                 style: TextStyle(
-                                  color: textColor.withValues(alpha: 0.6),
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
+                                  color: textColor.withValues(alpha: 0.8),
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                        IconButton(
-                          onPressed: () => Navigator.of(ctx).pop(),
-                          icon: const Icon(Icons.close),
-                          splashRadius: 20,
-                          color: textColor.withValues(alpha: 0.5),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-
-                  const Divider(height: 1, thickness: 1),
-
-                  // Day Summary Strip (Attendance Context)
-                  Container(
-                    color: textColor.withValues(alpha: isDark ? 0.04 : 0.02),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 12,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        if ((rowData['shiftName'] as String?)?.isNotEmpty ?? false)
-                          _buildDialogDayStat(
-                            label: provider.translate('shift'),
-                            value: (rowData['shiftWorkHours'] as String?)?.isNotEmpty ?? false
-                                ? '${rowData['shiftName']} (${rowData['shiftWorkHours']})'
-                                : '${rowData['shiftName']}',
-                            color: const Color(0xFF10B981),
-                          ),
-                        _buildDialogDayStat(
-                          label: provider.translate('attendance'),
-                          value: (rowData['isLeave'] as bool? ?? false) &&
-                                  !(rowData['hasRecord'] as bool)
-                              ? '-'
-                              : formatMinutes(rowData['attendance'] as int),
-                          color: const Color(0xFF2E65FF),
-                        ),
-                        _buildDialogDayStat(
-                          label: provider.translate('clock_time'),
-                          value: (rowData['clockTime'] as String).replaceAll(
-                            '\n',
-                            ', ',
-                          ),
-                          color: const Color(0xFF5B9BFF),
-                        ),
-                        _buildDialogDayStat(
-                          label: provider.translate('duty'),
-                          value: formatMinutes(rowData['duty'] as int),
-                          color: textColor.withValues(alpha: 0.7),
-                        ),
-                        _buildDialogDayStat(
-                          label: provider.translate('delay'),
-                          value: '${rowData['delay']}m',
-                          color: (rowData['delay'] as int) > 0
-                              ? const Color(0xFFFF5C5C)
-                              : textColor.withValues(alpha: 0.7),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const Divider(height: 1, thickness: 1),
-
-                  // Requests Content
-                  Flexible(
-                    child: requests.isEmpty
-                        ? Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 40,
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 64,
-                                  height: 64,
-                                  decoration: BoxDecoration(
-                                    color: textColor.withValues(alpha: 0.05),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    Icons.article_outlined,
-                                    size: 32,
-                                    color: textColor.withValues(alpha: 0.35),
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  provider.translate('no_requests'),
-                                  style: TextStyle(
-                                    color: textColor,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  provider.translate('no_requests_for_date'),
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: textColor.withValues(alpha: 0.5),
-                                    fontSize: 13,
-                                    height: 1.4,
-                                  ),
-                                ),
-                                const SizedBox(height: 20),
-                                NeuButton(
-                                  onPressed: () {
-                                    Navigator.of(ctx).pop();
-                                    showNewRequestDialog(
-                                      context: context,
-                                      provider: provider,
-                                    );
-                                  },
-                                  icon: const Icon(Icons.add),
-                                  label: provider.translate('new_request'),
-                                  height: 40,
-                                  fontSize: 13,
-                                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                                ),
-                              ],
-                            ),
-                          )
-                        : ListView.separated(
-                            padding: const EdgeInsets.all(20),
-                            itemCount: requests.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 12),
-                            itemBuilder: (context, index) {
-                              final req = requests[index];
-                              return _buildRequestDetailCard(
-                                req,
-                                provider,
-                                isDark,
-                                textColor,
-                              );
-                            },
-                          ),
-                  ),
-
-                  // Footer
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.of(ctx).pop(),
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 10,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          child: Text(
-                            provider.translate('close'),
-                            style: TextStyle(
-                              color: textColor.withValues(alpha: 0.8),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
@@ -2176,8 +2370,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
     Request req,
     AttendanceProvider provider,
     bool isDark,
-    Color textColor,
-  ) {
+    Color textColor, {
+    VoidCallback? onDelete,
+  }) {
     final statusColor = req.statusColor;
     final statusLabel = _translateRequestStatus(req.status, provider);
     final typeLabel = _translateRequestType(req.type, provider);
@@ -2276,6 +2471,32 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   ),
                 ),
               ),
+              if (onDelete != null) ...[
+                const SizedBox(width: 8),
+                Tooltip(
+                  message: provider.translate('delete_request'),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: onDelete,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.redAccent.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Colors.redAccent.withValues(alpha: 0.25),
+                          width: 1,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.delete_outline,
+                        size: 18,
+                        color: Colors.redAccent,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
 
@@ -2330,6 +2551,45 @@ class _HistoryScreenState extends State<HistoryScreen> {
             isDark: isDark,
             textColor: textColor,
           ),
+
+          // Action button: Delete Request
+          if (onDelete != null) ...[
+            const SizedBox(height: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton.icon(
+                  onPressed: onDelete,
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    size: 16,
+                    color: Colors.redAccent,
+                  ),
+                  label: Text(
+                    provider.translate('delete_request'),
+                    style: const TextStyle(
+                      color: Colors.redAccent,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.redAccent.withValues(alpha: 0.08),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: BorderSide(
+                        color: Colors.redAccent.withValues(alpha: 0.25),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

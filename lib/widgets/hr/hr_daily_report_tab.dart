@@ -120,15 +120,20 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
         ? int.parse(partsEnd[0]) * 60 + int.parse(partsEnd[1])
         : 1020;
 
-    final dateRecords = provider.getRecordsForDate(date, emp: emp);
-    final sortedRecords = List<AttendanceRecord>.from(dateRecords)
-      ..sort((a, b) => a.checkIn.compareTo(b.checkIn));
-
     // Compile day requests
     final allRequests = [
       ...provider.allCompanyRequests,
       ...provider.requests,
     ];
+
+    final dateRecords = provider.getRecordsForDate(
+      date,
+      emp: emp,
+      requestsPool: allRequests,
+    );
+    final sortedRecords = List<AttendanceRecord>.from(dateRecords)
+      ..sort((a, b) => a.checkIn.compareTo(b.checkIn));
+
     final dateStrFormatted = DateFormat('MMMM d, yyyy').format(date);
     final shortDateStr = DateFormat('MMMM d').format(date);
 
@@ -330,8 +335,16 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
         }
       }
 
-      // Delay (First session arrival)
-      if (isWorkingDay && !hasLeaveRequest && holiday == null) {
+      final isSpecial = shift.isSpecialShiftForDate(date);
+      final dayShiftDurMins = shift.getShiftDurationMinutesForDate(date);
+
+      if (isSpecial) {
+        dutyMinutes = totalActualMinutes > dayShiftDurMins ? dayShiftDurMins : totalActualMinutes;
+        extraTimeMinutes = totalActualMinutes > dayShiftDurMins ? (totalActualMinutes - dayShiftDurMins) : 0;
+        delayMinutes = 0;
+        earlyExitMinutes = 0;
+      } else if (isWorkingDay && !hasLeaveRequest && holiday == null) {
+        // Delay (First session arrival)
         final firstRec = sortedRecords.first;
         final isMissedCheckIn = firstRec.checkIn == firstRec.checkOut;
         if (!isMissedCheckIn) {
@@ -1852,6 +1865,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
 
   /// Popup dialog displaying detailed punch sessions and day requests
   void _showEmployeeDayDialog(BuildContext context, Map<String, dynamic> row) {
+    final provider = Provider.of<AttendanceProvider>(context, listen: false);
     final emp = row['employee'] as CompanyEmployee;
     final records = row['records'] as List<AttendanceRecord>;
     final requests = row['requests'] as List<Request>;
@@ -2005,6 +2019,62 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                                     Text('In: $inStr', style: TextStyle(fontSize: 12, color: textColor)),
                                     const Spacer(),
                                     Text('Out: $outStr', style: TextStyle(fontSize: 12, color: textColor)),
+                                    const SizedBox(width: 10),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_outline, size: 16, color: Color(0xFFEF4444)),
+                                      tooltip: 'Delete & Exclude from Device Sync',
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                      splashRadius: 16,
+                                      onPressed: () {
+                                        showDialog(
+                                          context: context,
+                                          builder: (delCtx) => AlertDialog(
+                                            title: const Row(
+                                              children: [
+                                                Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444)),
+                                                SizedBox(width: 8),
+                                                Text('Delete Punch Session'),
+                                              ],
+                                            ),
+                                            content: Text(
+                                              'Are you sure you want to delete this punch session for ${emp.name}?\n\n• In: $inStr\n• Out: $outStr\n\nThis will remove the session from attendance and blacklist the punch so that ZKTeco device sync will NEVER re-import it.',
+                                              style: const TextStyle(fontSize: 13, height: 1.4),
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.of(delCtx).pop(),
+                                                child: const Text('Cancel'),
+                                              ),
+                                              ElevatedButton(
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: const Color(0xFFEF4444),
+                                                  foregroundColor: Colors.white,
+                                                ),
+                                                onPressed: () async {
+                                                  Navigator.of(delCtx).pop();
+                                                  Navigator.of(ctx).pop();
+                                                  await provider.deletePunchSession(
+                                                    employeeId: emp.id,
+                                                    record: r,
+                                                    reason: 'Deleted from daily report',
+                                                  );
+                                                  if (context.mounted) {
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      const SnackBar(
+                                                        content: Text('Punch session deleted and added to sync blacklist!'),
+                                                        backgroundColor: Color(0xFF10B981),
+                                                      ),
+                                                    );
+                                                  }
+                                                },
+                                                child: const Text('Delete & Blacklist'),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                    ),
                                   ],
                                 ),
                               );
