@@ -11,6 +11,7 @@ import '../widgets/avatar_image_helper.dart';
 import '../widgets/glass_dialog.dart';
 import '../widgets/neu_button.dart';
 import 'user_management_screen.dart';
+import 'face_auth_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -221,6 +222,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 iconColor: const Color(0xFFEF4444),
                                 title: provider.translate('security'),
                                 textColor: secondaryTextColor,
+                              ),
+                              const SizedBox(height: 12),
+                              _buildFaceIdCard(
+                                context,
+                                provider,
+                                isDark,
+                                cardBg,
+                                cardBorder,
+                                primaryTextColor,
+                                secondaryTextColor,
+                                isRtl,
                               ),
                               const SizedBox(height: 12),
                               _buildSecurityCard(
@@ -1285,6 +1297,284 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  // --- FACE ID / BIOMETRIC AUTHENTICATION CARD ---
+  Widget _buildFaceIdCard(
+    BuildContext context,
+    AttendanceProvider provider,
+    bool isDark,
+    Color cardBg,
+    Color cardBorder,
+    Color primaryColor,
+    Color secondaryColor,
+    bool isRtl,
+  ) {
+    final currentEmp = provider.currentEmployee;
+    final hasFaceId = currentEmp?.faceEmbedding != null && currentEmp!.faceEmbedding!.isNotEmpty;
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: hasFaceId
+              ? const Color(0xFF10B981).withValues(alpha: 0.35)
+              : cardBorder,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFF00F0D8).withValues(alpha: isDark ? 0.25 : 0.15),
+                      const Color(0xFF00BD96).withValues(alpha: isDark ? 0.20 : 0.10),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(50),
+                  border: Border.all(
+                    color: const Color(0xFF00F0D8).withValues(alpha: isDark ? 0.5 : 0.35),
+                  ),
+                ),
+                child: Icon(
+                  hasFaceId ? Icons.face_retouching_natural : Icons.face_unlock_rounded,
+                  color: const Color(0xFF00BD96),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      provider.translate('face_id'),
+                      style: TextStyle(
+                        color: primaryColor,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      hasFaceId
+                          ? provider.translate('face_id_enrolled')
+                          : provider.translate('face_id_not_enrolled'),
+                      style: TextStyle(
+                        color: hasFaceId ? const Color(0xFF10B981) : secondaryColor,
+                        fontSize: 12,
+                        fontWeight: hasFaceId ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: hasFaceId
+                      ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                      : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: hasFaceId
+                        ? const Color(0xFF10B981).withValues(alpha: 0.4)
+                        : (isDark ? Colors.white24 : Colors.black12),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      hasFaceId ? Icons.check_circle_rounded : Icons.info_outline_rounded,
+                      size: 13,
+                      color: hasFaceId ? const Color(0xFF10B981) : secondaryColor,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      hasFaceId ? 'Active' : 'Disabled',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: hasFaceId ? const Color(0xFF10B981) : secondaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            provider.translate('face_id_desc'),
+            style: TextStyle(
+              color: secondaryColor,
+              fontSize: 12.5,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (hasFaceId)
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      final scaffoldMessenger = ScaffoldMessenger.of(context);
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => FaceAuthScreen(
+                            title: provider.translate('rescan_face_id'),
+                          ),
+                        ),
+                      );
+                      if (result != null && result is List<double> && context.mounted) {
+                        await provider.updateEmployeeFaceEmbedding(currentEmp.id, result);
+                        scaffoldMessenger.showSnackBar(
+                          SnackBar(
+                            content: Row(
+                              children: [
+                                const Icon(Icons.check_circle_rounded, color: Colors.white),
+                                const SizedBox(width: 8),
+                                Expanded(child: Text(provider.translate('face_id_enrolled_success'))),
+                              ],
+                            ),
+                            backgroundColor: const Color(0xFF10B981),
+                          ),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.refresh_rounded, size: 16),
+                    label: Text(provider.translate('rescan_face_id')),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF00E5CE),
+                      foregroundColor: const Color(0xFF0A2342),
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        backgroundColor: cardBg,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        title: Text(
+                          provider.translate('remove_face_id'),
+                          style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold),
+                        ),
+                        content: Text(
+                          'Are you sure you want to remove your Face ID? You will need your password to log in and Face ID will not be required for clock in/out.',
+                          style: TextStyle(color: secondaryColor),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              final scaffoldMessenger = ScaffoldMessenger.of(context);
+                              Navigator.pop(ctx);
+                              await provider.updateEmployeeFaceEmbedding(currentEmp.id, null);
+                              if (context.mounted) {
+                                scaffoldMessenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text(provider.translate('face_id_removed_success')),
+                                    backgroundColor: Colors.blueGrey,
+                                  ),
+                                );
+                              }
+                            },
+                            child: const Text(
+                              'Remove',
+                              style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.delete_outline_rounded, size: 16, color: Color(0xFFEF4444)),
+                  label: Text(
+                    provider.translate('remove_face_id'),
+                    style: const TextStyle(color: Color(0xFFEF4444), fontSize: 12.5),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFFEF4444)),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ],
+            )
+          else
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  if (currentEmp == null) return;
+                  final scaffoldMessenger = ScaffoldMessenger.of(context);
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => FaceAuthScreen(
+                        title: provider.translate('setup_face_id'),
+                      ),
+                    ),
+                  );
+                  if (result != null && result is List<double> && context.mounted) {
+                    await provider.updateEmployeeFaceEmbedding(currentEmp.id, result);
+                    scaffoldMessenger.showSnackBar(
+                      SnackBar(
+                        content: Row(
+                          children: [
+                            const Icon(Icons.check_circle_rounded, color: Colors.white),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text(provider.translate('face_id_enrolled_success'))),
+                          ],
+                        ),
+                        backgroundColor: const Color(0xFF10B981),
+                      ),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.add_a_photo_rounded, size: 18),
+                label: Text(provider.translate('setup_face_id')),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00E5CE),
+                  foregroundColor: const Color(0xFF0A2342),
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+              ),
+            ),
         ],
       ),
     );

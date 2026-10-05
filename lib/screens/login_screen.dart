@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/attendance_provider.dart';
 import '../widgets/neu_button.dart';
+import '../models/hr_models.dart';
+import 'face_auth_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -53,77 +55,100 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _simulateFaceAuth() async {
+  Future<void> _handleFaceAuth() async {
     final provider = Provider.of<AttendanceProvider>(context, listen: false);
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(22),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF2E65FF), Color(0xFF6366F1)],
-                ),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF2E65FF).withValues(alpha: 0.4),
-                    blurRadius: 20,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.face_rounded,
-                size: 56,
-                color: Colors.white,
-              ),
+    // 1. Check if any employee has Face ID enrolled
+    final enrolledEmployees = provider.employees
+        .where((e) => e.faceEmbedding != null && e.faceEmbedding!.isNotEmpty)
+        .toList();
+
+    if (enrolledEmployees.isEmpty) {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: const Color(0xFF1E293B),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          icon: const Icon(Icons.face_unlock_rounded, color: Color(0xFF00E5CE), size: 48),
+          title: const Text(
+            'Face ID Not Configured',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+          ),
+          content: Text(
+            provider.translate('no_face_id_registered'),
+            style: const TextStyle(color: Colors.white70, fontSize: 14),
+            textAlign: TextAlign.center,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('OK', style: TextStyle(color: Color(0xFF00E5CE))),
             ),
-            const SizedBox(height: 20),
-            const Text(
-              'Scanning Face...',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Position your face within the frame',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.7),
-                fontSize: 13,
-              ),
-            ),
-            const SizedBox(height: 24),
-            const CircularProgressIndicator(
-              color: Color(0xFF2E65FF),
-              strokeWidth: 3,
-            ),
-            const SizedBox(height: 16),
           ],
+        ),
+      );
+      return;
+    }
+
+    // 2. If the user already typed their email or employee ID
+    final idText = _identifierController.text.trim();
+    if (idText.isNotEmpty) {
+      CompanyEmployee? matchingEmp;
+      for (final e in provider.employees) {
+        if (e.email.trim().toLowerCase() == idText.toLowerCase() ||
+            e.id.trim().toLowerCase() == idText.toLowerCase()) {
+          matchingEmp = e;
+          break;
+        }
+      }
+
+      if (matchingEmp != null) {
+        if (matchingEmp.faceEmbedding == null || matchingEmp.faceEmbedding!.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('No Face ID enrolled for ${matchingEmp.name}. Please sign in with password to set it up.'),
+              backgroundColor: Colors.orangeAccent,
+            ),
+          );
+          return;
+        }
+
+        // Verify single target employee
+        final verified = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => FaceAuthScreen(
+              targetEmbedding: matchingEmp!.faceEmbedding,
+              title: 'Face ID Verification',
+            ),
+          ),
+        );
+
+        if (verified == true && mounted) {
+          setState(() => _isLoggingIn = true);
+          await provider.loginAsEmployee(matchingEmp);
+          if (mounted) setState(() => _isLoggingIn = false);
+        }
+        return;
+      }
+    }
+
+    // 3. Identification Mode: Match against all enrolled employees
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FaceAuthScreen(
+          matchEmployees: enrolledEmployees,
+          title: 'Face ID Sign In',
         ),
       ),
     );
 
-    await Future.delayed(const Duration(milliseconds: 1800));
-
-    if (mounted) {
-      Navigator.pop(context); // Close scanning dialog
-      if (provider.employees.isNotEmpty) {
-        await provider.loginAsEmployee(provider.employees.first);
-      } else {
-        await provider.login(identifier: 'jane.smith@company.com', password: 'password123');
-      }
+    if (result != null && result is CompanyEmployee && mounted) {
+      setState(() => _isLoggingIn = true);
+      await provider.loginAsEmployee(result);
+      if (mounted) setState(() => _isLoggingIn = false);
     }
   }
 
@@ -434,7 +459,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   SizedBox(
                                     width: double.infinity,
                                     child: NeuButton(
-                                      onPressed: _simulateFaceAuth,
+                                      onPressed: _handleFaceAuth,
                                       icon: const Icon(Icons.face_rounded),
                                       label: '${provider.translate('login')} (${provider.translate('face_verification')})',
                                       variant: NeuButtonVariant.whitePill,

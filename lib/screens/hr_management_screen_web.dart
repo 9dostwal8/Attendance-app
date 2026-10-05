@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import '../providers/attendance_provider.dart';
 import '../models/hr_models.dart';
 import '../widgets/glass_dialog.dart';
-import '../widgets/glass_container.dart';
 import '../widgets/neu_button.dart';
 import '../widgets/avatar_image_helper.dart';
 import 'map_picker_screen.dart';
@@ -81,40 +80,246 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
     }
   }
 
+  String _getTabSubtitle(HrTab tab, AttendanceProvider provider) {
+    switch (tab) {
+      case HrTab.structures:
+        return 'Define company departments, branches & reporting lines';
+      case HrTab.shifts:
+        return 'Configure work schedules, flexible shifts, rotations & hours';
+      case HrTab.groups:
+        return 'Organize teams, assign shifts & manage group policies';
+      case HrTab.employees:
+        return 'Manage personnel directory, roles & credentials';
+      case HrTab.holidays:
+        return 'Manage official public holidays & company off-days';
+      case HrTab.locations:
+        return 'Set up work locations, geofencing & coordinates';
+      case HrTab.payroll:
+        return 'Manage base salaries, hourly rates & compensation history';
+      case HrTab.dailyReport:
+        return 'Track daily attendance, punctuality & deficit reports';
+      case HrTab.device:
+        return 'Manage biometric devices, sync logs & device status';
+    }
+  }
+
+  int _getTabItemCount(HrTab tab, AttendanceProvider provider) {
+    switch (tab) {
+      case HrTab.structures:
+        return provider.structures.length;
+      case HrTab.shifts:
+        return provider.shifts.length;
+      case HrTab.groups:
+        return provider.groups.length;
+      case HrTab.employees:
+        return provider.employees.length;
+      case HrTab.holidays:
+        return provider.holidays.length;
+      case HrTab.locations:
+        return provider.locations.length;
+      case HrTab.payroll:
+        return provider.employees.length;
+      case HrTab.dailyReport:
+        return 0;
+      case HrTab.device:
+        return 1;
+    }
+  }
+
+  Widget _buildWebHeroHeader(AttendanceProvider provider) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final title = _getTabTitle(_activeTab, provider);
+    final subtitle = _getTabSubtitle(_activeTab, provider);
+    final count = _getTabItemCount(_activeTab, provider);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          if (!widget.isEmbedded) ...[
+            _buildBackButton(),
+            const SizedBox(width: 16),
+          ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    if (count > 0) ...[
+                      const SizedBox(width: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF3B82F6).withValues(alpha: isDark ? 0.2 : 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(0xFF3B82F6).withValues(alpha: isDark ? 0.4 : 0.2),
+                          ),
+                        ),
+                        child: Text(
+                          '$count',
+                          style: const TextStyle(
+                            color: Color(0xFF3B82F6),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          _buildAddNewButton(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWebTabBar(AttendanceProvider provider) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final tabs = [
+      (HrTab.structures, Icons.business_outlined, provider.translate('structures')),
+      (HrTab.shifts, Icons.schedule_outlined, provider.translate('shifts')),
+      (HrTab.groups, Icons.people_outline, provider.translate('groups')),
+      (HrTab.employees, Icons.badge_outlined, provider.translate('employees')),
+      (HrTab.holidays, Icons.event_available_outlined, provider.translate('holidays')),
+      (HrTab.locations, Icons.place_outlined, provider.translate('locations')),
+      (HrTab.payroll, Icons.monetization_on_outlined, provider.translate('payroll')),
+      (HrTab.dailyReport, Icons.analytics_outlined, provider.translate('daily_report')),
+      (HrTab.device, Icons.fingerprint_outlined, provider.translate('device')),
+    ];
+
+    return Container(
+      height: 48,
+      margin: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 6.0),
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: tabs.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final (tab, icon, label) = tabs[index];
+          final isActive = _activeTab == tab;
+
+          return InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () {
+              setState(() {
+                if (_activeTab != tab) {
+                  _activeTab = tab;
+                  _searchQuery = '';
+                  _searchController.clear();
+                }
+              });
+              if (tab == HrTab.dailyReport) {
+                _loadDailyReportData();
+              }
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: isActive
+                    ? const Color(0xFF3B82F6)
+                    : (isDark ? const Color(0xFF1E293B) : Colors.white),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isActive
+                      ? const Color(0xFF3B82F6)
+                      : (isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0)),
+                  width: 1,
+                ),
+                boxShadow: [
+                  if (isActive)
+                    BoxShadow(
+                      color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    )
+                  else if (!isDark)
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    icon,
+                    size: 18,
+                    color: isActive
+                        ? Colors.white
+                        : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: isActive
+                          ? Colors.white
+                          : (isDark ? Colors.white : const Color(0xFF0F172A)),
+                      fontSize: 13.5,
+                      fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<AttendanceProvider>(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final content = Column(
+      children: [
+        _buildWebHeroHeader(provider),
+        _buildWebTabBar(provider),
+        const SizedBox(height: 8),
+        Expanded(child: _buildActiveList(provider)),
+      ],
+    );
 
     if (widget.isEmbedded) {
       return Container(
-        color: Colors.transparent, // Let parent handle background
+        color: Colors.transparent,
         child: SafeArea(
           bottom: false,
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20.0,
-                  vertical: 12.0,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      _getTabTitle(_activeTab, provider),
-                      style: TextStyle(
-                        color: (Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black),
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    _buildAddNewButton(),
-                  ],
-                ),
-              ),
-              Expanded(child: _buildActiveList(provider)),
-            ],
-          ),
+          child: content,
         ),
       );
     }
@@ -123,125 +328,19 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
       extendBodyBehindAppBar: true,
       backgroundColor: Colors.transparent,
       body: Container(
-        color: Colors.transparent,
+        decoration: BoxDecoration(
+          gradient: !isDark
+              ? const LinearGradient(
+                  colors: [Color(0xFFFCFDFD), Color(0xFFEDF2FE), Color(0xFFE0EAFF)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: isDark ? const Color(0xFF0F172A) : null,
+        ),
         child: SafeArea(
           bottom: false,
-          child: NestedScrollView(
-            headerSliverBuilder:
-                (BuildContext context, bool innerBoxIsScrolled) {
-                  return <Widget>[
-                    SliverToBoxAdapter(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Custom Header Bar
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20.0,
-                              vertical: 12.0,
-                            ),
-                            child: Row(
-                              children: [
-                                _buildBackButton(),
-                                Expanded(
-                                  child: Center(
-                                    child: Text(
-                                      provider.translate('hr_management'),
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: -0.5,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(
-                                  width: 44,
-                                ), // visual balance for back button
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-
-                          // 2x2 Grid Tabs Selection
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20.0,
-                            ),
-                            child: GridView.count(
-                              crossAxisCount: 2,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 16,
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              childAspectRatio: 2.1,
-                              children: [
-                                _buildGridTab(
-                                  tab: HrTab.structures,
-                                  icon: Icons.business,
-                                  label: provider.translate('structures'),
-                                ),
-                                _buildGridTab(
-                                  tab: HrTab.shifts,
-                                  icon: Icons.access_time,
-                                  label: provider.translate('shifts'),
-                                ),
-                                _buildGridTab(
-                                  tab: HrTab.groups,
-                                  icon: Icons.people_outline,
-                                  label: provider.translate('groups'),
-                                ),
-                                _buildGridTab(
-                                  tab: HrTab.employees,
-                                  icon: Icons.manage_accounts_outlined,
-                                  label: provider.translate('employees'),
-                                ),
-                                _buildGridTab(
-                                  tab: HrTab.holidays,
-                                  icon: Icons.event_available,
-                                  label: provider.translate('holidays'),
-                                ),
-                                _buildGridTab(
-                                  tab: HrTab.locations,
-                                  icon: Icons.location_on_outlined,
-                                  label: provider.translate('locations'),
-                                ),
-                                _buildGridTab(
-                                  tab: HrTab.payroll,
-                                  icon: Icons.attach_money,
-                                  label: provider.translate('payroll'),
-                                ),
-                                _buildGridTab(
-                                  tab: HrTab.dailyReport,
-                                  icon: Icons.bar_chart,
-                                  label: provider.translate('daily_report'),
-                                ),
-                                _buildGridTab(
-                                  tab: HrTab.device,
-                                  icon: Icons.fingerprint,
-                                  label: provider.translate('device'),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-
-                          // Gradient Action Button (Add New Item)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20.0,
-                            ),
-                            child: _buildAddNewButton(),
-                          ),
-                          const SizedBox(height: 16),
-                        ],
-                      ),
-                    ),
-                  ];
-                },
-            body: _buildActiveList(provider),
-          ),
+          child: content,
         ),
       ),
     );
@@ -253,74 +352,6 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
       icon: const Icon(Icons.arrow_back, size: 20),
       size: 44,
       variant: NeuButtonVariant.whitePill,
-    );
-  }
-
-  Widget _buildGridTab({
-    required HrTab tab,
-    required IconData icon,
-    required String label,
-  }) {
-    final isActive = _activeTab == tab;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          if (_activeTab != tab) {
-            _activeTab = tab;
-            _searchQuery = '';
-            _searchController.clear();
-          }
-        });
-        if (tab == HrTab.dailyReport) {
-          _loadDailyReportData();
-        }
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: isActive
-              ? const Color(0xFF3B82F6) // Professional Blue
-              : (isDark ? const Color(0xFF1E293B) : Colors.white),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isActive
-                ? const Color(0xFF3B82F6)
-                : (isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05)),
-            width: 1.0,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              color: isActive
-                  ? Colors.white
-                  : (isDark ? Colors.white.withValues(alpha: 0.7) : Colors.black87),
-              size: 24,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              style: TextStyle(
-                color: isActive
-                    ? Colors.white
-                    : (isDark ? Colors.white.withValues(alpha: 0.7) : Colors.black87),
-                fontSize: 14,
-                fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -369,9 +400,24 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
-      child: GlassContainer(
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: BorderRadius.circular(12.0),
+          border: Border.all(
+            color: isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0),
+            width: 1,
+          ),
+          boxShadow: [
+            if (!isDark)
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+          ],
+        ),
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        borderRadius: 12.0,
         child: TextField(
           controller: _searchController,
           style: TextStyle(
@@ -380,18 +426,30 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
           ),
           decoration: InputDecoration(
             isDense: true,
-            contentPadding: const EdgeInsets.symmetric(vertical: 11),
+            contentPadding: const EdgeInsets.symmetric(vertical: 12),
             hintText: hint,
             hintStyle: TextStyle(
               fontSize: 14,
-              color: isDark ? Colors.white54 : Colors.grey.shade400,
+              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF94A3B8),
             ),
             border: InputBorder.none,
             icon: Icon(
               Icons.search,
               size: 20,
-              color: isDark ? Colors.white70 : Colors.grey.shade500,
+              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
             ),
+            suffixIcon: _searchQuery.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.close, size: 16),
+                    color: isDark ? Colors.white60 : Colors.black54,
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() {
+                        _searchQuery = '';
+                      });
+                    },
+                  )
+                : null,
           ),
           onChanged: (value) {
             setState(() {
@@ -407,35 +465,25 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
     required int itemCount,
     required Widget Function(BuildContext, int) itemBuilder,
   }) {
-    final rowCount = (itemCount / 2).ceil();
-    return ListView.builder(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      itemCount: rowCount,
-      itemBuilder: (context, index) {
-        final firstIndex = index * 2;
-        final secondIndex = firstIndex + 1;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final crossAxisCount = constraints.maxWidth > 1400
+            ? 3
+            : constraints.maxWidth > 850
+                ? 2
+                : 1;
 
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 16.0), // Consistent spacing
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Builder(
-                  builder: (context) {
-                    // Remove bottom padding from card since Row adds it
-                    return itemBuilder(context, firstIndex);
-                  },
-                ),
-              ),
-              const SizedBox(width: 16),
-              if (secondIndex < itemCount)
-                Expanded(child: itemBuilder(context, secondIndex))
-              else
-                const Expanded(child: SizedBox()),
-            ],
+        return GridView.builder(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            childAspectRatio: crossAxisCount == 1 ? 4.5 : 2.7,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
           ),
+          itemCount: itemCount,
+          itemBuilder: itemBuilder,
         );
       },
     );
@@ -542,25 +590,49 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
   
 
   Widget _buildEmptyState(String name) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.info_outline,
-            color: Colors.white.withValues(alpha: 0.4),
-            size: 48,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'No $name found.\nTap the add button to create one!',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.6),
-              fontSize: 14,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(22),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF1F5F9),
+                border: Border.all(
+                  color: isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0),
+                ),
+              ),
+              child: Icon(
+                Icons.inventory_2_outlined,
+                color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
+                size: 46,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 16),
+            Text(
+              'No $name found',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Tap the "+ Add New" button above to create one\nor adjust your search filter.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                fontSize: 13.5,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -4175,75 +4247,93 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                     ? employee.basicSalary / employee.workingHours
                     : 0.0;
                 final dailyRate = employee.basicSalary / 30.0;
-                return GestureDetector(
-                  onTap: () => _showPayrollConfigDialog(employee, provider),
-                  child: GlassContainer(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(16),
-                    borderRadius: 16,
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 22,
-                          backgroundImage: getAvatarProvider(employee.avatarUrl),
-                          backgroundColor: const Color(0xFF10B981).withValues(alpha: 0.15),
-                          child: (getAvatarProvider(employee.avatarUrl) == null)
-                              ? Text(
-                                  employee.name.isNotEmpty ? employee.name[0].toUpperCase() : '?',
-                                  style: const TextStyle(
-                                    color: Color(0xFF10B981),
-                                    fontWeight: FontWeight.bold,
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      if (!isDark)
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                    ],
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () => _showPayrollConfigDialog(employee, provider),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 22,
+                            backgroundImage: getAvatarProvider(employee.avatarUrl),
+                            backgroundColor: const Color(0xFF10B981).withValues(alpha: 0.15),
+                            child: (getAvatarProvider(employee.avatarUrl) == null)
+                                ? Text(
+                                    employee.name.isNotEmpty ? employee.name[0].toUpperCase() : '?',
+                                    style: const TextStyle(
+                                      color: Color(0xFF10B981),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  )
+                                : null,
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  employee.name,
+                                  style: TextStyle(
+                                    color: textColor,
                                     fontSize: 16,
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                )
-                              : null,
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                employee.name,
-                                style: TextStyle(
-                                  color: textColor,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
                                 ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Salary: ${employee.basicSalary.toStringAsFixed(2)} ${employee.salaryCurrency} | Hours: ${employee.workingHours.toStringAsFixed(1)}',
-                                style: TextStyle(
-                                  color: subtextColor,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Salary: ${employee.basicSalary.toStringAsFixed(2)} ${employee.salaryCurrency} | Hours: ${employee.workingHours.toStringAsFixed(1)}',
+                                  style: TextStyle(
+                                    color: subtextColor,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Hourly Rate: ${hourlyRate.toStringAsFixed(2)} ${employee.salaryCurrency}/hr | Daily Rate: ${dailyRate.toStringAsFixed(2)} ${employee.salaryCurrency}/day',
-                                style: TextStyle(
-                                  color: subtextColor,
-                                  fontSize: 12.5,
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Hourly Rate: ${hourlyRate.toStringAsFixed(2)} ${employee.salaryCurrency}/hr | Daily Rate: ${dailyRate.toStringAsFixed(2)} ${employee.salaryCurrency}/day',
+                                  style: TextStyle(
+                                    color: subtextColor,
+                                    fontSize: 12.5,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(8),
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              Icons.edit_outlined,
+                              color: isDark ? Colors.white70 : const Color(0xFF475569),
+                              size: 18,
+                            ),
                           ),
-                          child: Icon(
-                            Icons.edit_outlined,
-                            color: isDark ? Colors.white70 : const Color(0xFF475569),
-                            size: 18,
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 );

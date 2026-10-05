@@ -2943,8 +2943,18 @@ class AttendanceProvider with ChangeNotifier {
 
   Future<void> updateEmployeeFaceEmbedding(
     dynamic empId,
-    dynamic embedding,
-  ) async {}
+    List<double>? embedding,
+  ) async {
+    final strId = empId.toString().trim();
+    final index = _employees.indexWhere((e) => e.id == strId);
+    if (index != -1) {
+      final updated = _employees[index].copyWith(
+        faceEmbedding: embedding,
+        overrideFaceEmbedding: true,
+      );
+      await updateEmployee(updated);
+    }
+  }
   dynamic getHolidayForEmployee(dynamic emp, dynamic date) => null;
   dynamic getApprovedLeaveForDate(dynamic date, {dynamic employeeId}) => null;
 

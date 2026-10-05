@@ -20,6 +20,7 @@ class HomeScreenMobile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<AttendanceProvider>(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final todayStr = DateFormat('EEEE, MMMM d, yyyy').format(DateTime.now());
 
     return Scaffold(
@@ -45,16 +46,16 @@ class HomeScreenMobile extends StatelessWidget {
                       Text(
                         provider.translate('welcome_back'),
                         style: TextStyle(
-                          color: Theme.of(context).textTheme.bodyLarge?.color?.withValues(alpha: 0.7) ?? ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.7)),
+                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                           fontSize: 14,
                           fontWeight: FontWeight.w400,
                         ),
                       ),
-                      SizedBox(height: 2),
+                      const SizedBox(height: 2),
                       Text(
                         provider.userName,
                         style: TextStyle(
-                          color: Theme.of(context).textTheme.bodyLarge?.color ?? ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                           letterSpacing: -0.5,
@@ -72,7 +73,7 @@ class HomeScreenMobile extends StatelessWidget {
                             showCompanySettingsDialog(context);
                           },
                         ),
-                        SizedBox(width: 12),
+                        const SizedBox(width: 12),
                         _buildHeaderButton(context, 
                           icon: Icons.admin_panel_settings_outlined,
                           onTap: () {
@@ -85,7 +86,7 @@ class HomeScreenMobile extends StatelessWidget {
                             );
                           },
                         ),
-                        SizedBox(width: 12),
+                        const SizedBox(width: 12),
                       ],
                       _buildHeaderButton(context, 
                         icon: Icons.chat_bubble_outline_rounded,
@@ -99,7 +100,7 @@ class HomeScreenMobile extends StatelessWidget {
                           );
                         },
                       ),
-                      SizedBox(width: 12),
+                      const SizedBox(width: 12),
                       _buildHeaderButton(context, 
                         icon: Icons.person_outline,
                         onTap: () {
@@ -117,28 +118,28 @@ class HomeScreenMobile extends StatelessWidget {
                   ),
                 ],
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
               // Date Title
               Center(
                 child: Text(
                   todayStr,
                   style: TextStyle(
-                    color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.8)),
+                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
               // Clock Status Card
               _buildClockStatusCard(context, provider),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
               // Calendar Card
               const CustomCalendar(),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
               // Statistics Grid
               GridView.count(
@@ -153,61 +154,61 @@ class HomeScreenMobile extends StatelessWidget {
                     icon: Icons.access_time_outlined,
                     value: provider.weeklyHours.toStringAsFixed(1),
                     label: provider.translate('weekly_hours'),
-                    accentColor: const Color(0xFF9AA0EE), // light blue
+                    accentColor: const Color(0xFF38BDF8), // Sky blue
                   ),
                   StatCard(
                     icon: Icons.attach_money_outlined,
                     value:
                         '\$${NumberFormat('#,##0').format(provider.monthlyEarnings)}',
                     label: provider.translate('monthly_earnings'),
-                    accentColor: const Color(0xFF82A6DD), // steel blue
+                    accentColor: const Color(0xFF10B981), // Emerald green
                   ),
                   StatCard(
                     icon: Icons.calendar_today_outlined,
                     value: '${provider.daysWorked}',
                     label: provider.translate('days_worked'),
-                    accentColor: const Color(0xFFB08CD8), // purple/pink
+                    accentColor: const Color(0xFF8B5CF6), // Purple / Violet
                   ),
                   StatCard(
                     icon: Icons.trending_up_outlined,
                     value: '${provider.overtimeHours.toStringAsFixed(1)}h',
                     label: provider.translate('overtime'),
-                    accentColor: const Color(0xFFC88BE8), // pinkish
+                    accentColor: const Color(0xFFF59E0B), // Amber / Warm Orange
                   ),
                   StatCard(
                     icon: Icons.account_balance_wallet_outlined,
                     value: '${provider.currentEmployee?.annualLeaveBalance ?? 0}h',
-                    label: 'Remain Balance',
-                    accentColor: const Color(0xFF9AA0EE), // light blue
+                    label: provider.translate('remain_balance'),
+                    accentColor: const Color(0xFF06B6D4), // Cyan / Teal
                   ),
                 ],
               ),
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
 
               // Quick Actions
               Text(
                 provider.translate('quick_actions'),
                 style: TextStyle(
-                  color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.7)),
+                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               _buildQuickActionButton(
                 context: context,
                 label: provider.translate('view_history'),
                 icon: Icons.calendar_today_outlined,
                 targetTab: 2,
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               _buildQuickActionButton(
                 context: context,
                 label: provider.translate('view_payroll'),
                 icon: Icons.attach_money_outlined,
                 targetTab: 3,
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               _buildChatQuickActionButton(
                 context: context,
                 label: provider.translate('chat'),
@@ -216,7 +217,7 @@ class HomeScreenMobile extends StatelessWidget {
               ),
 
               // Extra padding to scroll above bottom nav bar
-              SizedBox(height: 100),
+              const SizedBox(height: 100),
             ],
           ),
         ),
@@ -233,6 +234,7 @@ class HomeScreenMobile extends StatelessWidget {
     String? avatarUrl,
     bool hasBadge = false,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final avatarProvider = isProfile ? getAvatarProvider(avatarUrl) : null;
     return GestureDetector(
       onTap: onTap,
@@ -241,9 +243,9 @@ class HomeScreenMobile extends StatelessWidget {
         height: 44,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.08)),
+          color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.04),
           border: Border.all(
-            color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.2)),
+            color: isDark ? Colors.white.withValues(alpha: 0.14) : const Color(0xFFE2E8F0),
             width: 1,
           ),
           image: avatarProvider != null
@@ -257,7 +259,7 @@ class HomeScreenMobile extends StatelessWidget {
           alignment: Alignment.center,
           children: [
             if (avatarProvider == null)
-              Icon(icon, color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)), size: 20),
+              Icon(icon, color: isDark ? Colors.white : const Color(0xFF1E293B), size: 20),
             if (hasBadge)
               Positioned(
                 right: 8,
@@ -281,6 +283,7 @@ class HomeScreenMobile extends StatelessWidget {
     BuildContext context,
     AttendanceProvider provider,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final hasClockedIn = provider.isClockedIn;
     bool isProcessing = false;
 
@@ -296,45 +299,45 @@ class HomeScreenMobile extends StatelessWidget {
                   Text(
                     provider.translate('current_status'),
                     style: TextStyle(
-                      color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.6)),
+                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
                     hasClockedIn
                         ? provider.translate('clocked_in')
                         : provider.translate('clocked_out'),
                     style: TextStyle(
-                      color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ],
               ),
-              // Clock Icon on grey/black rounded background
+              // Clock Icon container
               Container(
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
-                  color: Colors.black.withValues(alpha: 0.35),
+                  color: isDark ? Colors.black.withValues(alpha: 0.25) : const Color(0xFFF1F5F9),
                   border: Border.all(
-                    color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.1)),
+                    color: isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0),
                     width: 1,
                   ),
                 ),
                 child: Icon(
                   Icons.access_time,
-                  color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.7)),
+                  color: isDark ? Colors.white70 : const Color(0xFF475569),
                   size: 26,
                 ),
               ),
             ],
           ),
-          SizedBox(height: 18),
+          const SizedBox(height: 18),
 
           // Action Buttons
           StatefulBuilder(
@@ -605,6 +608,7 @@ class HomeScreenMobile extends StatelessWidget {
     required IconData icon,
     required int targetTab,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: () {
         context
@@ -619,12 +623,16 @@ class HomeScreenMobile extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
               ),
             ),
-            Icon(icon, color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.8)), size: 20),
+            Icon(
+              icon,
+              color: isDark ? Colors.white70 : const Color(0xFF64748B),
+              size: 20,
+            ),
           ],
         ),
       ),
@@ -637,6 +645,7 @@ class HomeScreenMobile extends StatelessWidget {
     required IconData icon,
     bool hasBadge = false,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -652,7 +661,7 @@ class HomeScreenMobile extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black)),
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
               ),
@@ -660,7 +669,11 @@ class HomeScreenMobile extends StatelessWidget {
             Stack(
               clipBehavior: Clip.none,
               children: [
-                Icon(icon, color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.8)), size: 20),
+                Icon(
+                  icon,
+                  color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                  size: 20,
+                ),
                 if (hasBadge)
                   Positioned(
                     right: -2,
