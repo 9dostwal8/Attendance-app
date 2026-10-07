@@ -121,13 +121,20 @@ class _ChatListScreenState extends State<ChatListScreen> {
                               }
                             }
 
+                            final unreadCount = provider.getUnreadCountForContact(contact.id);
+
                             return Container(
                               margin: const EdgeInsets.only(bottom: 12),
                               child: Container(
                                 decoration: BoxDecoration(
                                   color: isDark ? const Color(0xFF1E293B) : Colors.white,
                                   borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+                                  border: Border.all(
+                                    color: unreadCount > 0
+                                        ? const Color(0xFFEF4444).withValues(alpha: 0.5)
+                                        : (isDark ? Colors.white12 : Colors.black12),
+                                    width: unreadCount > 0 ? 1.5 : 1,
+                                  ),
                                   boxShadow: isDark ? [] : [
                                     BoxShadow(
                                       color: Colors.black.withValues(alpha: 0.03),
@@ -143,6 +150,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                     vertical: 8,
                                   ),
                                   onTap: () {
+                                    provider.markMessagesAsRead(contact.id);
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
@@ -151,7 +159,39 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                       ),
                                     );
                                   },
-                                  leading: _buildAvatar(contact),
+                                  leading: Stack(
+                                    clipBehavior: Clip.none,
+                                    children: [
+                                      _buildAvatar(contact),
+                                      if (unreadCount > 0)
+                                        Positioned(
+                                          top: -2,
+                                          right: -2,
+                                          child: Container(
+                                            padding: const EdgeInsets.all(4),
+                                            decoration: const BoxDecoration(
+                                              color: Color(0xFFEF4444),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            constraints: const BoxConstraints(
+                                              minWidth: 16,
+                                              minHeight: 16,
+                                            ),
+                                            child: Center(
+                                              child: Text(
+                                                unreadCount > 9 ? '9+' : '$unreadCount',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 9,
+                                                  fontWeight: FontWeight.bold,
+                                                  height: 1,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
                                   title: Row(
                                     mainAxisAlignment:
                                         MainAxisAlignment.spaceBetween,
@@ -162,7 +202,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                           style: TextStyle(
                                             color: isDark ? Colors.white : const Color(0xFF1E293B),
                                             fontSize: 15,
-                                            fontWeight: FontWeight.bold,
+                                            fontWeight: unreadCount > 0 ? FontWeight.w800 : FontWeight.bold,
                                           ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
@@ -171,9 +211,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                       if (lastMsg != null)
                                         Text(
                                           _formatTime(lastMsg.timestamp),
-                                          style: const TextStyle(
-                                            color: Color(0xFF64748B),
+                                          style: TextStyle(
+                                            color: unreadCount > 0 ? const Color(0xFFEF4444) : const Color(0xFF64748B),
                                             fontSize: 11,
+                                            fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
                                           ),
                                         ),
                                     ],
@@ -182,7 +223,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                     padding: const EdgeInsets.only(top: 4.0),
                                     child: Row(
                                       mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
+                                        MainAxisAlignment.spaceBetween,
                                       children: [
                                         Expanded(
                                           child: Text(
@@ -191,34 +232,63 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                                       ? '[Request Card]'
                                                       : lastMsg.text)
                                                 : contact.position,
-                                            style: const TextStyle(
-                                              color: Color(0xFF64748B),
+                                            style: TextStyle(
+                                              color: unreadCount > 0
+                                                  ? (isDark ? Colors.white : const Color(0xFF1E293B))
+                                                  : const Color(0xFF64748B),
                                               fontSize: 13,
+                                              fontWeight: unreadCount > 0 ? FontWeight.w600 : FontWeight.normal,
                                             ),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
-                                        if (pendingRequestCount > 0)
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 4,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFFEF4444),
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                            ),
-                                            child: Text(
-                                              '$pendingRequestCount Pending',
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 9,
-                                                fontWeight: FontWeight.bold,
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            if (pendingRequestCount > 0)
+                                              Container(
+                                                margin: const EdgeInsets.only(left: 6),
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 8,
+                                                  vertical: 4,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFFEF4444),
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                ),
+                                                child: Text(
+                                                  '$pendingRequestCount Pending',
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 9,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
                                               ),
-                                            ),
-                                          ),
+                                            if (unreadCount > 0 && pendingRequestCount == 0)
+                                              Container(
+                                                margin: const EdgeInsets.only(left: 6),
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 7,
+                                                  vertical: 3,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFFEF4444),
+                                                  borderRadius: BorderRadius.circular(10),
+                                                ),
+                                                child: Text(
+                                                  provider.translate('new') != 'new' ? provider.translate('new') : 'NEW',
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 9,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
                                       ],
                                     ),
                                   ),

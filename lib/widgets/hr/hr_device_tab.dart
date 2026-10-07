@@ -332,8 +332,11 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
                         ),
                       ],
                       const SizedBox(height: 20),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 10,
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           NeuButton(
                             onPressed: isTestingModal
@@ -359,6 +362,7 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
                             fontSize: 12,
                           ),
                           Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               TextButton(
                                 onPressed: () => Navigator.pop(dialogCtx),
@@ -517,89 +521,117 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
     AttendanceProvider provider,
     FirebaseService firebase,
   ) {
-    return GlassContainer(
-      padding: const EdgeInsets.all(20),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: const Color(0xFF2E65FF).withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFF2E65FF).withValues(alpha: 0.3)),
-            ),
-            child: const Icon(Icons.hub_rounded, color: Color(0xFF2E65FF), size: 26),
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 680;
+
+    final headerInfo = Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: const Color(0xFF2E65FF).withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFF2E65FF).withValues(alpha: 0.3)),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      'ZKTeco Biometric Devices',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor),
-                    ),
-                    const SizedBox(width: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
-                      ),
-                      child: Text(
-                        '${devices.length} Configured • $onlineCount Online',
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Multi-device synchronization with cross-terminal Smart Punch Pairing (Check In at Terminal A, Check Out at Terminal B)',
-                  style: TextStyle(fontSize: 12, color: subtextColor),
-                ),
-              ],
-            ),
-          ),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
+          child: const Icon(Icons.hub_rounded, color: Color(0xFF2E65FF), size: 24),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              NeuButton(
-                onPressed: () => _showAddEditDeviceDialog(context),
-                icon: const Icon(Icons.add_rounded, size: 18),
-                label: 'Add Device',
-                variant: NeuButtonVariant.primary,
-                height: 40,
-                fontSize: 13,
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    'ZKTeco Biometric Devices',
+                    style: TextStyle(
+                      fontSize: isMobile ? 16 : 18,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                    ),
+                    child: Text(
+                      '${devices.length} Configured • $onlineCount Online',
+                      style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
+                    ),
+                  ),
+                ],
               ),
-              NeuButton(
-                onPressed: _isTestingAll ? null : _handleTestAllDevices,
-                isLoading: _isTestingAll,
-                icon: const Icon(Icons.cable_rounded, size: 18),
-                label: 'Test All',
-                variant: NeuButtonVariant.whitePill,
-                height: 40,
-                fontSize: 13,
-              ),
-              NeuButton(
-                onPressed: _isSyncingAll ? null : () => _handleSyncAllDevices(provider, firebase),
-                isLoading: _isSyncingAll,
-                icon: const Icon(Icons.sync_rounded, size: 18),
-                label: 'Sync All Devices',
-                variant: NeuButtonVariant.navy,
-                height: 40,
-                fontSize: 13,
+              const SizedBox(height: 4),
+              Text(
+                'Multi-device synchronization with cross-terminal Smart Punch Pairing (Check In at Terminal A, Check Out at Terminal B)',
+                style: TextStyle(fontSize: 11.5, color: subtextColor),
               ),
             ],
           ),
-        ],
-      ),
+        ),
+      ],
+    );
+
+    final actionButtons = Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        NeuButton(
+          onPressed: () => _showAddEditDeviceDialog(context),
+          icon: const Icon(Icons.add_rounded, size: 18),
+          label: 'Add Device',
+          variant: NeuButtonVariant.primary,
+          height: 38,
+          fontSize: 12.5,
+        ),
+        NeuButton(
+          onPressed: _isTestingAll ? null : _handleTestAllDevices,
+          isLoading: _isTestingAll,
+          icon: const Icon(Icons.cable_rounded, size: 18),
+          label: 'Test All',
+          variant: NeuButtonVariant.whitePill,
+          height: 38,
+          fontSize: 12.5,
+        ),
+        NeuButton(
+          onPressed: _isSyncingAll ? null : () => _handleSyncAllDevices(provider, firebase),
+          isLoading: _isSyncingAll,
+          icon: const Icon(Icons.sync_rounded, size: 18),
+          label: 'Sync All Devices',
+          variant: NeuButtonVariant.navy,
+          height: 38,
+          fontSize: 12.5,
+        ),
+      ],
+    );
+
+    return GlassContainer(
+      padding: EdgeInsets.all(isMobile ? 14 : 20),
+      child: isMobile
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                headerInfo,
+                const SizedBox(height: 14),
+                actionButtons,
+              ],
+            )
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(child: headerInfo),
+                const SizedBox(width: 16),
+                actionButtons,
+              ],
+            ),
     );
   }
 
@@ -678,13 +710,15 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 4,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Text(
                                 dev.name,
                                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
                               ),
-                              const SizedBox(width: 8),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                 decoration: BoxDecoration(
@@ -696,8 +730,7 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
                                   style: TextStyle(fontSize: 11, fontFamily: 'monospace', fontWeight: FontWeight.w600, color: subtextColor),
                                 ),
                               ),
-                              if (dev.password > 0) ...[
-                                const SizedBox(width: 6),
+                              if (dev.password > 0)
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
@@ -706,32 +739,42 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
                                   ),
                                   child: Text('Key: ${dev.password}', style: const TextStyle(fontSize: 10, color: Colors.amber)),
                                 ),
-                              ],
                             ],
                           ),
                           const SizedBox(height: 4),
-                          Row(
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 2,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
-                              Container(
-                                width: 7,
-                                height: 7,
-                                decoration: BoxDecoration(
-                                  color: isConnected ? const Color(0xFF10B981) : (info != null ? const Color(0xFFEF4444) : Colors.grey),
-                                  shape: BoxShape.circle,
-                                ),
+                               Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 7,
+                                    height: 7,
+                                    decoration: BoxDecoration(
+                                      color: isConnected ? const Color(0xFF10B981) : (info != null ? const Color(0xFFEF4444) : Colors.grey),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Flexible(
+                                    child: Text(
+                                      isConnected
+                                          ? 'Online (${info!.deviceName.isNotEmpty ? info.deviceName : "ZKTeco Terminal"})'
+                                          : (info != null ? 'Offline: ${info.errorMessage ?? "Unreachable"}' : 'Ready to connect'),
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                        color: isConnected ? const Color(0xFF10B981) : (info != null ? const Color(0xFFEF4444) : subtextColor),
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 6),
-                              Text(
-                                isConnected
-                                    ? 'Online (${info!.deviceName.isNotEmpty ? info.deviceName : "ZKTeco Terminal"})'
-                                    : (info != null ? 'Offline: ${info.errorMessage ?? "Unreachable"}' : 'Ready to connect'),
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                  color: isConnected ? const Color(0xFF10B981) : (info != null ? const Color(0xFFEF4444) : subtextColor),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
                               Text('• Last Sync: ${dev.lastSyncStatus}', style: TextStyle(fontSize: 11, color: subtextColor)),
                             ],
                           ),
@@ -763,8 +806,11 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
                   ),
                 ],
                 const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.end,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     NeuButton(
                       onPressed: isTestingThis ? null : () => _handleTestSingleDevice(dev),
@@ -776,7 +822,6 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
                       fontSize: 11.5,
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                     ),
-                    const SizedBox(width: 8),
                     NeuButton(
                       onPressed: () => _handleFetchUsers(dev),
                       icon: const Icon(Icons.people_outline, size: 14),
@@ -786,7 +831,6 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
                       fontSize: 11.5,
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                     ),
-                    const SizedBox(width: 8),
                     NeuButton(
                       onPressed: isSyncingThis ? null : () => _handleSyncSingleDevice(dev, provider, firebase),
                       isLoading: isSyncingThis,
@@ -797,16 +841,20 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
                       fontSize: 11.5,
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                     ),
-                    const SizedBox(width: 6),
-                    IconButton(
-                      icon: const Icon(Icons.edit_outlined, size: 18),
-                      tooltip: 'Edit Device Settings',
-                      onPressed: () => _showAddEditDeviceDialog(context, device: dev),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
-                      tooltip: 'Delete Device',
-                      onPressed: () => _confirmDeleteDevice(context, dev),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined, size: 18),
+                          tooltip: 'Edit Device Settings',
+                          onPressed: () => _showAddEditDeviceDialog(context, device: dev),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+                          tooltip: 'Delete Device',
+                          onPressed: () => _confirmDeleteDevice(context, dev),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -835,18 +883,75 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
     AttendanceProvider provider,
     FirebaseService firebase,
   ) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 650;
+
+    final syncIntervalField = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Auto-Sync Interval', style: TextStyle(fontSize: 12, color: subtextColor)),
+        const SizedBox(height: 4),
+        DropdownButtonFormField<int>(
+          initialValue: _syncInterval,
+          isDense: true,
+          decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
+          items: const [
+            DropdownMenuItem(value: 5, child: Text('Every 5 mins')),
+            DropdownMenuItem(value: 10, child: Text('Every 10 mins')),
+            DropdownMenuItem(value: 15, child: Text('Every 15 mins (Default)')),
+            DropdownMenuItem(value: 30, child: Text('Every 30 mins')),
+            DropdownMenuItem(value: 60, child: Text('Every 1 hour')),
+          ],
+          onChanged: (val) {
+            if (val != null) {
+              setState(() => _syncInterval = val);
+              _handleSaveGlobalSettings(provider, firebase);
+            }
+          },
+        ),
+      ],
+    );
+
+    final cooldownField = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Duplicate Punch Cooldown', style: TextStyle(fontSize: 12, color: subtextColor)),
+        const SizedBox(height: 4),
+        DropdownButtonFormField<int>(
+          initialValue: _cooldown,
+          isDense: true,
+          decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
+          items: const [
+            DropdownMenuItem(value: 1, child: Text('1 minute')),
+            DropdownMenuItem(value: 2, child: Text('2 minutes')),
+            DropdownMenuItem(value: 3, child: Text('3 minutes (Default)')),
+            DropdownMenuItem(value: 5, child: Text('5 minutes')),
+          ],
+          onChanged: (val) {
+            if (val != null) {
+              setState(() => _cooldown = val);
+              _handleSaveGlobalSettings(provider, firebase);
+            }
+          },
+        ),
+      ],
+    );
+
     return GlassContainer(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const Icon(Icons.auto_awesome, color: Color(0xFF10B981), size: 20),
               const SizedBox(width: 8),
-              Text(
-                'Multi-Device Smart Pairing & Background Sync',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
+              Expanded(
+                child: Text(
+                  'Multi-Device Smart Pairing & Background Sync',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: textColor),
+                ),
               ),
             ],
           ),
@@ -869,64 +974,19 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
             },
           ),
           const Divider(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Auto-Sync Interval', style: TextStyle(fontSize: 12, color: subtextColor)),
-                    const SizedBox(height: 4),
-                    DropdownButtonFormField<int>(
-                      initialValue: _syncInterval,
-                      isDense: true,
-                      decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
-                      items: const [
-                        DropdownMenuItem(value: 5, child: Text('Every 5 mins')),
-                        DropdownMenuItem(value: 10, child: Text('Every 10 mins')),
-                        DropdownMenuItem(value: 15, child: Text('Every 15 mins (Default)')),
-                        DropdownMenuItem(value: 30, child: Text('Every 30 mins')),
-                        DropdownMenuItem(value: 60, child: Text('Every 1 hour')),
-                      ],
-                      onChanged: (val) {
-                        if (val != null) {
-                          setState(() => _syncInterval = val);
-                          _handleSaveGlobalSettings(provider, firebase);
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Duplicate Punch Cooldown', style: TextStyle(fontSize: 12, color: subtextColor)),
-                    const SizedBox(height: 4),
-                    DropdownButtonFormField<int>(
-                      initialValue: _cooldown,
-                      isDense: true,
-                      decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
-                      items: const [
-                        DropdownMenuItem(value: 1, child: Text('1 minute')),
-                        DropdownMenuItem(value: 2, child: Text('2 minutes')),
-                        DropdownMenuItem(value: 3, child: Text('3 minutes (Default)')),
-                        DropdownMenuItem(value: 5, child: Text('5 minutes')),
-                      ],
-                      onChanged: (val) {
-                        if (val != null) {
-                          setState(() => _cooldown = val);
-                          _handleSaveGlobalSettings(provider, firebase);
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          if (isMobile) ...[
+            syncIntervalField,
+            const SizedBox(height: 12),
+            cooldownField,
+          ] else ...[
+            Row(
+              children: [
+                Expanded(child: syncIntervalField),
+                const SizedBox(width: 12),
+                Expanded(child: cooldownField),
+              ],
+            ),
+          ],
           const SizedBox(height: 14),
           Container(
             padding: const EdgeInsets.all(12),
@@ -964,52 +1024,84 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
     final deviceUsers = _zkService.cachedUsers;
     final employees = provider.employees;
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 650;
+
+    final headerTitle = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.badge_outlined, color: Color(0xFF8B5CF6), size: 20),
+        const SizedBox(width: 8),
+        Text(
+          'Device Users & Employee ID Mapping',
+          style: TextStyle(fontSize: isMobile ? 15 : 16, fontWeight: FontWeight.bold, color: textColor),
+        ),
+      ],
+    );
+
+    final controls = Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        if (devices.isNotEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: subtextColor.withValues(alpha: 0.25)),
+            ),
+            child: DropdownButton<String>(
+              value: _selectedDeviceForUsers ?? devices.first.id,
+              underline: const SizedBox(),
+              isDense: true,
+              style: TextStyle(fontSize: 12, color: textColor),
+              items: devices.map((d) {
+                return DropdownMenuItem(value: d.id, child: Text(d.name));
+              }).toList(),
+              onChanged: (val) {
+                if (val != null) setState(() => _selectedDeviceForUsers = val);
+              },
+            ),
+          ),
+        NeuButton(
+          onPressed: _isFetchingUsers
+              ? null
+              : () {
+                  final dev = devices.cast<ZkDeviceConfig?>().firstWhere(
+                        (d) => d != null && d.id == _selectedDeviceForUsers,
+                        orElse: () => devices.isNotEmpty ? devices.first : null,
+                      );
+                  _handleFetchUsers(dev);
+                },
+          isLoading: _isFetchingUsers,
+          icon: const Icon(Icons.download, size: 16),
+          label: 'Fetch Users',
+          variant: NeuButtonVariant.whitePill,
+          height: 34,
+          fontSize: 12,
+        ),
+      ],
+    );
+
     return GlassContainer(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.badge_outlined, color: Color(0xFF8B5CF6), size: 20),
-              const SizedBox(width: 8),
-              Text(
-                'Device Users & Employee ID Mapping',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
-              ),
-              const Spacer(),
-              if (devices.isNotEmpty)
-                DropdownButton<String>(
-                  value: _selectedDeviceForUsers ?? devices.first.id,
-                  underline: const SizedBox(),
-                  style: TextStyle(fontSize: 12, color: textColor),
-                  items: devices.map((d) {
-                    return DropdownMenuItem(value: d.id, child: Text(d.name));
-                  }).toList(),
-                  onChanged: (val) {
-                    if (val != null) setState(() => _selectedDeviceForUsers = val);
-                  },
-                ),
-              const SizedBox(width: 8),
-              NeuButton(
-                onPressed: _isFetchingUsers
-                    ? null
-                    : () {
-                        final dev = devices.cast<ZkDeviceConfig?>().firstWhere(
-                              (d) => d != null && d.id == _selectedDeviceForUsers,
-                              orElse: () => devices.isNotEmpty ? devices.first : null,
-                            );
-                        _handleFetchUsers(dev);
-                      },
-                isLoading: _isFetchingUsers,
-                icon: const Icon(Icons.download, size: 16),
-                label: 'Fetch Users',
-                variant: NeuButtonVariant.whitePill,
-                height: 36,
-                fontSize: 12,
-              ),
-            ],
-          ),
+          if (isMobile) ...[
+            headerTitle,
+            const SizedBox(height: 12),
+            controls,
+          ] else ...[
+            Row(
+              children: [
+                Expanded(child: headerTitle),
+                const SizedBox(width: 8),
+                controls,
+              ],
+            ),
+          ],
           const SizedBox(height: 12),
           if (deviceUsers.isEmpty)
             Container(

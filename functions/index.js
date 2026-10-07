@@ -34,7 +34,7 @@ exports.onMessageCreated = onDocumentCreated("chat_rooms/{roomId}/messages/{mess
       return;
     }
 
-    // 3. Construct and send FCM payload
+    // 3. Construct and send FCM payload with high priority for closed apps
     const message = {
       notification: {
         title: `Message from ${senderName}`,
@@ -44,8 +44,30 @@ exports.onMessageCreated = onDocumentCreated("chat_rooms/{roomId}/messages/{mess
       data: {
         type: 'chat_message',
         senderId: senderId,
-        roomId: event.params.roomId
-      }
+        senderName: senderName,
+        roomId: event.params.roomId,
+        title: `Message from ${senderName}`,
+        body: text,
+      },
+      android: {
+        priority: 'high',
+        notification: {
+          channelId: 'chat_channel_id',
+          sound: 'default',
+          priority: 'high',
+          defaultSound: true,
+          defaultVibrateTimings: true,
+        },
+      },
+      apns: {
+        payload: {
+          aps: {
+            sound: 'default',
+            badge: 1,
+            contentAvailable: true,
+          },
+        },
+      },
     };
 
     const response = await admin.messaging().send(message);

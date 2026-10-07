@@ -119,156 +119,125 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
       );
     }
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      body: Container(
-        // Matching global background gradient
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF2E65FF), // Royal Blue
-              Color(0xFF8236FE), // Indigo/Purple
-            ],
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryTextColor = isDark ? Colors.white : const Color(0xFF0F172A);
+
+    return Directionality(
+      textDirection: provider.currentLanguageDirection,
+      child: Scaffold(
+        backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.transparent,
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: !isDark
+                ? const LinearGradient(
+                    colors: [Color(0xFFFCFDFD), Color(0xFFEDF2FE), Color(0xFFE0EAFF)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
+            color: isDark ? const Color(0xFF0F172A) : null,
           ),
-        ),
-        child: SafeArea(
-          bottom: false,
-          child: NestedScrollView(
-            headerSliverBuilder:
-                (BuildContext context, bool innerBoxIsScrolled) {
-                  return <Widget>[
-                    SliverToBoxAdapter(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Custom Header Bar
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20.0,
-                              vertical: 12.0,
-                            ),
-                            child: Row(
-                              children: [
-                                _buildBackButton(),
-                                Expanded(
-                                  child: Center(
-                                    child: Text(
-                                      provider.translate('hr_management'),
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: -0.5,
-                                      ),
-                                    ),
-                                  ),
+          child: SafeArea(
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Modern Navigation Header Bar
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+                    child: Row(
+                      children: [
+                        _buildBackButton(isDark),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                provider.translate('hr_management'),
+                                style: TextStyle(
+                                  color: primaryTextColor,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: -0.5,
                                 ),
-                                const SizedBox(
-                                  width: 44,
-                                ), // visual balance for back button
-                              ],
-                            ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _getTabTitle(_activeTab, provider),
+                                style: const TextStyle(
+                                  color: Color(0xFF00E5CE),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 12),
-
-                          // 2x2 Grid Tabs Selection
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20.0,
-                            ),
-                            child: GridView.count(
-                              crossAxisCount: 2,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 16,
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              childAspectRatio: 2.1,
-                              children: [
-                                _buildGridTab(
-                                  tab: HrTab.structures,
-                                  icon: Icons.business,
-                                  label: provider.translate('structures'),
-                                ),
-                                _buildGridTab(
-                                  tab: HrTab.shifts,
-                                  icon: Icons.access_time,
-                                  label: provider.translate('shifts'),
-                                ),
-                                _buildGridTab(
-                                  tab: HrTab.groups,
-                                  icon: Icons.people_outline,
-                                  label: provider.translate('groups'),
-                                ),
-                                _buildGridTab(
-                                  tab: HrTab.employees,
-                                  icon: Icons.manage_accounts_outlined,
-                                  label: provider.translate('employees'),
-                                ),
-                                _buildGridTab(
-                                  tab: HrTab.holidays,
-                                  icon: Icons.event_available,
-                                  label: provider.translate('holidays'),
-                                ),
-                                _buildGridTab(
-                                  tab: HrTab.locations,
-                                  icon: Icons.location_on_outlined,
-                                  label: provider.translate('locations'),
-                                ),
-                                _buildGridTab(
-                                  tab: HrTab.payroll,
-                                  icon: Icons.attach_money,
-                                  label: provider.translate('payroll'),
-                                ),
-                                _buildGridTab(
-                                  tab: HrTab.dailyReport,
-                                  icon: Icons.bar_chart,
-                                  label: provider.translate('daily_report'),
-                                ),
-                                _buildGridTab(
-                                  tab: HrTab.device,
-                                  icon: Icons.fingerprint,
-                                  label: provider.translate('device'),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-
-                          // Gradient Action Button (Add New Item)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20.0,
-                            ),
-                            child: _buildAddNewButton(),
-                          ),
-                          const SizedBox(height: 16),
-                        ],
-                      ),
+                        ),
+                        _buildAddNewButton(),
+                      ],
                     ),
-                  ];
-                },
-            body: _buildActiveList(provider),
+                  ),
+
+                  // Horizontal Category Pills
+                  SizedBox(
+                    height: 44,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      children: [
+                        _buildPillTab(tab: HrTab.structures, icon: Icons.business_rounded, label: provider.translate('structures'), isDark: isDark),
+                        const SizedBox(width: 8),
+                        _buildPillTab(tab: HrTab.shifts, icon: Icons.access_time_rounded, label: provider.translate('shifts'), isDark: isDark),
+                        const SizedBox(width: 8),
+                        _buildPillTab(tab: HrTab.groups, icon: Icons.people_outline_rounded, label: provider.translate('groups'), isDark: isDark),
+                        const SizedBox(width: 8),
+                        _buildPillTab(tab: HrTab.employees, icon: Icons.badge_outlined, label: provider.translate('employees'), isDark: isDark),
+                        const SizedBox(width: 8),
+                        _buildPillTab(tab: HrTab.holidays, icon: Icons.event_available_rounded, label: provider.translate('holidays'), isDark: isDark),
+                        const SizedBox(width: 8),
+                        _buildPillTab(tab: HrTab.locations, icon: Icons.location_on_outlined, label: provider.translate('locations'), isDark: isDark),
+                        const SizedBox(width: 8),
+                        _buildPillTab(tab: HrTab.payroll, icon: Icons.attach_money_rounded, label: provider.translate('payroll'), isDark: isDark),
+                        const SizedBox(width: 8),
+                        _buildPillTab(tab: HrTab.dailyReport, icon: Icons.bar_chart_rounded, label: provider.translate('daily_report'), isDark: isDark),
+                        const SizedBox(width: 8),
+                        _buildPillTab(tab: HrTab.device, icon: Icons.fingerprint_rounded, label: provider.translate('device'), isDark: isDark),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Active Tab Content
+                  Expanded(
+                    child: _buildActiveList(provider),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
       ),
     );
   }
 
-  Widget _buildBackButton() {
+  Widget _buildBackButton(bool isDark) {
     return NeuIconButton(
       onPressed: () => Navigator.pop(context),
-      icon: const Icon(Icons.arrow_back, size: 20),
-      size: 44,
+      icon: Icon(
+        Icons.arrow_back_rounded,
+        size: 20,
+        color: isDark ? Colors.white : const Color(0xFF0F172A),
+      ),
+      size: 42,
       variant: NeuButtonVariant.whitePill,
     );
   }
 
-  Widget _buildGridTab({
+  Widget _buildPillTab({
     required HrTab tab,
     required IconData icon,
     required String label,
+    required bool isDark,
   }) {
     final isActive = _activeTab == tab;
 
@@ -285,46 +254,54 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
           _loadDailyReportData();
         }
       },
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: isActive
-              ? Colors.white.withValues(alpha: 0.18)
-              : Colors.white.withValues(alpha: 0.07),
-          borderRadius: BorderRadius.circular(20),
+              ? const Color(0xFF00E5CE)
+              : (isDark ? const Color(0xFF1E293B) : Colors.white),
+          borderRadius: BorderRadius.circular(30),
           border: Border.all(
             color: isActive
-                ? Colors.white.withValues(alpha: 0.4)
-                : Colors.white.withValues(alpha: 0.12),
-            width: isActive ? 1.5 : 1.0,
+                ? const Color(0xFF00E5CE)
+                : (isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0)),
+            width: 1.2,
           ),
           boxShadow: isActive
               ? [
                   BoxShadow(
-                    color: Colors.white.withValues(alpha: 0.05),
-                    blurRadius: 8,
-                    spreadRadius: 1,
+                    color: const Color(0xFF00E5CE).withValues(alpha: 0.35),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
                   ),
                 ]
-              : null,
+              : [
+                  BoxShadow(
+                    color: isDark ? Colors.black.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               icon,
+              size: 16,
               color: isActive
-                  ? Colors.white
-                  : Colors.white.withValues(alpha: 0.7),
-              size: 24,
+                  ? const Color(0xFF0A2342)
+                  : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
                 color: isActive
-                    ? Colors.white
-                    : Colors.white.withValues(alpha: 0.7),
-                fontSize: 14,
+                    ? const Color(0xFF0A2342)
+                    : (isDark ? Colors.white : const Color(0xFF1E293B)),
+                fontSize: 13,
                 fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
               ),
             ),
@@ -335,28 +312,28 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
   }
 
   Widget _buildAddNewButton() {
-    if (_activeTab == HrTab.payroll || _activeTab == HrTab.dailyReport || _activeTab == HrTab.device)
-      // ignore: curly_braces_in_flow_control_structures
+    if (_activeTab == HrTab.payroll || _activeTab == HrTab.dailyReport || _activeTab == HrTab.device) {
       return const SizedBox.shrink();
+    }
     String label = '';
     switch (_activeTab) {
       case HrTab.structures:
-        label = 'Add New Structure';
+        label = 'Add Structure';
         break;
       case HrTab.shifts:
-        label = 'Add New Shift';
+        label = 'Add Shift';
         break;
       case HrTab.groups:
-        label = 'Add New Group';
+        label = 'Add Group';
         break;
       case HrTab.employees:
-        label = 'Add New Employee';
+        label = 'Add Employee';
         break;
       case HrTab.holidays:
-        label = 'Add New Holiday';
+        label = 'Add Holiday';
         break;
       case HrTab.locations:
-        label = 'Add New Location';
+        label = 'Add Location';
         break;
       case HrTab.payroll:
       case HrTab.dailyReport:
@@ -366,37 +343,72 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
 
     return NeuButton(
       onPressed: () => _showAddEditDialog(),
-      icon: const Icon(Icons.add_rounded, size: 20),
+      icon: const Icon(Icons.add_rounded, size: 18),
       label: label,
       variant: NeuButtonVariant.primary,
-      height: 48,
-      fontSize: 15,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      height: 40,
+      fontSize: 13,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
     );
   }
 
   Widget _buildSearchBar(String hint) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final borderCol = isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0);
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final hintColor = isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
-      child: GlassContainer(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: TextField(
-          controller: _searchController,
-          style: const TextStyle(color: Colors.white),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
-            border: InputBorder.none,
-            icon: Icon(
-              Icons.search,
-              color: Colors.white.withValues(alpha: 0.7),
+      child: Container(
+        height: 48,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: borderCol, width: 1.0),
+          boxShadow: [
+            BoxShadow(
+              color: isDark ? Colors.black.withValues(alpha: 0.15) : Colors.black.withValues(alpha: 0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-          ),
-          onChanged: (value) {
-            setState(() {
-              _searchQuery = value;
-            });
-          },
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.search_rounded, size: 20, color: hintColor),
+            const SizedBox(width: 10),
+            Expanded(
+              child: TextField(
+                controller: _searchController,
+                style: TextStyle(color: textColor, fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: hint,
+                  hintStyle: TextStyle(color: hintColor, fontSize: 14),
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: EdgeInsets.zero,
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value;
+                  });
+                },
+              ),
+            ),
+            if (_searchController.text.isNotEmpty)
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _searchController.clear();
+                    _searchQuery = '';
+                  });
+                },
+                child: Icon(Icons.close_rounded, size: 18, color: hintColor),
+              ),
+          ],
         ),
       ),
     );

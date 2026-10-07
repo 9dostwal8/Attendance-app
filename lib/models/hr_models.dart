@@ -839,7 +839,7 @@ class CompanyEmployee {
     this.transportationAllowance = 0.0,
     this.otherAllowance = 0.0,
     this.faceEmbedding,
-    this.themePreference = 'dark',
+    this.themePreference = 'light',
     this.languagePreference = 'en',
     this.fcmToken,
     this.password,
@@ -996,7 +996,7 @@ class CompanyEmployee {
       faceEmbedding: map['faceEmbedding'] != null 
           ? List<double>.from((map['faceEmbedding'] as List).map((e) => (e as num).toDouble()))
           : null,
-      themePreference: map['themePreference'] ?? 'dark',
+      themePreference: map['themePreference'] ?? 'light',
       languagePreference: map['languagePreference'] ?? 'en',
       fcmToken: map['fcmToken'],
       password: map['password'],

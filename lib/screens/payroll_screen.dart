@@ -1245,8 +1245,11 @@ class _PayrollScreenState extends State<PayrollScreen> {
           (adj.date.length >= 7 && adj.date.substring(0, 7) == targetMonthStr);
     }).length;
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         // Manage / View adjustments button (Sleek pill matching reference)
         Tooltip(
@@ -1261,8 +1264,8 @@ class _PayrollScreenState extends State<PayrollScreen> {
               borderRadius: BorderRadius.circular(50),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                height: 40,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                height: 38,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
                 decoration: BoxDecoration(
                   gradient: isDark
                       ? const LinearGradient(
@@ -1293,23 +1296,23 @@ class _PayrollScreenState extends State<PayrollScreen> {
                   children: [
                     Icon(
                       Icons.tune_rounded,
-                      size: 16,
+                      size: 15,
                       color: isDark ? const Color(0xFF00F0D8) : const Color(0xFF102B94),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     Text(
                       provider.translate('adjustments'),
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 12.5,
                         fontWeight: FontWeight.w700,
                         color: isDark ? const Color(0xFF00F0D8) : const Color(0xFF102B94),
                         letterSpacing: 0.2,
                       ),
                     ),
                     if (count > 0) ...[
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [Color(0xFF1E3DB8), Color(0xFF122684)],
@@ -1320,7 +1323,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
                           '$count',
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 11,
+                            fontSize: 10.5,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
@@ -1332,7 +1335,6 @@ class _PayrollScreenState extends State<PayrollScreen> {
             ),
           ),
         ),
-        const SizedBox(width: 10),
 
         // + Addition Button (Radiant Cyan-Aqua capsule hero button)
         Tooltip(
@@ -1343,15 +1345,14 @@ class _PayrollScreenState extends State<PayrollScreen> {
               initialType: 'addition',
               initialMonth: provider.selectedMonth,
             ),
-            icon: const Icon(Icons.add_circle_outline_rounded, size: 16),
+            icon: const Icon(Icons.add_circle_outline_rounded, size: 15),
             label: provider.translate('addition'),
             variant: NeuButtonVariant.primary,
-            height: 40,
-            fontSize: 13,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            height: 38,
+            fontSize: 12.5,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
           ),
         ),
-        const SizedBox(width: 10),
 
         // - Deduction Button (Coral Red capsule hero button)
         Tooltip(
@@ -1362,12 +1363,12 @@ class _PayrollScreenState extends State<PayrollScreen> {
               initialType: 'deduction',
               initialMonth: provider.selectedMonth,
             ),
-            icon: const Icon(Icons.remove_circle_outline_rounded, size: 16),
+            icon: const Icon(Icons.remove_circle_outline_rounded, size: 15),
             label: provider.translate('deduction'),
             variant: NeuButtonVariant.danger,
-            height: 40,
-            fontSize: 13,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            height: 38,
+            fontSize: 12.5,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
           ),
         ),
       ],

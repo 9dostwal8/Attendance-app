@@ -377,28 +377,37 @@ class _PayrollAdjustmentDialogContentState
                                             ]
                                           : null,
                                     ),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.add_circle_outline_rounded,
-                                          size: 16,
-                                          color: isAddition
-                                              ? const Color(0xFF0A2342)
-                                              : (isDark ? Colors.white70 : Colors.black87),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          provider.translate('addition_bonus'),
-                                          style: TextStyle(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.add_circle_outline_rounded,
+                                            size: 15,
                                             color: isAddition
                                                 ? const Color(0xFF0A2342)
                                                 : (isDark ? Colors.white70 : Colors.black87),
-                                            fontWeight: FontWeight.w800,
-                                            fontSize: 13,
                                           ),
-                                        ),
-                                      ],
+                                          const SizedBox(width: 5),
+                                          Flexible(
+                                            child: FittedBox(
+                                              fit: BoxFit.scaleDown,
+                                              child: Text(
+                                                provider.translate('addition_bonus'),
+                                                style: TextStyle(
+                                                  color: isAddition
+                                                      ? const Color(0xFF0A2342)
+                                                      : (isDark ? Colors.white70 : Colors.black87),
+                                                  fontWeight: FontWeight.w800,
+                                                  fontSize: 12.5,
+                                                ),
+                                                maxLines: 1,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -429,28 +438,37 @@ class _PayrollAdjustmentDialogContentState
                                             ]
                                           : null,
                                     ),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.remove_circle_outline_rounded,
-                                          size: 16,
-                                          color: !isAddition
-                                              ? Colors.white
-                                              : (isDark ? Colors.white70 : Colors.black87),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          provider.translate('deduction_loan_fine'),
-                                          style: TextStyle(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.remove_circle_outline_rounded,
+                                            size: 15,
                                             color: !isAddition
                                                 ? Colors.white
                                                 : (isDark ? Colors.white70 : Colors.black87),
-                                            fontWeight: FontWeight.w800,
-                                            fontSize: 13,
                                           ),
-                                        ),
-                                      ],
+                                          const SizedBox(width: 5),
+                                          Flexible(
+                                            child: FittedBox(
+                                              fit: BoxFit.scaleDown,
+                                              child: Text(
+                                                provider.translate('deduction_loan_fine'),
+                                                style: TextStyle(
+                                                  color: !isAddition
+                                                      ? Colors.white
+                                                      : (isDark ? Colors.white70 : Colors.black87),
+                                                  fontWeight: FontWeight.w800,
+                                                  fontSize: 12.5,
+                                                ),
+                                                maxLines: 1,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),

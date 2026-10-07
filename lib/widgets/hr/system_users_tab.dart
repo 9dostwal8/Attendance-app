@@ -5,6 +5,7 @@ import '../../models/hr_models.dart';
 import '../glass_container.dart';
 import '../glass_dialog.dart';
 import '../neu_button.dart';
+import '../../screens/face_auth_screen.dart';
 
 class SystemUsersTab extends StatefulWidget {
   final String searchQuery;
@@ -670,28 +671,33 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
 
                           // Face ID Status
                           DataCell(
-                            Row(
-                              children: [
-                                Icon(
-                                  user.faceEmbedding != null
-                                      ? Icons.face_rounded
-                                      : Icons.no_photography_outlined,
-                                  size: 15,
-                                  color: user.faceEmbedding != null
-                                      ? const Color(0xFF3B82F6)
-                                      : Colors.grey,
-                                ),
-                                const SizedBox(width: 5),
-                                Text(
-                                  user.faceEmbedding != null ? 'Enabled' : 'None',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: isDark
-                                        ? Colors.white54
-                                        : Colors.black54,
+                            InkWell(
+                              borderRadius: BorderRadius.circular(4),
+                              onTap: () => _showFaceIdManageDialog(context, user, provider),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    user.faceEmbedding != null
+                                        ? Icons.face_retouching_natural
+                                        : Icons.no_photography_outlined,
+                                    size: 15,
+                                    color: user.faceEmbedding != null
+                                        ? const Color(0xFF10B981)
+                                        : Colors.grey,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    user.faceEmbedding != null ? 'Enabled' : 'None',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: user.faceEmbedding != null ? FontWeight.w600 : FontWeight.normal,
+                                      color: user.faceEmbedding != null
+                                          ? const Color(0xFF10B981)
+                                          : (isDark ? Colors.white54 : Colors.black54),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
 
@@ -700,6 +706,30 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
+                                Tooltip(
+                                  message: user.faceEmbedding != null ? 'Manage Face ID (Enrolled)' : 'Enroll Face ID',
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(6),
+                                    onTap: () => _showFaceIdManageDialog(
+                                      context,
+                                      user,
+                                      provider,
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(5),
+                                      child: Icon(
+                                        user.faceEmbedding != null
+                                            ? Icons.face_retouching_natural
+                                            : Icons.face_outlined,
+                                        size: 18,
+                                        color: user.faceEmbedding != null
+                                            ? const Color(0xFF10B981)
+                                            : (isDark ? Colors.white70 : Colors.black54),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
                                 Tooltip(
                                   message: 'Edit Role',
                                   child: InkWell(
@@ -1131,7 +1161,7 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
             if (conflict != null) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('User ID "' + enteredId + '" is already in use by ' + conflict.name + '.'),
+                  content: Text('User ID "$enteredId" is already in use by ${conflict.name}.'),
                   backgroundColor: Colors.redAccent,
                 ),
               );
@@ -1174,4 +1204,219 @@ class _SystemUsersTabState extends State<SystemUsersTab> {
       ],
     );
   }
+
+  void _showFaceIdManageDialog(
+    BuildContext context,
+    CompanyEmployee user,
+    AttendanceProvider provider,
+  ) {
+    if (!provider.isHRManager) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(provider.translate('only_hr_manage_face')),
+          backgroundColor: const Color(0xFFEF4444),
+        ),
+      );
+      return;
+    }
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtextColor = isDark ? Colors.white60 : const Color(0xFF64748B);
+    final cardBg = isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.03);
+    final borderColor = isDark ? Colors.white12 : Colors.black12;
+
+    showGlassDialog(
+      context: context,
+      title: 'Face ID - ${user.name}',
+      subtitle: 'System User Biometric Clock In/Out Enrollment',
+      icon: Icons.face_retouching_natural,
+      content: StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          final currentUser = provider.employees.firstWhere(
+            (e) => e.id == user.id,
+            orElse: () => user,
+          );
+          final hasFace = currentUser.faceEmbedding != null && currentUser.faceEmbedding!.isNotEmpty;
+
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: cardBg,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: borderColor),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: hasFace
+                            ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                            : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
+                        border: Border.all(
+                          color: hasFace ? const Color(0xFF10B981) : borderColor,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Icon(
+                        hasFace ? Icons.face_retouching_natural : Icons.face_outlined,
+                        color: hasFace ? const Color(0xFF10B981) : subtextColor,
+                        size: 26,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            currentUser.name,
+                            style: TextStyle(
+                              color: textColor,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Role: ${currentUser.role.toUpperCase()} • ID: ${currentUser.id}',
+                            style: TextStyle(color: subtextColor, fontSize: 11),
+                          ),
+                          const SizedBox(height: 5),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: hasFace
+                                  ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                                  : const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              hasFace ? 'FACE ID ENROLLED' : 'NO FACE ID REGISTERED',
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.bold,
+                                color: hasFace ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Biometric face verification ensures user presence when performing mobile clock in & out.',
+                style: TextStyle(color: subtextColor, fontSize: 12),
+              ),
+              const SizedBox(height: 16),
+
+              ElevatedButton.icon(
+                onPressed: () async {
+                  final scaffoldMessenger = ScaffoldMessenger.of(context);
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (c) => FaceAuthScreen(
+                        title: 'Scan Face: ${currentUser.name}',
+                        checkForDuplicate: true,
+                        excludeEmployeeId: currentUser.id,
+                      ),
+                    ),
+                  );
+
+                  if (result != null && result is List<double> && context.mounted) {
+                    final duplicate = provider.findDuplicateFaceEmployee(result, excludeEmployeeId: currentUser.id);
+                    if (duplicate != null) {
+                      scaffoldMessenger.showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              const Icon(Icons.warning_amber_rounded, color: Colors.white),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  provider.translate('duplicate_face_detected').replaceAll('{name}', duplicate.name),
+                                ),
+                              ),
+                            ],
+                          ),
+                          backgroundColor: const Color(0xFFEF4444),
+                          duration: const Duration(seconds: 4),
+                        ),
+                      );
+                      return;
+                    }
+                    await provider.updateEmployeeFaceEmbedding(currentUser.id, result);
+                    setDialogState(() {});
+                    scaffoldMessenger.showSnackBar(
+                      SnackBar(
+                        content: Row(
+                          children: [
+                            const Icon(Icons.check_circle_rounded, color: Colors.white),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text('Face ID registered for ${currentUser.name}!')),
+                          ],
+                        ),
+                        backgroundColor: const Color(0xFF10B981),
+                      ),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.camera_alt_rounded, size: 18),
+                label: Text(hasFace ? 'Re-scan with Camera' : 'Enroll via Camera'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00E5CE),
+                  foregroundColor: const Color(0xFF0A2342),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+              ),
+
+              if (hasFace) ...[
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final scaffoldMessenger = ScaffoldMessenger.of(context);
+                    await provider.updateEmployeeFaceEmbedding(currentUser.id, null);
+                    setDialogState(() {});
+                    scaffoldMessenger.showSnackBar(
+                      SnackBar(
+                        content: Text('Face ID removed for ${currentUser.name}.'),
+                        backgroundColor: Colors.blueGrey,
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Color(0xFFEF4444)),
+                  label: const Text('Remove Face ID', style: TextStyle(color: Color(0xFFEF4444))),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFFEF4444)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                  ),
+                ),
+              ],
+            ],
+          );
+        },
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text('Close', style: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF64748B))),
+        ),
+      ],
+    );
+  }
+
 }

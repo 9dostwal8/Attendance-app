@@ -1,19 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import '../models/hr_models.dart';
 import '../services/face_recognition_service.dart';
+import '../providers/attendance_provider.dart';
 
 class FaceAuthScreen extends StatefulWidget {
   final List<double>? targetEmbedding; // If provided, verify against this single embedding
   final List<CompanyEmployee>? matchEmployees; // If provided, identify and match against enrolled employees
   final String title;
+  final bool checkForDuplicate; // If true, checks provider for duplicate face before returning
+  final String? excludeEmployeeId; // Employee ID to exclude when checking duplicates
 
   const FaceAuthScreen({
     super.key,
     this.targetEmbedding,
     this.matchEmployees,
     this.title = 'Face Authentication',
+    this.checkForDuplicate = false,
+    this.excludeEmployeeId,
   });
 
   @override
@@ -26,6 +31,7 @@ class _FaceAuthScreenState extends State<FaceAuthScreen> {
   int _currentCameraIndex = 0;
   final FaceRecognitionService _faceService = FaceRecognitionService();
   bool _isProcessing = false;
+  bool _isErrorMessage = false;
   String? _initError;
   String _statusMessage = 'Align your face inside the circle and tap capture.';
 
@@ -46,7 +52,7 @@ class _FaceAuthScreenState extends State<FaceAuthScreen> {
       if (_availableCameras.isEmpty) {
         setState(() {
           _initError = 'No camera found on this device.';
-          _statusMessage = 'Please select a photo from gallery.';
+          _statusMessage = 'Please ensure a camera is available.';
         });
         return;
       }
@@ -69,7 +75,7 @@ class _FaceAuthScreenState extends State<FaceAuthScreen> {
       if (mounted) {
         setState(() {
           _initError = 'Camera error: $e';
-          _statusMessage = 'You can still pick a photo from gallery.';
+          _statusMessage = 'Please check camera permissions and retry.';
         });
       }
     }
@@ -83,41 +89,6 @@ class _FaceAuthScreenState extends State<FaceAuthScreen> {
       enableAudio: false,
     );
     await _controller!.initialize();
-  }
-
-  Future<void> _switchCamera() async {
-    if (_availableCameras.length < 2 || _isProcessing) return;
-    _currentCameraIndex = (_currentCameraIndex + 1) % _availableCameras.length;
-    setState(() => _isProcessing = true);
-    try {
-      await _setupCameraController(_availableCameras[_currentCameraIndex]);
-    } catch (e) {
-      debugPrint('Failed to switch camera: $e');
-    } finally {
-      if (mounted) setState(() => _isProcessing = false);
-    }
-  }
-
-  Future<void> _pickFromGallery() async {
-    if (_isProcessing) return;
-    try {
-      final picker = ImagePicker();
-      final XFile? image = await picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 1200,
-        maxHeight: 1200,
-        imageQuality: 90,
-      );
-      if (image != null) {
-        await _processImagePath(image.path);
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _statusMessage = 'Failed to pick image: $e';
-        });
-      }
-    }
   }
 
   Future<void> _captureAndProcess() async {
@@ -144,6 +115,7 @@ class _FaceAuthScreenState extends State<FaceAuthScreen> {
   Future<void> _processImagePath(String imagePath) async {
     setState(() {
       _isProcessing = true;
+      _isErrorMessage = false;
       _statusMessage = 'Analyzing facial biometric features...';
     });
 
@@ -153,6 +125,7 @@ class _FaceAuthScreenState extends State<FaceAuthScreen> {
       if (embedding == null) {
         if (mounted) {
           setState(() {
+            _isErrorMessage = true;
             _statusMessage = 'No face detected. Please ensure your face is well-lit and clearly visible.';
             _isProcessing = false;
           });
@@ -183,6 +156,7 @@ class _FaceAuthScreenState extends State<FaceAuthScreen> {
         } else {
           if (mounted) {
             setState(() {
+              _isErrorMessage = true;
               _statusMessage = 'Face not recognized. Try again or sign in with your password.';
               _isProcessing = false;
             });
@@ -206,6 +180,7 @@ class _FaceAuthScreenState extends State<FaceAuthScreen> {
         } else {
           if (mounted) {
             setState(() {
+              _isErrorMessage = true;
               _statusMessage = 'Face did not match. Please try again.';
               _isProcessing = false;
             });
@@ -215,11 +190,32 @@ class _FaceAuthScreenState extends State<FaceAuthScreen> {
       }
 
       // Case 3: Registration / Enrollment Mode (targetEmbedding == null and matchEmployees == null)
+      if (widget.checkForDuplicate) {
+        if (!mounted) return;
+        final provider = Provider.of<AttendanceProvider>(context, listen: false);
+        final duplicate = provider.findDuplicateFaceEmployee(
+          embedding,
+          excludeEmployeeId: widget.excludeEmployeeId,
+        );
+        if (duplicate != null) {
+          if (mounted) {
+            setState(() {
+              _isErrorMessage = true;
+              final template = provider.translate('duplicate_face_detected');
+              _statusMessage = template.replaceAll('{name}', duplicate.name);
+              _isProcessing = false;
+            });
+          }
+          return;
+        }
+      }
+
       if (!mounted) return;
       Navigator.pop(context, embedding); // Return the List<double> face embedding
     } catch (e) {
       if (mounted) {
         setState(() {
+          _isErrorMessage = true;
           _statusMessage = 'Authentication error: $e';
           _isProcessing = false;
         });
@@ -249,19 +245,6 @@ class _FaceAuthScreenState extends State<FaceAuthScreen> {
           icon: const Icon(Icons.close_rounded, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        actions: [
-          if (_availableCameras.length > 1)
-            IconButton(
-              icon: const Icon(Icons.flip_camera_ios_rounded, color: Colors.white),
-              tooltip: 'Switch Camera',
-              onPressed: _switchCamera,
-            ),
-          IconButton(
-            icon: const Icon(Icons.photo_library_outlined, color: Colors.white),
-            tooltip: 'Pick from Gallery',
-            onPressed: _pickFromGallery,
-          ),
-        ],
       ),
       body: _buildBody(),
     );
@@ -295,22 +278,17 @@ class _FaceAuthScreenState extends State<FaceAuthScreen> {
                 style: const TextStyle(color: Colors.white70, fontSize: 13),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 24),
               ElevatedButton.icon(
-                onPressed: _pickFromGallery,
-                icon: const Icon(Icons.photo_library_rounded),
-                label: const Text('Select Photo from Gallery'),
+                onPressed: _initializeCamera,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Retry Camera'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF00E5CE),
                   foregroundColor: const Color(0xFF0A2342),
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
-              ),
-              const SizedBox(height: 14),
-              TextButton(
-                onPressed: _initializeCamera,
-                child: const Text('Retry Camera', style: TextStyle(color: Colors.white70)),
               ),
             ],
           ),
@@ -367,18 +345,19 @@ class _FaceAuthScreenState extends State<FaceAuthScreen> {
 
         // Glowing Scanner Border
         Center(
-          child: Container(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
             width: 270,
             height: 340,
             decoration: BoxDecoration(
               border: Border.all(
-                color: const Color(0xFF00E5CE),
+                color: _isErrorMessage ? const Color(0xFFEF4444) : const Color(0xFF00E5CE),
                 width: 3.5,
               ),
               borderRadius: BorderRadius.circular(160),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF00E5CE).withValues(alpha: 0.35),
+                  color: (_isErrorMessage ? const Color(0xFFEF4444) : const Color(0xFF00E5CE)).withValues(alpha: 0.35),
                   blurRadius: 20,
                   spreadRadius: 2,
                 ),
@@ -395,77 +374,79 @@ class _FaceAuthScreenState extends State<FaceAuthScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
                 padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.75),
+                  color: _isErrorMessage
+                      ? const Color(0xFF7F1D1D).withValues(alpha: 0.90)
+                      : Colors.black.withValues(alpha: 0.75),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white12),
-                ),
-                child: Text(
-                  _statusMessage,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                  border: Border.all(
+                    color: _isErrorMessage ? const Color(0xFFEF4444) : Colors.white12,
+                    width: _isErrorMessage ? 1.5 : 1.0,
                   ),
-                  textAlign: TextAlign.center,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (_isErrorMessage) ...[
+                      const Icon(Icons.warning_amber_rounded, color: Color(0xFFFCA5A5), size: 20),
+                      const SizedBox(width: 8),
+                    ],
+                    Flexible(
+                      child: Text(
+                        _statusMessage,
+                        style: TextStyle(
+                          color: _isErrorMessage ? const Color(0xFFFEE2E2) : Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 22),
               if (!_isProcessing)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    // Gallery pick button
-                    IconButton(
-                      icon: const Icon(Icons.photo_library_rounded, color: Colors.white, size: 28),
-                      tooltip: 'Choose photo from gallery',
-                      onPressed: _pickFromGallery,
-                    ),
-                    // Capture button
-                    GestureDetector(
-                      onTap: _captureAndProcess,
-                      child: Container(
-                        width: 76,
-                        height: 76,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF00F0D8), Color(0xFF00BD96)],
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF00F0D8).withValues(alpha: 0.5),
-                              blurRadius: 18,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
+                Center(
+                  child: GestureDetector(
+                    onTap: _captureAndProcess,
+                    child: Container(
+                      width: 76,
+                      height: 76,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF00F0D8), Color(0xFF00BD96)],
                         ),
-                        child: Center(
-                          child: Container(
-                            width: 62,
-                            height: 62,
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white,
-                            ),
-                            child: const Icon(
-                              Icons.camera_alt_rounded,
-                              color: Color(0xFF0A2342),
-                              size: 32,
-                            ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF00F0D8).withValues(alpha: 0.5),
+                            blurRadius: 18,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Container(
+                          width: 62,
+                          height: 62,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white,
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt_rounded,
+                            color: Color(0xFF0A2342),
+                            size: 32,
                           ),
                         ),
                       ),
                     ),
-                    // Flip camera button
-                    IconButton(
-                      icon: const Icon(Icons.flip_camera_ios_rounded, color: Colors.white, size: 28),
-                      tooltip: 'Switch Camera',
-                      onPressed: _availableCameras.length > 1 ? _switchCamera : null,
-                    ),
-                  ],
+                  ),
                 ),
               if (_isProcessing)
                 const Padding(

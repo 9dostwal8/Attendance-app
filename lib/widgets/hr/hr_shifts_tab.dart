@@ -52,11 +52,22 @@ class _HrShiftsTabState extends State<HrShiftsTab> {
                     ? 2
                     : 1;
 
+        if (crossAxisCount == 1) {
+          return ListView.separated(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+            itemCount: filtered.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 14),
+            itemBuilder: (context, index) {
+              return _buildShiftCard(context, filtered[index], provider);
+            },
+          );
+        }
+
         return GridView.builder(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            childAspectRatio: crossAxisCount == 1 ? 2.2 : (crossAxisCount == 2 ? 1.75 : 1.95),
+            childAspectRatio: crossAxisCount == 2 ? 1.6 : 1.75,
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
           ),
@@ -144,8 +155,11 @@ class _HrShiftsTabState extends State<HrShiftsTab> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 3),
-                    Row(
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -175,8 +189,7 @@ class _HrShiftsTabState extends State<HrShiftsTab> {
                             ),
                           ),
                         ),
-                        if (shift.isRotation && shift.rotationStartDate.isNotEmpty) ...[
-                          const SizedBox(width: 4),
+                        if (shift.isRotation && shift.rotationStartDate.isNotEmpty)
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                             decoration: BoxDecoration(
@@ -195,9 +208,7 @@ class _HrShiftsTabState extends State<HrShiftsTab> {
                               ),
                             ),
                           ),
-                        ],
-                        if (shift.isOvernight || (!shift.isRotation && WorkShift.isTimeCrossMidnight(shift.startTime, shift.endTime))) ...[
-                          const SizedBox(width: 5),
+                        if (shift.isOvernight || (!shift.isRotation && WorkShift.isTimeCrossMidnight(shift.startTime, shift.endTime)))
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                             decoration: BoxDecoration(
@@ -225,9 +236,7 @@ class _HrShiftsTabState extends State<HrShiftsTab> {
                               ],
                             ),
                           ),
-                        ],
-                        if (shift.isSpecialShift) ...[
-                          const SizedBox(width: 8),
+                        if (shift.isSpecialShift)
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                             decoration: BoxDecoration(
@@ -249,9 +258,8 @@ class _HrShiftsTabState extends State<HrShiftsTab> {
                                 ),
                               ],
                             ),
-                          ),
-                        ] else if (shift.isOvernight) ...[
-                          const SizedBox(width: 8),
+                          )
+                        else if (shift.isOvernight)
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                             decoration: BoxDecoration(
@@ -274,22 +282,6 @@ class _HrShiftsTabState extends State<HrShiftsTab> {
                               ],
                             ),
                           ),
-                        ],
-                        if (!shift.isRotation) ...[
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              '${shift.startTime} - ${shift.endTime}',
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w500,
-                                color: subtextColor,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
                       ],
                     ),
                   ],
@@ -936,22 +928,24 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                   border: Border.all(color: Colors.white12),
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Rotating Shift Cycle',
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          'Shift schedule repeats continuously every N days (e.g. 3 days, 4 days)',
-                          style: TextStyle(fontSize: 11, color: Colors.grey),
-                        ),
-                      ],
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Rotating Shift Cycle',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Shift schedule repeats continuously every N days (e.g. 3 days, 4 days)',
+                            style: TextStyle(fontSize: 11, color: Colors.grey),
+                          ),
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     Switch(
                       value: isRotation,
                       activeThumbColor: const Color(0xFF8B5CF6),
@@ -974,7 +968,6 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                   border: Border.all(color: Colors.white12),
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Expanded(
                       child: Column(
@@ -992,6 +985,7 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                         ],
                       ),
                     ),
+                    const SizedBox(width: 8),
                     Switch(
                       value: isSpecialShift,
                       activeThumbColor: const Color(0xFF10B981),
@@ -1197,10 +1191,14 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           const Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(Icons.sync_rounded, color: Color(0xFF8B5CF6), size: 18),
                               SizedBox(width: 8),
@@ -1228,43 +1226,43 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                         ],
                       ),
                       const SizedBox(height: 10),
-                      Row(
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Expanded(
-                            child: Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
-                              children: [2, 3, 4, 5, 6, 7].map((days) {
-                                final isSelected = rotationDays == days;
-                                return ChoiceChip(
-                                  label: Text('$days Days'),
-                                  selected: isSelected,
-                                  selectedColor: const Color(0xFF8B5CF6),
-                                  backgroundColor: isDark ? Colors.white10 : Colors.grey.shade200,
-                                  labelStyle: TextStyle(
-                                    fontSize: 11.5,
-                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                    color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
-                                  ),
-                                  onSelected: (selected) {
-                                    if (selected) {
-                                      setDialogState(() {
-                                        rotationDays = days;
-                                        for (int i = 1; i <= rotationDays; i++) {
-                                          rotationSchedule[i] ??= DayShiftConfig(
-                                            isWorkingDay: i != rotationDays,
-                                            startTime: '08:00',
-                                            endTime: '16:00',
-                                          );
-                                        }
-                                      });
-                                    }
-                                  },
-                                );
-                              }).toList(),
-                            ),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: [2, 3, 4, 5, 6, 7].map((days) {
+                              final isSelected = rotationDays == days;
+                              return ChoiceChip(
+                                label: Text('$days Days'),
+                                selected: isSelected,
+                                selectedColor: const Color(0xFF8B5CF6),
+                                backgroundColor: isDark ? Colors.white10 : Colors.grey.shade200,
+                                labelStyle: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                  color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
+                                ),
+                                onSelected: (selected) {
+                                  if (selected) {
+                                    setDialogState(() {
+                                      rotationDays = days;
+                                      for (int i = 1; i <= rotationDays; i++) {
+                                        rotationSchedule[i] ??= DayShiftConfig(
+                                          isWorkingDay: i != rotationDays,
+                                          startTime: '08:00',
+                                          endTime: '16:00',
+                                        );
+                                      }
+                                    });
+                                  }
+                                },
+                              );
+                            }).toList(),
                           ),
-                          const SizedBox(width: 8),
                           Container(
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),

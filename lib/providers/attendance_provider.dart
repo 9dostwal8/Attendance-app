@@ -17,6 +17,8 @@ import '../services/web_notification_helper.dart';
 import '../widgets/web_notification_toast.dart';
 import '../main.dart';
 import '../screens/chat_room_screen.dart';
+import '../services/face_recognition_service.dart';
+import '../services/fcm_push_service.dart';
 
 class AttendanceProvider with ChangeNotifier {
   // User Profile Data
@@ -29,9 +31,12 @@ class AttendanceProvider with ChangeNotifier {
   String _position = 'HR Manager';
   String? _avatarPath;
 
+  String _role = 'hr';
+
   final FirebaseService _firebaseService = FirebaseService();
   final Map<String, List<Request>> _allRequestsMap = {};
   String _currentLanguage = 'en';
+  String _themePreference = 'light';
   bool _isLoading = false;
   bool _isLoggedIn = false;
   final List<StreamSubscription> _subscriptions = [];
@@ -52,6 +57,7 @@ class AttendanceProvider with ChangeNotifier {
         _userTitle = match.position;
         _position = match.position;
         _email = match.email;
+        _role = match.role;
         _department = match.structureId ?? match.position;
         if (match.avatarUrl != null && match.avatarUrl!.isNotEmpty) {
           _avatarPath = match.avatarUrl;
@@ -63,6 +69,13 @@ class AttendanceProvider with ChangeNotifier {
             prefs.setString('app_language', langPref);
           });
         }
+        final themePref = match.themePreference;
+        if (themePref.isNotEmpty && _themePreference != themePref) {
+          _themePreference = themePref;
+          SharedPreferences.getInstance().then((prefs) {
+            prefs.setString('app_theme_preference', themePref);
+          });
+        }
         if (_isLoggedIn) {
           _saveAuthSession(
             true,
@@ -70,6 +83,10 @@ class AttendanceProvider with ChangeNotifier {
             name: match.name,
             email: match.email,
             position: match.position,
+            role: match.role,
+            department: match.structureId ?? match.position,
+            avatarUrl: match.avatarUrl,
+            themePreference: match.themePreference,
           );
         }
       }
@@ -84,11 +101,16 @@ class AttendanceProvider with ChangeNotifier {
     String? name,
     String? email,
     String? position,
+    String? role,
+    String? department,
+    String? avatarUrl,
+    String? themePreference,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isLoggedIn', loggedIn);
       await prefs.setString('app_language', _currentLanguage);
+      await prefs.setString('app_theme_preference', _themePreference);
       if (loggedIn) {
         await prefs.setString('loggedInEmployeeId', empId);
         if (name != null) await prefs.setString('loggedInUserName', name);
@@ -96,11 +118,26 @@ class AttendanceProvider with ChangeNotifier {
         if (position != null) {
           await prefs.setString('loggedInPosition', position);
         }
+        if (role != null) {
+          await prefs.setString('loggedInRole', role);
+        }
+        if (department != null) {
+          await prefs.setString('loggedInDepartment', department);
+        }
+        if (avatarUrl != null) {
+          await prefs.setString('user_avatar_$empId', avatarUrl);
+        }
+        if (themePreference != null && themePreference.isNotEmpty) {
+          await prefs.setString('app_theme_preference', themePreference);
+          _themePreference = themePreference;
+        }
       } else {
         await prefs.remove('loggedInEmployeeId');
         await prefs.remove('loggedInUserName');
         await prefs.remove('loggedInEmail');
         await prefs.remove('loggedInPosition');
+        await prefs.remove('loggedInRole');
+        await prefs.remove('loggedInDepartment');
       }
     } catch (e) {
       debugPrint('Error saving auth session: $e');
@@ -114,11 +151,17 @@ class AttendanceProvider with ChangeNotifier {
       if (savedLang != null && savedLang.isNotEmpty) {
         _currentLanguage = savedLang;
       }
+      final savedTheme = prefs.getString('app_theme_preference');
+      if (savedTheme != null && savedTheme.isNotEmpty) {
+        _themePreference = savedTheme;
+      }
       final isLoggedInSaved = prefs.getBool('isLoggedIn') ?? false;
       final savedEmployeeId = prefs.getString('loggedInEmployeeId');
       final savedName = prefs.getString('loggedInUserName');
       final savedEmail = prefs.getString('loggedInEmail');
       final savedPosition = prefs.getString('loggedInPosition');
+      final savedRole = prefs.getString('loggedInRole');
+      final savedDepartment = prefs.getString('loggedInDepartment');
 
       if (isLoggedInSaved) {
         _isLoggedIn = true;
@@ -135,13 +178,19 @@ class AttendanceProvider with ChangeNotifier {
           _position = savedPosition;
           _userTitle = savedPosition;
         }
+        if (savedRole != null && savedRole.isNotEmpty) {
+          _role = savedRole;
+        }
+        if (savedDepartment != null && savedDepartment.isNotEmpty) {
+          _department = savedDepartment;
+        }
         final savedAvatar = prefs.getString('user_avatar_$_employeeId');
         if (savedAvatar != null && savedAvatar.isNotEmpty) {
           _avatarPath = savedAvatar;
         }
         _syncCurrentEmployeeInfo();
         notifyListeners();
-      } else if (savedLang != null && savedLang.isNotEmpty) {
+      } else if ((savedLang != null && savedLang.isNotEmpty) || (savedTheme != null && savedTheme.isNotEmpty)) {
         notifyListeners();
       }
     } catch (e) {
@@ -176,6 +225,14 @@ class AttendanceProvider with ChangeNotifier {
         if (match.languagePreference.isNotEmpty) {
           _currentLanguage = match.languagePreference;
         }
+        if (match.themePreference.isNotEmpty) {
+          _themePreference = match.themePreference;
+        }
+        _role = match.role;
+        _department = match.structureId ?? match.position;
+        if (match.avatarUrl != null && match.avatarUrl!.isNotEmpty) {
+          _avatarPath = match.avatarUrl;
+        }
         _isLoggedIn = true;
         _isLoading = false;
         await _saveAuthSession(
@@ -184,6 +241,10 @@ class AttendanceProvider with ChangeNotifier {
           name: _userName,
           email: _email,
           position: _position,
+          role: match.role,
+          department: match.structureId ?? match.position,
+          avatarUrl: match.avatarUrl,
+          themePreference: match.themePreference,
         );
 
         _records.clear();
@@ -212,8 +273,16 @@ class AttendanceProvider with ChangeNotifier {
     _userTitle = employee.position;
     _position = employee.position;
     _email = employee.email;
+    _role = employee.role;
+    _department = employee.structureId ?? employee.position;
+    if (employee.avatarUrl != null && employee.avatarUrl!.isNotEmpty) {
+      _avatarPath = employee.avatarUrl;
+    }
     if (employee.languagePreference.isNotEmpty) {
       _currentLanguage = employee.languagePreference;
+    }
+    if (employee.themePreference.isNotEmpty) {
+      _themePreference = employee.themePreference;
     }
     _isLoggedIn = true;
     await _saveAuthSession(
@@ -222,6 +291,10 @@ class AttendanceProvider with ChangeNotifier {
       name: _userName,
       email: _email,
       position: _position,
+      role: employee.role,
+      department: employee.structureId ?? employee.position,
+      avatarUrl: employee.avatarUrl,
+      themePreference: employee.themePreference,
     );
 
     _records.clear();
@@ -247,9 +320,12 @@ class AttendanceProvider with ChangeNotifier {
   int get unreadNotificationCount {
     _notifications ??= [];
     int count = _notifications!.where((n) => !n.isRead).length;
-    for (var messages in _chatMessagesMap.values) {
-      if (messages.any((m) => m.receiverId == _employeeId && !m.isRead)) {
-        count++;
+    final myId = _employeeId.trim().toLowerCase();
+    if (myId.isNotEmpty) {
+      for (var messages in _chatMessagesMap.values) {
+        if (messages.any((m) => m.receiverId.trim().toLowerCase() == myId && !m.isRead)) {
+          count++;
+        }
       }
     }
     return count;
@@ -273,12 +349,33 @@ class AttendanceProvider with ChangeNotifier {
   }
 
   bool get hasUnreadMessages {
+    final myId = _employeeId.trim().toLowerCase();
+    if (myId.isEmpty) return false;
     for (var messages in _chatMessagesMap.values) {
-      if (messages.any((m) => m.receiverId == _employeeId && !m.isRead)) {
+      if (messages.any((m) => m.receiverId.trim().toLowerCase() == myId && !m.isRead)) {
         return true;
       }
     }
     return false;
+  }
+
+  int getUnreadCountForContact(dynamic contactId) {
+    final cId = contactId.toString().trim().toLowerCase();
+    final myId = _employeeId.trim().toLowerCase();
+    if (cId.isEmpty || myId.isEmpty) return 0;
+    
+    // Look up in chat messages map by exact key or case-insensitive match
+    List<ChatMessage>? messages = _chatMessagesMap[contactId.toString()];
+    if (messages == null) {
+      for (var entry in _chatMessagesMap.entries) {
+        if (entry.key.trim().toLowerCase() == cId) {
+          messages = entry.value;
+          break;
+        }
+      }
+    }
+    if (messages == null) return 0;
+    return messages.where((m) => m.receiverId.trim().toLowerCase() == myId && !m.isRead).length;
   }
 
   // Clock State
@@ -394,6 +491,11 @@ class AttendanceProvider with ChangeNotifier {
         name: _userName,
         email: _email,
         position: _position,
+        role: _role,
+        structureId: _department,
+        avatarUrl: _avatarPath,
+        themePreference: _themePreference,
+        languagePreference: _currentLanguage,
       );
     }
     return null;
@@ -452,7 +554,23 @@ class AttendanceProvider with ChangeNotifier {
     return group.canEditCompanyInfo;
   }
 
-  bool get isDarkMode => (currentEmployee?.themePreference ?? 'dark') == 'dark';
+  /// Whether the logged-in user is an HR manager/admin who can register/delete Face ID
+  bool get isHRManager {
+    final emp = currentEmployee;
+    if (emp == null) return false;
+    final role = emp.role.toLowerCase().trim();
+    if (role == 'hr' || role == 'admin') return true;
+    final pos = emp.position.toLowerCase();
+    if (pos.contains('hr') || pos.contains('human resource')) return true;
+    return canEditCompanyInfo;
+  }
+
+  bool get isDarkMode {
+    if (currentEmployee != null && currentEmployee!.themePreference.isNotEmpty) {
+      return currentEmployee!.themePreference == 'dark';
+    }
+    return _themePreference == 'dark';
+  }
 
   TextDirection get currentLanguageDirection {
     return (_currentLanguage == 'ar' || _currentLanguage == 'ku')
@@ -490,22 +608,67 @@ class AttendanceProvider with ChangeNotifier {
   }
 
   Future<void> toggleTheme() async {
-    final emp = currentEmployee;
-    if (emp == null) return;
-
     final newPreference = isDarkMode ? 'light' : 'dark';
-    final updatedEmp = emp.copyWith(themePreference: newPreference);
-
-    final index = _employees.indexWhere((e) => e.id == emp.id);
-    if (index != -1) {
-      _employees[index] = updatedEmp;
-    }
-
-    await _firebaseService.saveEmployee(updatedEmp);
+    _themePreference = newPreference;
     notifyListeners();
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('app_theme_preference', newPreference);
+
+      final emp = currentEmployee;
+      if (emp != null) {
+        final updatedEmp = emp.copyWith(themePreference: newPreference);
+        final index = _employees.indexWhere((e) => e.id == emp.id);
+        if (index != -1) {
+          _employees[index] = updatedEmp;
+        }
+        await _firebaseService.saveEmployee(updatedEmp);
+      }
+    } catch (e) {
+      debugPrint('Error persisting theme preference: $e');
+    }
   }
 
-  AttendanceProvider() {
+  AttendanceProvider({
+    String initialThemePreference = 'light',
+    String initialLanguage = 'en',
+    bool initialLoggedIn = false,
+    String? initialEmployeeId,
+    String? initialUserName,
+    String? initialEmail,
+    String? initialPosition,
+    String? initialRole,
+    String? initialDepartment,
+    String? initialAvatarPath,
+  }) {
+    _themePreference = initialThemePreference;
+    if (initialLanguage.isNotEmpty) {
+      _currentLanguage = initialLanguage;
+    }
+    _isLoggedIn = initialLoggedIn;
+    if (initialEmployeeId != null && initialEmployeeId.isNotEmpty) {
+      _employeeId = initialEmployeeId;
+    }
+    if (initialUserName != null && initialUserName.isNotEmpty) {
+      _userName = initialUserName;
+    }
+    if (initialEmail != null && initialEmail.isNotEmpty) {
+      _email = initialEmail;
+    }
+    if (initialPosition != null && initialPosition.isNotEmpty) {
+      _position = initialPosition;
+      _userTitle = initialPosition;
+    }
+    if (initialRole != null && initialRole.isNotEmpty) {
+      _role = initialRole;
+    }
+    if (initialDepartment != null && initialDepartment.isNotEmpty) {
+      _department = initialDepartment;
+    }
+    if (initialAvatarPath != null && initialAvatarPath.isNotEmpty) {
+      _avatarPath = initialAvatarPath;
+    }
     _isLoading = _firebaseService.isAvailable;
     _initializeMockData();
     _initializeHRMockData();
@@ -593,9 +756,19 @@ class AttendanceProvider with ChangeNotifier {
       );
     }
 
-    // Seed empty Firestore tables with timeout
+    // 2. Query Firestore and update state immediately for fast, smooth startup
     try {
-      await _firebaseService
+      await _setupFirestoreListeners();
+    } catch (e) {
+      debugPrint('Error loading data from Firestore: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+
+    // 3. Seed empty Firestore tables asynchronously in background without blocking startup
+    unawaited(
+      _firebaseService
           .seedDefaultMockData(
             structures: _structures,
             shifts: _shifts,
@@ -606,20 +779,10 @@ class AttendanceProvider with ChangeNotifier {
             userRequests: defaultRequests,
             locations: _locations,
           )
-          .timeout(const Duration(seconds: 4));
-    } catch (e) {
-      debugPrint('Seeding Firestore database timed out or failed: $e');
-    }
-
-    // 2. Query Firestore and update state
-    try {
-      await _setupFirestoreListeners();
-    } catch (e) {
-      debugPrint('Error loading data from Firestore: $e');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
+          .catchError((e) {
+            debugPrint('Background seeding Firestore database completed/handled: $e');
+          }),
+    );
   }
 
   Future<void> _setupFirestoreListeners() async {
@@ -831,7 +994,7 @@ class AttendanceProvider with ChangeNotifier {
       // Request permission
       await messaging.requestPermission(alert: true, badge: true, sound: true);
 
-      // Initialize local notifications for foreground
+      // Initialize local notifications for foreground and register high-priority notification channel
       const AndroidInitializationSettings initializationSettingsAndroid =
           AndroidInitializationSettings('@mipmap/ic_launcher');
       const DarwinInitializationSettings initializationSettingsIOS =
@@ -844,6 +1007,20 @@ class AttendanceProvider with ChangeNotifier {
       await _localNotificationsPlugin.initialize(
         settings: initializationSettings,
       );
+
+      // Create high-priority notification channel for Android system tray
+      const AndroidNotificationChannel channel = AndroidNotificationChannel(
+        'chat_channel_id',
+        'Chat Messages',
+        description: 'Notifications for new messages and attendance alerts',
+        importance: Importance.max,
+        playSound: true,
+        enableVibration: true,
+      );
+      await _localNotificationsPlugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(channel);
 
       // Get token
       String? token = await messaging.getToken();
@@ -1333,6 +1510,7 @@ class AttendanceProvider with ChangeNotifier {
         daysWorked++;
         int dayDuty = 0;
         int dayExtra = 0;
+        int dayActualMinutes = 0;
 
         final startTimeStr = shift.getStartTimeForDate(date);
         final endTimeStr = shift.getEndTimeForDate(date);
@@ -1399,15 +1577,25 @@ class AttendanceProvider with ChangeNotifier {
               dayExtra += cOut.difference(sAfter).inMinutes;
             }
           }
+          dayActualMinutes += cOut.difference(cIn).inMinutes;
         }
 
         totalDutyMinutes += dayDuty;
 
         // Delay & Early Exit
+        final isSpecial = shift.isSpecialShiftForDate(date);
+        final shiftDur = shift.getShiftDurationMinutesForDate(date);
+
         int dayDelay = 0;
         int dayEarlyExit = 0;
         int unexcusedRestMinutes = 0;
-        if (isWorkingDay && !hasLeave && !isHoliday) {
+
+        if (isSpecial) {
+          dayDelay = 0;
+          dayEarlyExit = 0;
+          dayDuty = dayActualMinutes > shiftDur ? shiftDur : dayActualMinutes;
+          dayExtra = dayActualMinutes > shiftDur ? (dayActualMinutes - shiftDur) : 0;
+        } else if (isWorkingDay && !hasLeave && !isHoliday) {
           final sorted = List<AttendanceRecord>.from(dayRecords)
             ..sort((a, b) => a.checkIn.compareTo(b.checkIn));
           final firstRec = sorted.first;
@@ -1541,7 +1729,16 @@ class AttendanceProvider with ChangeNotifier {
         }
 
         // Deficit on active day
-        int dayDeficit = dayDelay + dayEarlyExit + unexcusedRestMinutes;
+        int dayDeficit = 0;
+        if (isSpecial) {
+          if (isWorkingDay && !hasLeave && !isHoliday) {
+            if (dayActualMinutes < shiftDur) {
+              dayDeficit = shiftDur - dayActualMinutes;
+            }
+          }
+        } else {
+          dayDeficit = dayDelay + dayEarlyExit + unexcusedRestMinutes;
+        }
         totalDeficitMinutes += dayDeficit;
       } else {
         // No record on this day
@@ -1683,12 +1880,13 @@ class AttendanceProvider with ChangeNotifier {
     List<CompanyEmployee> contacts = [];
     final Set<String> contactIds = {};
 
-    if (currentUser.role == 'hr') {
+    final userRole = currentUser.role.trim().toLowerCase();
+    if (userRole == 'hr' || userRole == 'admin' || userRole == 'super_admin' || userRole == 'superadmin') {
       contacts = _employees.where((e) => e.id != currentUser.id).toList();
       for (var c in contacts) {
         contactIds.add(c.id);
       }
-    } else if (currentUser.role == 'supervisor') {
+    } else if (userRole == 'supervisor') {
       final supervisedStructures = _structures
           .where((s) => s.supervisorId == currentUser.id)
           .map((s) => s.id)
@@ -1720,9 +1918,9 @@ class AttendanceProvider with ChangeNotifier {
         }
       }
 
-      // Include HR managers so supervisors can communicate with HR
+      // Include HR managers & admins so supervisors can communicate with them
       final hrEmps = _employees.where(
-        (e) => e.role == 'hr' && e.id != currentUser.id,
+        (e) => (e.role == 'hr' || e.role == 'admin') && e.id != currentUser.id,
       );
       for (var hr in hrEmps) {
         if (contactIds.add(hr.id)) {
@@ -1738,9 +1936,9 @@ class AttendanceProvider with ChangeNotifier {
         }
       }
 
-      // Plus HR managers
+      // Plus HR managers and Admins
       final hrEmps = _employees.where(
-        (e) => e.role == 'hr' && e.id != currentUser.id,
+        (e) => (e.role == 'hr' || e.role == 'admin') && e.id != currentUser.id,
       );
       for (var hr in hrEmps) {
         if (contactIds.add(hr.id)) {
@@ -2941,11 +3139,45 @@ class AttendanceProvider with ChangeNotifier {
   Future<void> addLocation(dynamic loc) async =>
       await _firebaseService.saveLocation(loc);
 
+  final FaceRecognitionService _faceService = FaceRecognitionService();
+
+  /// Check if the provided face embedding matches any other employee
+  CompanyEmployee? findDuplicateFaceEmployee(
+    List<double> embedding, {
+    String? excludeEmployeeId,
+    double threshold = 1.05,
+  }) {
+    final cleanExclude = excludeEmployeeId?.toString().trim();
+    for (final emp in _employees) {
+      if (cleanExclude != null && cleanExclude.isNotEmpty && emp.id == cleanExclude) {
+        continue;
+      }
+      if (emp.faceEmbedding == null || emp.faceEmbedding!.isEmpty) {
+        continue;
+      }
+      final dist = _faceService.calculateEuclideanDistance(emp.faceEmbedding!, embedding);
+      if (dist < threshold) {
+        return emp;
+      }
+    }
+    return null;
+  }
+
   Future<void> updateEmployeeFaceEmbedding(
     dynamic empId,
     List<double>? embedding,
   ) async {
+    if (!isHRManager) {
+      throw Exception('PERMISSION_DENIED: Only HR Managers can register or delete Face ID.');
+    }
     final strId = empId.toString().trim();
+    if (embedding != null && embedding.isNotEmpty) {
+      final duplicate = findDuplicateFaceEmployee(embedding, excludeEmployeeId: strId);
+      if (duplicate != null) {
+        throw Exception('DUPLICATE_FACE:${duplicate.name}');
+      }
+    }
+
     final index = _employees.indexWhere((e) => e.id == strId);
     if (index != -1) {
       final updated = _employees[index].copyWith(
@@ -2980,18 +3212,35 @@ class AttendanceProvider with ChangeNotifier {
   }
 
   Future<void> markMessagesAsRead(dynamic otherId) async {
-    final cId = otherId.toString();
-    final messages = _chatMessagesMap[cId];
-    if (messages == null) return;
+    final cId = otherId.toString().trim().toLowerCase();
+    final myId = _employeeId.trim().toLowerCase();
+    if (cId.isEmpty || myId.isEmpty) return;
+
+    // Find the relevant message list
+    String? matchedKey;
+    List<ChatMessage>? messages = _chatMessagesMap[otherId.toString()];
+    if (messages != null) {
+      matchedKey = otherId.toString();
+    } else {
+      for (var entry in _chatMessagesMap.entries) {
+        if (entry.key.trim().toLowerCase() == cId) {
+          messages = entry.value;
+          matchedKey = entry.key;
+          break;
+        }
+      }
+    }
+
+    if (messages == null || matchedKey == null) return;
 
     final unreadMessages = messages
-        .where((m) => m.receiverId == _employeeId && !m.isRead)
+        .where((m) => m.receiverId.trim().toLowerCase() == myId && !m.isRead)
         .toList();
     if (unreadMessages.isEmpty) return;
 
     // Update in-memory first to avoid infinite callback loop
     for (int i = 0; i < messages.length; i++) {
-      if (messages[i].receiverId == _employeeId && !messages[i].isRead) {
+      if (messages[i].receiverId.trim().toLowerCase() == myId && !messages[i].isRead) {
         messages[i] = messages[i].copyWith(isRead: true);
       }
     }
@@ -3000,6 +3249,31 @@ class AttendanceProvider with ChangeNotifier {
     if (_firebaseService.isAvailable) {
       for (var m in unreadMessages) {
         await _firebaseService.saveChatMessage(m.copyWith(isRead: true));
+      }
+    }
+  }
+
+  Future<void> markAllChatMessagesAsRead() async {
+    final myId = _employeeId.trim().toLowerCase();
+    if (myId.isEmpty) return;
+
+    final List<ChatMessage> toUpdateInFirestore = [];
+    for (var list in _chatMessagesMap.values) {
+      for (int i = 0; i < list.length; i++) {
+        if (list[i].receiverId.trim().toLowerCase() == myId && !list[i].isRead) {
+          final updated = list[i].copyWith(isRead: true);
+          list[i] = updated;
+          toUpdateInFirestore.add(updated);
+        }
+      }
+    }
+
+    if (toUpdateInFirestore.isNotEmpty) {
+      notifyListeners();
+      if (_firebaseService.isAvailable) {
+        for (var m in toUpdateInFirestore) {
+          await _firebaseService.saveChatMessage(m);
+        }
       }
     }
   }
@@ -3035,6 +3309,33 @@ class AttendanceProvider with ChangeNotifier {
 
     if (_firebaseService.isAvailable) {
       await _firebaseService.saveChatMessage(newMsg);
+
+      // Trigger push notification to receiver's device
+      try {
+        CompanyEmployee? receiverEmp;
+        try {
+          receiverEmp = _employees.firstWhere(
+            (e) => e.id.trim().toLowerCase() == rId.trim().toLowerCase(),
+          );
+        } catch (_) {}
+
+        if (receiverEmp != null && receiverEmp.fcmToken != null && receiverEmp.fcmToken!.isNotEmpty) {
+          final senderName = _userName.isNotEmpty ? _userName : 'Colleague';
+          FcmPushService.sendNotification(
+            targetFcmToken: receiverEmp.fcmToken!,
+            title: 'Message from $senderName',
+            body: msgStr,
+            data: {
+              'type': 'chat_message',
+              'senderId': _employeeId,
+              'senderName': senderName,
+              'receiverId': rId,
+            },
+          );
+        }
+      } catch (e) {
+        debugPrint('Error triggering direct FCM push for chat: $e');
+      }
     }
   }
 }

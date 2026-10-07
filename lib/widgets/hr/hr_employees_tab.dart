@@ -6,6 +6,8 @@ import '../../models/hr_models.dart';
 import '../glass_container.dart';
 import '../glass_dialog.dart';
 import '../neu_button.dart';
+import '../avatar_image_helper.dart';
+import '../../screens/face_auth_screen.dart';
 
 class HrEmployeesTab extends StatefulWidget {
   final String searchQuery;
@@ -94,6 +96,10 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
           else
             LayoutBuilder(
               builder: (context, constraints) {
+                final isMobile = constraints.maxWidth < 768;
+                if (isMobile) {
+                  return _buildMobileEmployeesList(context, filteredEmployees, provider, isDark);
+                }
                 return _buildEmployeesTable(context, filteredEmployees, provider, isDark);
               },
             ),
@@ -114,56 +120,73 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < 600;
+        final chips = [
+          _buildKpiChip(
+            context: context,
+            label: 'Total Users',
+            value: '$total',
+            icon: Icons.people_alt_rounded,
+            color: const Color(0xFF2E65FF),
+            isDark: isDark,
+            width: isMobile ? 140 : 160,
+          ),
+          _buildKpiChip(
+            context: context,
+            label: 'Active Users',
+            value: '$active',
+            icon: Icons.check_circle_rounded,
+            color: const Color(0xFF10B981),
+            isDark: isDark,
+            width: isMobile ? 140 : 160,
+          ),
+          _buildKpiChip(
+            context: context,
+            label: 'HR / Admins',
+            value: '$hrAdmins',
+            icon: Icons.admin_panel_settings_rounded,
+            color: const Color(0xFF8B5CF6),
+            isDark: isDark,
+            width: isMobile ? 140 : 160,
+          ),
+          _buildKpiChip(
+            context: context,
+            label: 'Supervisors',
+            value: '$supervisors',
+            icon: Icons.supervisor_account_rounded,
+            color: const Color(0xFFF59E0B),
+            isDark: isDark,
+            width: isMobile ? 140 : 160,
+          ),
+          _buildKpiChip(
+            context: context,
+            label: 'Face Verified',
+            value: '$faceVerified',
+            icon: Icons.face_retouching_natural,
+            color: const Color(0xFF06B6D4),
+            isDark: isDark,
+            width: isMobile ? 140 : 160,
+          ),
+        ];
+
+        if (isMobile) {
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: Row(
+              children: [
+                for (int i = 0; i < chips.length; i++) ...[
+                  chips[i],
+                  if (i < chips.length - 1) const SizedBox(width: 10),
+                ],
+              ],
+            ),
+          );
+        }
+
         return Wrap(
           spacing: 12,
           runSpacing: 12,
-          children: [
-            _buildKpiChip(
-              context: context,
-              label: 'Total Users',
-              value: '$total',
-              icon: Icons.people_alt_rounded,
-              color: const Color(0xFF2E65FF),
-              isDark: isDark,
-              width: isMobile ? (constraints.maxWidth - 12) / 2 : 160,
-            ),
-            _buildKpiChip(
-              context: context,
-              label: 'Active Users',
-              value: '$active',
-              icon: Icons.check_circle_rounded,
-              color: const Color(0xFF10B981),
-              isDark: isDark,
-              width: isMobile ? (constraints.maxWidth - 12) / 2 : 160,
-            ),
-            _buildKpiChip(
-              context: context,
-              label: 'HR / Admins',
-              value: '$hrAdmins',
-              icon: Icons.admin_panel_settings_rounded,
-              color: const Color(0xFF8B5CF6),
-              isDark: isDark,
-              width: isMobile ? (constraints.maxWidth - 12) / 2 : 160,
-            ),
-            _buildKpiChip(
-              context: context,
-              label: 'Supervisors',
-              value: '$supervisors',
-              icon: Icons.supervisor_account_rounded,
-              color: const Color(0xFFF59E0B),
-              isDark: isDark,
-              width: isMobile ? (constraints.maxWidth - 12) / 2 : 160,
-            ),
-            _buildKpiChip(
-              context: context,
-              label: 'Face Verified',
-              value: '$faceVerified',
-              icon: Icons.face_retouching_natural,
-              color: const Color(0xFF06B6D4),
-              isDark: isDark,
-              width: isMobile ? constraints.maxWidth : 160,
-            ),
-          ],
+          children: chips,
         );
       },
     );
@@ -244,11 +267,96 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < 650;
-        return Flex(
-          direction: isMobile ? Axis.vertical : Axis.horizontal,
-          crossAxisAlignment: isMobile
-              ? CrossAxisAlignment.stretch
-              : CrossAxisAlignment.center,
+        
+        if (isMobile) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Top Action Buttons on Mobile
+              Row(
+                children: [
+                  Expanded(
+                    child: NeuButton(
+                      onPressed: () => _showUserFormDialog(context: context, provider: provider),
+                      icon: const Icon(Icons.person_add_alt_1_rounded, size: 16),
+                      label: 'Add User',
+                      variant: NeuButtonVariant.primary,
+                      height: 40,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  NeuIconButton(
+                    onPressed: () => _showResequenceConfirm(context, provider),
+                    icon: const Icon(Icons.format_list_numbered_rounded, size: 18),
+                    tooltip: 'Re-sequence IDs (1, 2, 3...)',
+                    size: 40,
+                    variant: NeuButtonVariant.whitePill,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              // Mobile Filter Chips / Dropdowns Scrollable Row
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                child: Row(
+                  children: [
+                    _buildDropdownFilter(
+                      context: context,
+                      isDark: isDark,
+                      value: _selectedRoleFilter,
+                      items: const [
+                        DropdownMenuItem(value: 'all', child: Text('All Roles')),
+                        DropdownMenuItem(value: 'hr', child: Text('HR / Admin')),
+                        DropdownMenuItem(value: 'supervisor', child: Text('Supervisor')),
+                        DropdownMenuItem(value: 'employee', child: Text('Employee')),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) setState(() => _selectedRoleFilter = val);
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    _buildDropdownFilter(
+                      context: context,
+                      isDark: isDark,
+                      value: _selectedStatusFilter,
+                      items: const [
+                        DropdownMenuItem(value: 'all', child: Text('All Status')),
+                        DropdownMenuItem(value: 'active', child: Text('Active Only')),
+                        DropdownMenuItem(value: 'disabled', child: Text('Suspended')),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) setState(() => _selectedStatusFilter = val);
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    _buildDropdownFilter(
+                      context: context,
+                      isDark: isDark,
+                      value: _selectedStructureFilter,
+                      items: [
+                        const DropdownMenuItem(value: 'all', child: Text('All Structures')),
+                        ...provider.structures.map(
+                          (s) => DropdownMenuItem(
+                            value: s.id,
+                            child: Text(s.name),
+                          ),
+                        ),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) setState(() => _selectedStructureFilter = val);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        }
+
+        // Desktop layout
+        return Row(
           children: [
             Wrap(
               spacing: 10,
@@ -301,7 +409,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                 ),
               ],
             ),
-            if (!isMobile) const Spacer() else const SizedBox(height: 12),
+            const Spacer(),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -373,6 +481,474 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                 ? const Color(0xFF2E65FF)
                 : (isDark ? Colors.white60 : Colors.black54),
             size: 20,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobileEmployeesList(
+    BuildContext context,
+    List<CompanyEmployee> employees,
+    AttendanceProvider provider,
+    bool isDark,
+  ) {
+    if (employees.isEmpty) {
+      return _buildEmptyState(context, isDark);
+    }
+
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: employees.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final employee = employees[index];
+        return _buildMobileEmployeeCard(context, employee, provider, isDark);
+      },
+    );
+  }
+
+  Widget _buildMobileEmployeeCard(
+    BuildContext context,
+    CompanyEmployee employee,
+    AttendanceProvider provider,
+    bool isDark,
+  ) {
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.08)
+        : const Color(0xFFE2E8F0);
+    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+
+    final isSuspended = employee.disabled;
+    final hasFaceId = employee.faceEmbedding != null && employee.faceEmbedding!.isNotEmpty;
+
+    final role = employee.role.toLowerCase().trim();
+    final roleColor = role == 'hr' || role == 'admin'
+        ? const Color(0xFF8B5CF6)
+        : role == 'supervisor'
+            ? const Color(0xFF2E65FF)
+            : const Color(0xFF10B981);
+
+    final structure = provider.structures.firstWhere(
+      (s) => s.id == employee.structureId,
+      orElse: () => OrgStructure(id: '', name: 'Unassigned', location: '', capacity: 0),
+    );
+
+    final group = provider.groups.firstWhere(
+      (g) => g.id == employee.groupId,
+      orElse: () => EmployeeGroup(id: '', name: 'Unassigned', shiftId: ''),
+    );
+
+    final avatarProvider = getAvatarProvider(employee.avatarUrl);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isSuspended ? Colors.redAccent.withValues(alpha: 0.3) : borderColor,
+          width: 1.1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? Colors.black.withValues(alpha: 0.25) : Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: () => _showUserDetailsDialog(context, employee, provider, isDark),
+          child: Padding(
+            padding: const EdgeInsets.all(14.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top Row: Avatar + Name + ID + More Actions Menu
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        CircleAvatar(
+                          radius: 24,
+                          backgroundColor: roleColor.withValues(alpha: 0.15),
+                          backgroundImage: avatarProvider,
+                          child: avatarProvider == null
+                              ? Text(
+                                  employee.name.trim().isNotEmpty
+                                      ? employee.name.trim()[0].toUpperCase()
+                                      : 'E',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: roleColor,
+                                  ),
+                                )
+                              : null,
+                        ),
+                        if (isSuspended)
+                          Positioned(
+                            bottom: -2,
+                            right: -2,
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: const BoxDecoration(
+                                color: Colors.redAccent,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.close_rounded, size: 10, color: Colors.white),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  employee.name,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: textColor,
+                                    letterSpacing: -0.2,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF2E65FF).withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  'ID: ${employee.id}',
+                                  style: const TextStyle(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF2E65FF),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            employee.position.isNotEmpty ? employee.position : 'Team Member',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w500,
+                              color: subtextColor,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (employee.email.isNotEmpty) ...[
+                            const SizedBox(height: 1),
+                            Text(
+                              employee.email,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: subtextColor.withValues(alpha: 0.8),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    PopupMenuButton<String>(
+                      icon: Icon(
+                        Icons.more_vert_rounded,
+                        size: 20,
+                        color: subtextColor,
+                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                      elevation: 8,
+                      onSelected: (value) {
+                        if (value == 'view') {
+                          _showUserDetailsDialog(context, employee, provider, isDark);
+                        } else if (value == 'edit') {
+                          if (widget.onEdit != null) {
+                            widget.onEdit!(employee);
+                          } else {
+                            _showUserFormDialog(context: context, provider: provider, employee: employee);
+                          }
+                        } else if (value == 'face') {
+                          _showFaceIdManageDialog(context, employee, provider);
+                        } else if (value == 'toggle_status') {
+                          final updated = employee.copyWith(disabled: !employee.disabled);
+                          provider.updateEmployee(updated);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                employee.disabled
+                                    ? '${employee.name}\'s account activated.'
+                                    : '${employee.name}\'s account suspended.',
+                              ),
+                            ),
+                          );
+                        } else if (value == 'delete') {
+                          if (widget.onDelete != null) {
+                            widget.onDelete!(employee.id);
+                          } else {
+                            _showDeleteConfirm(context, employee, provider);
+                          }
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'view',
+                          child: Row(
+                            children: [
+                              Icon(Icons.visibility_outlined, size: 18),
+                              SizedBox(width: 10),
+                              Text('View Full Details', style: TextStyle(fontSize: 13)),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit_outlined, size: 18),
+                              SizedBox(width: 10),
+                              Text('Edit User', style: TextStyle(fontSize: 13)),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'face',
+                          child: Row(
+                            children: [
+                              Icon(
+                                hasFaceId ? Icons.face_retouching_natural : Icons.face_outlined,
+                                size: 18,
+                                color: hasFaceId ? const Color(0xFF10B981) : null,
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                hasFaceId ? 'Manage Face ID' : 'Register Face ID',
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'toggle_status',
+                          child: Row(
+                            children: [
+                              Icon(
+                                isSuspended ? Icons.check_circle_outline : Icons.block_outlined,
+                                size: 18,
+                                color: isSuspended ? const Color(0xFF10B981) : Colors.orangeAccent,
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                isSuspended ? 'Activate User' : 'Suspend User',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: isSuspended ? const Color(0xFF10B981) : Colors.orangeAccent,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuDivider(),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete_outline, size: 18, color: Color(0xFFEF4444)),
+                              SizedBox(width: 10),
+                              Text('Delete User', style: TextStyle(fontSize: 13, color: Color(0xFFEF4444))),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Middle Row: Department, Group & Info Badges
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    // Role Badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: roleColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        employee.role.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.bold,
+                          color: roleColor,
+                        ),
+                      ),
+                    ),
+
+                    // Department Badge
+                    if (structure.name != 'Unassigned')
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.business_rounded, size: 12, color: subtextColor),
+                            const SizedBox(width: 4),
+                            Text(
+                              structure.name,
+                              style: TextStyle(fontSize: 11, color: textColor, fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    // Group Badge
+                    if (group.name != 'Unassigned')
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.people_outline_rounded, size: 12, color: subtextColor),
+                            const SizedBox(width: 4),
+                            Text(
+                              group.name,
+                              style: TextStyle(fontSize: 11, color: textColor, fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    // Suspended Status Badge
+                    if (isSuspended)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.redAccent.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'SUSPENDED',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.redAccent,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Bottom Action Bar: Quick Face ID status + Quick Action Buttons
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.black.withValues(alpha: 0.2)
+                        : const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: borderColor.withValues(alpha: 0.6)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Face ID indicator button
+                      InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: () => _showFaceIdManageDialog(context, employee, provider),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                hasFaceId ? Icons.face_retouching_natural : Icons.face_outlined,
+                                size: 16,
+                                color: hasFaceId ? const Color(0xFF10B981) : Colors.grey,
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                hasFaceId ? 'Face ID Active' : 'No Face ID',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: hasFaceId ? FontWeight.w600 : FontWeight.normal,
+                                  color: hasFaceId ? const Color(0xFF10B981) : Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      // Quick Action Buttons
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit_outlined, size: 18),
+                            padding: const EdgeInsets.all(6),
+                            constraints: const BoxConstraints(),
+                            tooltip: 'Edit',
+                            color: isDark ? Colors.white70 : const Color(0xFF475569),
+                            onPressed: () {
+                              if (widget.onEdit != null) {
+                                widget.onEdit!(employee);
+                              } else {
+                                _showUserFormDialog(context: context, provider: provider, employee: employee);
+                              }
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(Icons.visibility_outlined, size: 18),
+                            padding: const EdgeInsets.all(6),
+                            constraints: const BoxConstraints(),
+                            tooltip: 'Details',
+                            color: isDark ? Colors.white70 : const Color(0xFF475569),
+                            onPressed: () => _showUserDetailsDialog(context, employee, provider, isDark),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -626,22 +1202,27 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                                   ),
                                 ),
                                 const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      employee.faceEmbedding != null ? Icons.face_retouching_natural : Icons.face_outlined,
-                                      size: 13,
-                                      color: employee.faceEmbedding != null ? const Color(0xFF10B981) : Colors.grey,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      employee.faceEmbedding != null ? 'Face Verified' : 'No Face ID',
-                                      style: TextStyle(
-                                        fontSize: 11,
+                                InkWell(
+                                  borderRadius: BorderRadius.circular(4),
+                                  onTap: () => _showFaceIdManageDialog(context, employee, provider),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        employee.faceEmbedding != null ? Icons.face_retouching_natural : Icons.face_outlined,
+                                        size: 13,
                                         color: employee.faceEmbedding != null ? const Color(0xFF10B981) : Colors.grey,
                                       ),
-                                    ),
-                                  ],
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        employee.faceEmbedding != null ? 'Face Verified' : 'No Face ID',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: employee.faceEmbedding != null ? FontWeight.w600 : FontWeight.normal,
+                                          color: employee.faceEmbedding != null ? const Color(0xFF10B981) : Colors.grey,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
@@ -652,6 +1233,22 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
+                                Tooltip(
+                                  message: employee.faceEmbedding != null ? 'Manage Face ID (Enrolled)' : 'Enroll Face ID',
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(6),
+                                    onTap: () => _showFaceIdManageDialog(context, employee, provider),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(5),
+                                      child: Icon(
+                                        employee.faceEmbedding != null ? Icons.face_retouching_natural : Icons.face_outlined,
+                                        size: 18,
+                                        color: employee.faceEmbedding != null ? const Color(0xFF10B981) : (isDark ? Colors.white70 : Colors.black54),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
                                 Tooltip(
                                   message: 'View Profile',
                                   child: InkWell(
@@ -800,9 +1397,30 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
           _buildDetailRow('Hire Date', employee.startDate.isNotEmpty ? employee.startDate : 'N/A', isDark),
           _buildDetailRow('Annual Leave Balance', '${employee.annualLeaveBalance} hours', isDark),
           _buildDetailRow('Account Status', employee.disabled ? 'SUSPENDED' : 'ACTIVE', isDark),
+          _buildDetailRow(
+            'Face ID Biometrics',
+            employee.faceEmbedding != null ? 'ENROLLED & VERIFIED' : 'NOT ENROLLED',
+            isDark,
+            valueColor: employee.faceEmbedding != null ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+          ),
         ],
       ),
       actions: [
+        TextButton.icon(
+          onPressed: () {
+            Navigator.pop(context);
+            _showFaceIdManageDialog(context, employee, provider);
+          },
+          icon: Icon(
+            employee.faceEmbedding != null ? Icons.face_retouching_natural : Icons.face_outlined,
+            size: 16,
+            color: const Color(0xFF00E5CE),
+          ),
+          label: Text(
+            employee.faceEmbedding != null ? 'Manage Face ID' : 'Enroll Face ID',
+            style: const TextStyle(color: Color(0xFF00E5CE), fontWeight: FontWeight.bold),
+          ),
+        ),
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: Text('Close', style: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF64748B))),
@@ -811,7 +1429,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
     );
   }
 
-  Widget _buildDetailRow(String label, String value, bool isDark) {
+  Widget _buildDetailRow(String label, String value, bool isDark, {Color? valueColor}) {
     final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
     final subtextColor = isDark ? Colors.white60 : const Color(0xFF64748B);
     return Padding(
@@ -831,7 +1449,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
-              color: textColor,
+              color: valueColor ?? textColor,
             ),
           ),
         ],
@@ -882,6 +1500,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
     String? selectedStructure = employee?.structureId;
     String? selectedGroup = employee?.groupId;
     bool isDisabled = employee?.disabled ?? false;
+    List<double>? formFaceEmbedding = employee?.faceEmbedding;
 
     List<GroupHistoryEntry> tempGroupHistory = [];
     if (employee != null) {
@@ -1260,6 +1879,127 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                 ),
                 const SizedBox(height: 12),
 
+                // Face ID Biometrics Section
+                if (provider.isHRManager)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: cardBg,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: borderColor),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              formFaceEmbedding != null ? Icons.face_retouching_natural : Icons.face_outlined,
+                              size: 18,
+                              color: formFaceEmbedding != null ? const Color(0xFF10B981) : iconColor,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Face ID Biometrics',
+                              style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13),
+                            ),
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: formFaceEmbedding != null
+                                    ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                                    : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                formFaceEmbedding != null ? 'ENROLLED' : 'NOT ENROLLED',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: formFaceEmbedding != null ? const Color(0xFF10B981) : subtextColor,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Enabling Face ID requires this employee to verify their face when clocking in & out.',
+                          style: TextStyle(color: subtextColor, fontSize: 11),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () async {
+                                  final res = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (c) => FaceAuthScreen(
+                                        title: 'Scan Face: ${nameController.text.trim().isNotEmpty ? nameController.text.trim() : "User"}',
+                                        checkForDuplicate: true,
+                                        excludeEmployeeId: employee?.id,
+                                      ),
+                                    ),
+                                  );
+                                  if (res != null && res is List<double>) {
+                                    final duplicate = provider.findDuplicateFaceEmployee(res, excludeEmployeeId: employee?.id);
+                                    if (duplicate != null) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Row(
+                                              children: [
+                                                const Icon(Icons.warning_amber_rounded, color: Colors.white),
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Text(
+                                                    provider.translate('duplicate_face_detected').replaceAll('{name}', duplicate.name),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            backgroundColor: const Color(0xFFEF4444),
+                                            duration: const Duration(seconds: 4),
+                                          ),
+                                        );
+                                      }
+                                      return;
+                                    }
+                                    setDialogState(() {
+                                      formFaceEmbedding = res;
+                                    });
+                                  }
+                                },
+                                icon: const Icon(Icons.camera_alt_outlined, size: 16),
+                                label: const Text('Scan Camera', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                              ),
+                            ),
+                            if (formFaceEmbedding != null) ...[
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, color: Color(0xFFEF4444), size: 20),
+                                tooltip: 'Remove Face ID',
+                                onPressed: () {
+                                  setDialogState(() {
+                                    formFaceEmbedding = null;
+                                  });
+                                },
+                              ),
+                            ],
+                          ],
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+
                 // Active / Suspended Switch
                 SwitchListTile(
                   title: Text('Suspend Account', style: TextStyle(color: textColor, fontSize: 13)),
@@ -1478,6 +2218,8 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                 basicSalary: salaryVal,
                 workingHours: employee.workingHours > 0 ? employee.workingHours : 160.0,
                 salaryHistory: sHistory,
+                faceEmbedding: formFaceEmbedding,
+                overrideFaceEmbedding: true,
               );
               provider.updateEmployee(newOrUpdatedEmp, oldId: employee.id);
             } else {
@@ -1511,6 +2253,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                 workingHours: 160.0,
                 salaryHistory: initialHistory,
                 annualLeaveBalance: leaveBalanceVal,
+                faceEmbedding: formFaceEmbedding,
               );
               provider.addEmployee(newOrUpdatedEmp);
             }
@@ -1607,4 +2350,220 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
       ],
     );
   }
+
+  void _showFaceIdManageDialog(
+    BuildContext context,
+    CompanyEmployee employee,
+    AttendanceProvider provider,
+  ) {
+    if (!provider.isHRManager) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(provider.translate('only_hr_manage_face')),
+          backgroundColor: const Color(0xFFEF4444),
+        ),
+      );
+      return;
+    }
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final subtextColor = isDark ? Colors.white60 : const Color(0xFF64748B);
+    final cardBg = isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.03);
+    final borderColor = isDark ? Colors.white12 : Colors.black12;
+
+    showGlassDialog(
+      context: context,
+      title: 'Face ID - ${employee.name}',
+      subtitle: 'Employee Biometric Clock In/Out Enrollment',
+      icon: Icons.face_retouching_natural,
+      content: StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          final currentEmp = provider.employees.firstWhere(
+            (e) => e.id == employee.id,
+            orElse: () => employee,
+          );
+          final hasFace = currentEmp.faceEmbedding != null && currentEmp.faceEmbedding!.isNotEmpty;
+
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: cardBg,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: borderColor),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: hasFace
+                            ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                            : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
+                        border: Border.all(
+                          color: hasFace ? const Color(0xFF10B981) : borderColor,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Icon(
+                        hasFace ? Icons.face_retouching_natural : Icons.face_outlined,
+                        color: hasFace ? const Color(0xFF10B981) : subtextColor,
+                        size: 26,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            currentEmp.name,
+                            style: TextStyle(
+                              color: textColor,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'ID: ${currentEmp.id} • ${currentEmp.position}',
+                            style: TextStyle(color: subtextColor, fontSize: 11),
+                          ),
+                          const SizedBox(height: 5),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: hasFace
+                                  ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                                  : const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              hasFace ? 'FACE ID ENROLLED & ACTIVE' : 'NO FACE ID REGISTERED',
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.bold,
+                                color: hasFace ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Enroll or update biometric face data for this employee to enable secure facial clock in and clock out.',
+                style: TextStyle(color: subtextColor, fontSize: 12),
+              ),
+              const SizedBox(height: 16),
+
+              // Button 1: Live Camera Scan
+              ElevatedButton.icon(
+                onPressed: () async {
+                  final scaffoldMessenger = ScaffoldMessenger.of(context);
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (c) => FaceAuthScreen(
+                        title: 'Scan Face: ${currentEmp.name}',
+                        checkForDuplicate: true,
+                        excludeEmployeeId: currentEmp.id,
+                      ),
+                    ),
+                  );
+
+                  if (result != null && result is List<double> && context.mounted) {
+                    final duplicate = provider.findDuplicateFaceEmployee(result, excludeEmployeeId: currentEmp.id);
+                    if (duplicate != null) {
+                      scaffoldMessenger.showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              const Icon(Icons.warning_amber_rounded, color: Colors.white),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  provider.translate('duplicate_face_detected').replaceAll('{name}', duplicate.name),
+                                ),
+                              ),
+                            ],
+                          ),
+                          backgroundColor: const Color(0xFFEF4444),
+                          duration: const Duration(seconds: 4),
+                        ),
+                      );
+                      return;
+                    }
+                    await provider.updateEmployeeFaceEmbedding(currentEmp.id, result);
+                    setDialogState(() {});
+                    scaffoldMessenger.showSnackBar(
+                      SnackBar(
+                        content: Row(
+                          children: [
+                            const Icon(Icons.check_circle_rounded, color: Colors.white),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text('Face ID registered successfully for ${currentEmp.name}!')),
+                          ],
+                        ),
+                        backgroundColor: const Color(0xFF10B981),
+                      ),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.camera_alt_rounded, size: 18),
+                label: Text(hasFace ? 'Re-scan with Camera' : 'Enroll via Camera'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00E5CE),
+                  foregroundColor: const Color(0xFF0A2342),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+              ),
+
+              if (hasFace) ...[
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final scaffoldMessenger = ScaffoldMessenger.of(context);
+                    await provider.updateEmployeeFaceEmbedding(currentEmp.id, null);
+                    setDialogState(() {});
+                    scaffoldMessenger.showSnackBar(
+                      SnackBar(
+                        content: Text('Face ID removed for ${currentEmp.name}.'),
+                        backgroundColor: Colors.blueGrey,
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Color(0xFFEF4444)),
+                  label: const Text('Remove Face ID', style: TextStyle(color: Color(0xFFEF4444))),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFFEF4444)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                  ),
+                ),
+              ],
+            ],
+          );
+        },
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text('Close', style: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF64748B))),
+        ),
+      ],
+    );
+  }
+
 }

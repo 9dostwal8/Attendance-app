@@ -1432,7 +1432,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          if (hasFaceId)
+          if (!provider.isHRManager)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.04),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.08),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.lock_outline_rounded,
+                    size: 18,
+                    color: secondaryColor,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      provider.translate('only_hr_manage_face'),
+                      style: TextStyle(
+                        color: secondaryColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else if (hasFaceId)
             Row(
               children: [
                 Expanded(
@@ -1444,10 +1476,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         MaterialPageRoute(
                           builder: (context) => FaceAuthScreen(
                             title: provider.translate('rescan_face_id'),
+                            checkForDuplicate: true,
+                            excludeEmployeeId: currentEmp.id,
                           ),
                         ),
                       );
                       if (result != null && result is List<double> && context.mounted) {
+                        final duplicate = provider.findDuplicateFaceEmployee(result, excludeEmployeeId: currentEmp.id);
+                        if (duplicate != null) {
+                          scaffoldMessenger.showSnackBar(
+                            SnackBar(
+                              content: Row(
+                                children: [
+                                  const Icon(Icons.warning_amber_rounded, color: Colors.white),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      provider.translate('duplicate_face_detected').replaceAll('{name}', duplicate.name),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              backgroundColor: const Color(0xFFEF4444),
+                              duration: const Duration(seconds: 4),
+                            ),
+                          );
+                          return;
+                        }
                         await provider.updateEmployeeFaceEmbedding(currentEmp.id, result);
                         scaffoldMessenger.showSnackBar(
                           SnackBar(
@@ -1544,10 +1599,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     MaterialPageRoute(
                       builder: (context) => FaceAuthScreen(
                         title: provider.translate('setup_face_id'),
+                        checkForDuplicate: true,
+                        excludeEmployeeId: currentEmp.id,
                       ),
                     ),
                   );
                   if (result != null && result is List<double> && context.mounted) {
+                    final duplicate = provider.findDuplicateFaceEmployee(result, excludeEmployeeId: currentEmp.id);
+                    if (duplicate != null) {
+                      scaffoldMessenger.showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              const Icon(Icons.warning_amber_rounded, color: Colors.white),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  provider.translate('duplicate_face_detected').replaceAll('{name}', duplicate.name),
+                                ),
+                              ),
+                            ],
+                          ),
+                          backgroundColor: const Color(0xFFEF4444),
+                          duration: const Duration(seconds: 4),
+                        ),
+                      );
+                      return;
+                    }
                     await provider.updateEmployeeFaceEmbedding(currentEmp.id, result);
                     scaffoldMessenger.showSnackBar(
                       SnackBar(

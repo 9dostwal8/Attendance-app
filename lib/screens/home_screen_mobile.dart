@@ -7,7 +7,6 @@ import '../widgets/glass_container.dart';
 import '../widgets/custom_calendar.dart';
 import '../widgets/stat_card.dart';
 import '../widgets/avatar_image_helper.dart';
-import 'main_navigation_screen.dart';
 import 'profile_screen.dart';
 import 'hr_management_screen.dart';
 import 'chat_list_screen.dart';
@@ -183,39 +182,6 @@ class HomeScreenMobile extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
-
-              // Quick Actions
-              Text(
-                provider.translate('quick_actions'),
-                style: TextStyle(
-                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-              _buildQuickActionButton(
-                context: context,
-                label: provider.translate('view_history'),
-                icon: Icons.calendar_today_outlined,
-                targetTab: 2,
-              ),
-              const SizedBox(height: 12),
-              _buildQuickActionButton(
-                context: context,
-                label: provider.translate('view_payroll'),
-                icon: Icons.attach_money_outlined,
-                targetTab: 3,
-              ),
-              const SizedBox(height: 12),
-              _buildChatQuickActionButton(
-                context: context,
-                label: provider.translate('chat'),
-                icon: Icons.chat_bubble_outline_rounded,
-                hasBadge: provider.hasUnreadMessages,
-              ),
-
               // Extra padding to scroll above bottom nav bar
               const SizedBox(height: 100),
             ],
@@ -598,99 +564,6 @@ class HomeScreenMobile extends StatelessWidget {
             },
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildQuickActionButton({
-    required BuildContext context,
-    required String label,
-    required IconData icon,
-    required int targetTab,
-  }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return GestureDetector(
-      onTap: () {
-        context
-            .findAncestorStateOfType<MainNavigationScreenState>()
-            ?.onTabSelected(targetTab);
-      },
-      child: GlassContainer(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                color: isDark ? Colors.white : const Color(0xFF0F172A),
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            Icon(
-              icon,
-              color: isDark ? Colors.white70 : const Color(0xFF64748B),
-              size: 20,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildChatQuickActionButton({
-    required BuildContext context,
-    required String label,
-    required IconData icon,
-    bool hasBadge = false,
-  }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const ChatListScreen()),
-        );
-      },
-      child: GlassContainer(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                color: isDark ? Colors.white : const Color(0xFF0F172A),
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(
-                  icon,
-                  color: isDark ? Colors.white70 : const Color(0xFF64748B),
-                  size: 20,
-                ),
-                if (hasBadge)
-                  Positioned(
-                    right: -2,
-                    top: -2,
-                    child: Container(
-                      width: 10,
-                      height: 10,
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }

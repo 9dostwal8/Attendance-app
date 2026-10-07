@@ -2007,23 +2007,33 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                                   : 'Ongoing / Not Clocked Out';
                               return Container(
                                 margin: const EdgeInsets.only(bottom: 8),
-                                padding: const EdgeInsets.all(10),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                                 decoration: BoxDecoration(
                                   color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF1F5F9),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     const Icon(Icons.fingerprint, size: 16, color: Color(0xFF00E5CE)),
                                     const SizedBox(width: 8),
-                                    Text('In: $inStr', style: TextStyle(fontSize: 12, color: textColor)),
-                                    const Spacer(),
-                                    Text('Out: $outStr', style: TextStyle(fontSize: 12, color: textColor)),
-                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Wrap(
+                                        spacing: 12,
+                                        runSpacing: 4,
+                                        alignment: WrapAlignment.spaceBetween,
+                                        crossAxisAlignment: WrapCrossAlignment.center,
+                                        children: [
+                                          Text('In: $inStr', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: textColor)),
+                                          Text('Out: $outStr', style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.85))),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
                                     IconButton(
                                       icon: const Icon(Icons.delete_outline, size: 16, color: Color(0xFFEF4444)),
                                       tooltip: 'Delete & Exclude from Device Sync',
-                                      padding: EdgeInsets.zero,
+                                      padding: const EdgeInsets.all(4),
                                       constraints: const BoxConstraints(),
                                       splashRadius: 16,
                                       onPressed: () {

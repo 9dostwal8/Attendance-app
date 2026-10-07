@@ -53,11 +53,22 @@ class _HrStructuresTabState extends State<HrStructuresTab> {
                     ? 2
                     : 1;
 
+        if (crossAxisCount == 1) {
+          return ListView.separated(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+            itemCount: filtered.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 14),
+            itemBuilder: (context, index) {
+              return _buildStructureCard(context, filtered[index], provider);
+            },
+          );
+        }
+
         return GridView.builder(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            childAspectRatio: crossAxisCount == 1 ? 2.5 : (crossAxisCount == 2 ? 2.05 : 2.2),
+            childAspectRatio: crossAxisCount == 2 ? 1.75 : 1.9,
             crossAxisSpacing: 16,
             mainAxisSpacing: 16,
           ),
