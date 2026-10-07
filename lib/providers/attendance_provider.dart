@@ -303,7 +303,19 @@ class AttendanceProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void logout() {
+  Future<void> logout() async {
+    final current = currentEmployee;
+    if (current != null && current.fcmToken != null && current.fcmToken!.isNotEmpty) {
+      try {
+        final clearedEmp = current.copyWith(
+          fcmToken: '',
+          overrideFcmToken: true,
+        );
+        await updateEmployee(clearedEmp);
+      } catch (e) {
+        debugPrint('Error clearing FCM token on logout: $e');
+      }
+    }
     _isLoggedIn = false;
     _saveAuthSession(false, '');
     notifyListeners();
@@ -1022,26 +1034,47 @@ class AttendanceProvider with ChangeNotifier {
               AndroidFlutterLocalNotificationsPlugin>()
           ?.createNotificationChannel(channel);
 
-      // Get token
+      // Get token and ensure it belongs exclusively to the current logged-in employee
       String? token = await messaging.getToken();
-      if (token != null &&
-          currentEmployee != null &&
-          currentEmployee!.fcmToken != token) {
-        final updatedEmp = currentEmployee!.copyWith(
-          fcmToken: token,
-          overrideFcmToken: true,
-        );
-        await updateEmployee(updatedEmp);
+      if (token != null && currentEmployee != null) {
+        // Disassociate this hardware token from any other employee who previously used this device
+        for (var emp in _employees) {
+          if (emp.id != currentEmployee!.id && emp.fcmToken == token) {
+            try {
+              await updateEmployee(emp.copyWith(fcmToken: '', overrideFcmToken: true));
+            } catch (e) {
+              debugPrint('Error unbinding token from previous employee ${emp.id}: $e');
+            }
+          }
+        }
+
+        if (currentEmployee!.fcmToken != token) {
+          final updatedEmp = currentEmployee!.copyWith(
+            fcmToken: token,
+            overrideFcmToken: true,
+          );
+          await updateEmployee(updatedEmp);
+        }
       }
 
       // Listen to token refresh
       messaging.onTokenRefresh.listen((newToken) async {
-        if (currentEmployee != null && currentEmployee!.fcmToken != newToken) {
-          final updatedEmp = currentEmployee!.copyWith(
-            fcmToken: newToken,
-            overrideFcmToken: true,
-          );
-          await updateEmployee(updatedEmp);
+        if (currentEmployee != null) {
+          for (var emp in _employees) {
+            if (emp.id != currentEmployee!.id && emp.fcmToken == newToken) {
+              try {
+                await updateEmployee(emp.copyWith(fcmToken: '', overrideFcmToken: true));
+              } catch (_) {}
+            }
+          }
+
+          if (currentEmployee!.fcmToken != newToken) {
+            final updatedEmp = currentEmployee!.copyWith(
+              fcmToken: newToken,
+              overrideFcmToken: true,
+            );
+            await updateEmployee(updatedEmp);
+          }
         }
       });
 
