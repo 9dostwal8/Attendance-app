@@ -67,7 +67,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'User & Access Management',
+                              provider.translate('user_and_access_mgmt'),
                               style: TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
@@ -75,7 +75,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                               ),
                             ),
                             Text(
-                              'Manage web system user logins, admin/supervisor roles, and company workforce directory',
+                              provider.translate('user_and_access_desc'),
                               style: TextStyle(
                                 fontSize: 12,
                                 color: isDark ? Colors.white60 : Colors.black54,
@@ -110,13 +110,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       children: [
                         _buildTabButton(
                           index: 0,
-                          label: 'System Users & Web Accounts',
+                          label: provider.translate('system_users_tab'),
                           icon: Icons.admin_panel_settings_outlined,
                           isDark: isDark,
                         ),
                         _buildTabButton(
                           index: 1,
-                          label: 'Employees & Workforce',
+                          label: provider.translate('workforce_directory_tab'),
                           icon: Icons.people_alt_outlined,
                           isDark: isDark,
                         ),
@@ -155,8 +155,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                         ),
                         decoration: InputDecoration(
                           hintText: _activeSubTab == 0
-                              ? 'Search system users by name, login email, or role...'
-                              : 'Search employees by name, position, or structure...',
+                              ? provider.translate('search_system_users_hint')
+                              : provider.translate('search_workforce_hint'),
                           hintStyle: TextStyle(
                             fontSize: 13,
                             color: isDark ? Colors.white38 : Colors.black38,

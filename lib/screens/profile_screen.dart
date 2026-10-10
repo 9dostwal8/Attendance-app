@@ -252,7 +252,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 _buildSectionTitle(
                                   icon: Icons.admin_panel_settings_outlined,
                                   iconColor: const Color(0xFF1E3DB8),
-                                  title: 'System Administration',
+                                  title: provider.translate('user_and_access_mgmt'),
                                   textColor: secondaryTextColor,
                                 ),
                                 const SizedBox(height: 12),
@@ -359,7 +359,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               const SizedBox(height: 2),
               Text(
-                'Personal Account & Preferences',
+                provider.translate('personal_info'),
                 style: TextStyle(
                   color: secondaryColor,
                   fontSize: 11,
@@ -2006,9 +2006,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Sign Out',
-                      style: TextStyle(
+                    Text(
+                      provider.translate('sign_out'),
+                      style: const TextStyle(
                         color: Color(0xFFEF4444),
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
@@ -2016,7 +2016,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Log out of your current session safely',
+                      provider.translate('sign_out_confirm_subtitle'),
                       style: TextStyle(
                         color: isDark ? const Color(0xFFF87171).withValues(alpha: 0.7) : const Color(0xFFB91C1C).withValues(alpha: 0.7),
                         fontSize: 12,
@@ -2040,13 +2040,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _confirmSignOut(BuildContext context, AttendanceProvider provider, bool isDark) {
     showGlassDialog(
       context: context,
-      title: 'Sign Out',
-      subtitle: 'Are you sure you want to end your session?',
+      title: provider.translate('sign_out'),
+      subtitle: provider.translate('sign_out_confirm_subtitle'),
       icon: Icons.logout_rounded,
       iconBackgroundColor: const [Color(0xFFEF4444), Color(0xFFDC2626)],
-      content: const Text(
-        'You will need to sign in again to access your attendance records and requests.',
-        style: TextStyle(color: Colors.white70, fontSize: 13),
+      content: Text(
+        provider.translate('sign_out_confirm_desc'),
+        style: const TextStyle(color: Colors.white70, fontSize: 13),
       ),
       actions: [
         NeuButton(
@@ -2059,7 +2059,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         const SizedBox(width: 8),
         NeuButton(
-          label: 'Sign Out',
+          label: provider.translate('sign_out'),
           variant: NeuButtonVariant.danger,
           height: 38,
           fontSize: 12,
@@ -2371,7 +2371,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showGlassDialog(
       context: context,
       title: provider.translate('change_pwd'),
-      subtitle: 'Enter and confirm your new account password',
+      subtitle: provider.translate('change_pwd_subtitle'),
       icon: Icons.lock_reset_rounded,
       iconBackgroundColor: const [Color(0xFF00F0D8), Color(0xFF00BD96)],
       content: StatefulBuilder(
@@ -2385,7 +2385,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 obscureText: obscureNew,
                 style: const TextStyle(color: Colors.white, fontSize: 14),
                 decoration: InputDecoration(
-                  labelText: 'New Password *',
+                  labelText: '${provider.translate('password')} *',
                   labelStyle: const TextStyle(color: Colors.white70, fontSize: 13),
                   hintText: provider.translate('new_pwd_hint'),
                   hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 12),

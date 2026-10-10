@@ -1,6 +1,14 @@
+import 'dart:convert';
+import 'dart:io' show File;
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:image/image.dart' as img;
+import 'package:file_picker/file_picker.dart';
+import 'package:file_saver/file_saver.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import '../../providers/attendance_provider.dart';
 import '../../models/hr_models.dart';
 import '../glass_container.dart';
@@ -77,6 +85,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
           // 1. Summary KPI Cards Bar
           _buildUserSummaryKPI(
             context: context,
+            provider: provider,
             isDark: isDark,
             total: totalCount,
             active: activeCount,
@@ -110,6 +119,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
 
   Widget _buildUserSummaryKPI({
     required BuildContext context,
+    required AttendanceProvider provider,
     required bool isDark,
     required int total,
     required int active,
@@ -123,7 +133,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
         final chips = [
           _buildKpiChip(
             context: context,
-            label: 'Total Users',
+            label: provider.translate('total_users'),
             value: '$total',
             icon: Icons.people_alt_rounded,
             color: const Color(0xFF2E65FF),
@@ -132,7 +142,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
           ),
           _buildKpiChip(
             context: context,
-            label: 'Active Users',
+            label: provider.translate('active_users'),
             value: '$active',
             icon: Icons.check_circle_rounded,
             color: const Color(0xFF10B981),
@@ -141,7 +151,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
           ),
           _buildKpiChip(
             context: context,
-            label: 'HR / Admins',
+            label: provider.translate('hr_admins_stat'),
             value: '$hrAdmins',
             icon: Icons.admin_panel_settings_rounded,
             color: const Color(0xFF8B5CF6),
@@ -150,7 +160,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
           ),
           _buildKpiChip(
             context: context,
-            label: 'Supervisors',
+            label: provider.translate('supervisors_stat'),
             value: '$supervisors',
             icon: Icons.supervisor_account_rounded,
             color: const Color(0xFFF59E0B),
@@ -159,7 +169,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
           ),
           _buildKpiChip(
             context: context,
-            label: 'Face Verified',
+            label: provider.translate('face_verified_stat'),
             value: '$faceVerified',
             icon: Icons.face_retouching_natural,
             color: const Color(0xFF06B6D4),
@@ -279,7 +289,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                     child: NeuButton(
                       onPressed: () => _showUserFormDialog(context: context, provider: provider),
                       icon: const Icon(Icons.person_add_alt_1_rounded, size: 16),
-                      label: 'Add User',
+                      label: provider.translate('add_user'),
                       variant: NeuButtonVariant.primary,
                       height: 40,
                       fontSize: 13,
@@ -289,7 +299,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                   NeuIconButton(
                     onPressed: () => _showResequenceConfirm(context, provider),
                     icon: const Icon(Icons.format_list_numbered_rounded, size: 18),
-                    tooltip: 'Re-sequence IDs (1, 2, 3...)',
+                    tooltip: provider.translate('resequence_ids'),
                     size: 40,
                     variant: NeuButtonVariant.whitePill,
                   ),
@@ -306,11 +316,11 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                       context: context,
                       isDark: isDark,
                       value: _selectedRoleFilter,
-                      items: const [
-                        DropdownMenuItem(value: 'all', child: Text('All Roles')),
-                        DropdownMenuItem(value: 'hr', child: Text('HR / Admin')),
-                        DropdownMenuItem(value: 'supervisor', child: Text('Supervisor')),
-                        DropdownMenuItem(value: 'employee', child: Text('Employee')),
+                      items: [
+                        DropdownMenuItem(value: 'all', child: Text(provider.translate('all_roles'))),
+                        DropdownMenuItem(value: 'hr', child: Text(provider.translate('hr_admin_role'))),
+                        DropdownMenuItem(value: 'supervisor', child: Text(provider.translate('supervisor_role'))),
+                        DropdownMenuItem(value: 'employee', child: Text(provider.translate('employee_role'))),
                       ],
                       onChanged: (val) {
                         if (val != null) setState(() => _selectedRoleFilter = val);
@@ -321,10 +331,10 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                       context: context,
                       isDark: isDark,
                       value: _selectedStatusFilter,
-                      items: const [
-                        DropdownMenuItem(value: 'all', child: Text('All Status')),
-                        DropdownMenuItem(value: 'active', child: Text('Active Only')),
-                        DropdownMenuItem(value: 'disabled', child: Text('Suspended')),
+                      items: [
+                        DropdownMenuItem(value: 'all', child: Text(provider.translate('all_status'))),
+                        DropdownMenuItem(value: 'active', child: Text(provider.translate('active_only'))),
+                        DropdownMenuItem(value: 'disabled', child: Text(provider.translate('suspended_status'))),
                       ],
                       onChanged: (val) {
                         if (val != null) setState(() => _selectedStatusFilter = val);
@@ -336,7 +346,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                       isDark: isDark,
                       value: _selectedStructureFilter,
                       items: [
-                        const DropdownMenuItem(value: 'all', child: Text('All Structures')),
+                        DropdownMenuItem(value: 'all', child: Text(provider.translate('all_structures'))),
                         ...provider.structures.map(
                           (s) => DropdownMenuItem(
                             value: s.id,
@@ -367,11 +377,11 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                   context: context,
                   isDark: isDark,
                   value: _selectedRoleFilter,
-                  items: const [
-                    DropdownMenuItem(value: 'all', child: Text('All Roles')),
-                    DropdownMenuItem(value: 'hr', child: Text('HR / Admin')),
-                    DropdownMenuItem(value: 'supervisor', child: Text('Supervisor')),
-                    DropdownMenuItem(value: 'employee', child: Text('Employee')),
+                  items: [
+                    DropdownMenuItem(value: 'all', child: Text(provider.translate('all_roles'))),
+                    DropdownMenuItem(value: 'hr', child: Text(provider.translate('hr_admin_role'))),
+                    DropdownMenuItem(value: 'supervisor', child: Text(provider.translate('supervisor_role'))),
+                    DropdownMenuItem(value: 'employee', child: Text(provider.translate('employee_role'))),
                   ],
                   onChanged: (val) {
                     if (val != null) setState(() => _selectedRoleFilter = val);
@@ -381,10 +391,10 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                   context: context,
                   isDark: isDark,
                   value: _selectedStatusFilter,
-                  items: const [
-                    DropdownMenuItem(value: 'all', child: Text('All Status')),
-                    DropdownMenuItem(value: 'active', child: Text('Active Only')),
-                    DropdownMenuItem(value: 'disabled', child: Text('Suspended')),
+                  items: [
+                    DropdownMenuItem(value: 'all', child: Text(provider.translate('all_status'))),
+                    DropdownMenuItem(value: 'active', child: Text(provider.translate('active_only'))),
+                    DropdownMenuItem(value: 'disabled', child: Text(provider.translate('suspended_status'))),
                   ],
                   onChanged: (val) {
                     if (val != null) setState(() => _selectedStatusFilter = val);
@@ -395,7 +405,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                   isDark: isDark,
                   value: _selectedStructureFilter,
                   items: [
-                    const DropdownMenuItem(value: 'all', child: Text('All Structures')),
+                    DropdownMenuItem(value: 'all', child: Text(provider.translate('all_structures'))),
                     ...provider.structures.map(
                       (s) => DropdownMenuItem(
                         value: s.id,
@@ -417,7 +427,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                 NeuButton(
                   onPressed: () => _showResequenceConfirm(context, provider),
                   icon: const Icon(Icons.format_list_numbered_rounded, size: 16),
-                  label: 'Re-sequence IDs (1, 2, 3...)',
+                  label: provider.translate('resequence_ids'),
                   variant: NeuButtonVariant.navy,
                   height: 38,
                   fontSize: 12.5,
@@ -426,7 +436,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                 NeuButton(
                   onPressed: () => _showUserFormDialog(context: context, provider: provider),
                   icon: const Icon(Icons.person_add_alt_1_rounded, size: 16),
-                  label: 'Add User',
+                  label: provider.translate('add_user'),
                   variant: NeuButtonVariant.primary,
                   height: 38,
                   fontSize: 13,
@@ -903,7 +913,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                               ),
                               const SizedBox(width: 5),
                               Text(
-                                hasFaceId ? 'Face ID Active' : 'No Face ID',
+                                hasFaceId ? provider.translate('face_id_active') : provider.translate('no_face_id'),
                                 style: TextStyle(
                                   fontSize: 11.5,
                                   fontWeight: hasFaceId ? FontWeight.w600 : FontWeight.normal,
@@ -997,7 +1007,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                     columns: [
                       DataColumn(
                         label: Text(
-                          'Employee',
+                          provider.translate('col_employee'),
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
@@ -1007,7 +1017,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                       ),
                       DataColumn(
                         label: Text(
-                          'Job Details',
+                          provider.translate('col_job_details'),
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
@@ -1017,7 +1027,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                       ),
                       DataColumn(
                         label: Text(
-                          'Role & Access',
+                          provider.translate('col_role_access'),
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
@@ -1027,7 +1037,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                       ),
                       DataColumn(
                         label: Text(
-                          'Actions',
+                          provider.translate('col_actions'),
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
@@ -1374,36 +1384,478 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
     );
   }
 
+  bool _isPdfDocument(String source) {
+    final clean = source.trim();
+    if (clean.toLowerCase().endsWith('.pdf')) return true;
+    if (clean.startsWith('data:application/pdf')) return true;
+    if (clean.contains('application/pdf')) return true;
+    try {
+      String base64Str = clean;
+      if (base64Str.contains(',')) {
+        base64Str = base64Str.split(',').last;
+      }
+      base64Str = base64Str.replaceAll(RegExp(r'\s+'), '');
+      if (base64Str.length > 8) {
+        final decodedHeader = utf8.decode(base64Decode(base64Str.substring(0, 8)), allowMalformed: true);
+        if (decodedHeader.startsWith('%PDF')) return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  Uint8List? _getDocumentBytes(String source) {
+    try {
+      String base64Str = source.trim();
+      if (base64Str.contains(',')) {
+        base64Str = base64Str.split(',').last;
+      }
+      base64Str = base64Str.replaceAll(RegExp(r'\s+'), '');
+      return base64Decode(base64Str);
+    } catch (e) {
+      debugPrint('Error decoding document bytes: $e');
+      return null;
+    }
+  }
+
+  Future<void> _downloadDocumentFile(BuildContext context, String title, String source) async {
+    try {
+      final isPdf = _isPdfDocument(source);
+      final bytes = _getDocumentBytes(source);
+      if (bytes == null || bytes.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to read file data for download.'), backgroundColor: Colors.redAccent),
+        );
+        return;
+      }
+
+      final cleanTitle = title.replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '_');
+      final fileName = '${cleanTitle}_${DateTime.now().millisecondsSinceEpoch}';
+
+      await FileSaver.instance.saveFile(
+        name: fileName,
+        bytes: bytes,
+        fileExtension: isPdf ? 'pdf' : 'jpg',
+        mimeType: isPdf ? MimeType.pdf : MimeType.jpeg,
+      );
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Text('$title downloaded successfully!'),
+              ],
+            ),
+            backgroundColor: const Color(0xFF10B981),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error saving file: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to download document: $e'), backgroundColor: Colors.redAccent),
+        );
+      }
+    }
+  }
+
+  void _showDocumentPreviewDialog(BuildContext context, String title, String documentSource) {
+    final isPdf = _isPdfDocument(documentSource);
+    final docBytes = _getDocumentBytes(documentSource);
+    final imageProvider = !isPdf ? getAvatarProvider(documentSource) : null;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        bool isFullScreen = false;
+        return StatefulBuilder(
+          builder: (dialogCtx, setModalState) {
+            final screenWidth = MediaQuery.of(context).size.width;
+            final screenHeight = MediaQuery.of(context).size.height;
+
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              insetPadding: isFullScreen ? EdgeInsets.zero : const EdgeInsets.all(16),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(isFullScreen ? 0 : 20),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOutCubic,
+                  width: isFullScreen ? screenWidth : 780,
+                  height: isFullScreen ? screenHeight : 820,
+                  constraints: BoxConstraints(
+                    maxWidth: isFullScreen ? screenWidth : screenWidth * 0.94,
+                    maxHeight: isFullScreen ? screenHeight : screenHeight * 0.92,
+                  ),
+                  color: isDark ? const Color(0xFF0F172A) : Colors.white,
+                  child: Column(
+                    children: [
+                      // Header
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF1F5F9),
+                          border: Border(bottom: BorderSide(color: isDark ? Colors.white12 : Colors.black12)),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isPdf ? Icons.picture_as_pdf_rounded : Icons.image_rounded,
+                              color: isPdf ? Colors.redAccent : const Color(0xFF2E65FF),
+                              size: 22,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    title,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                  Text(
+                                    isPdf ? 'PDF Document Viewer' : 'Image File',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              icon: Icon(
+                                isFullScreen ? Icons.fullscreen_exit_rounded : Icons.fullscreen_rounded,
+                                size: 22,
+                              ),
+                              tooltip: isFullScreen ? 'Exit Full Screen' : 'Full Screen',
+                              color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                              onPressed: () {
+                                setModalState(() {
+                                  isFullScreen = !isFullScreen;
+                                });
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close_rounded, size: 20),
+                              color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                              onPressed: () => Navigator.pop(dialogCtx),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Content Body
+                      Expanded(
+                        child: Container(
+                          color: isDark ? Colors.black26 : const Color(0xFFF1F5F9),
+                          child: isPdf
+                              ? (docBytes != null && docBytes.isNotEmpty
+                                  ? ClipRRect(
+                                      child: SfPdfViewer.memory(
+                                        docBytes,
+                                        enableDoubleTapZooming: true,
+                                        canShowScrollHead: true,
+                                        canShowScrollStatus: true,
+                                        onDocumentLoadFailed: (PdfDocumentLoadFailedDetails details) {
+                                          debugPrint('SfPdfViewer load failed: ${details.error} - ${details.description}');
+                                        },
+                                      ),
+                                    )
+                                  : Center(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(Icons.error_outline_rounded, size: 48, color: Colors.redAccent),
+                                          const SizedBox(height: 12),
+                                          Text(
+                                            'Unable to decode PDF content',
+                                            style: TextStyle(color: isDark ? Colors.white70 : Colors.black87),
+                                          ),
+                                        ],
+                                      ),
+                                    ))
+                              : InteractiveViewer(
+                                  minScale: 0.5,
+                                  maxScale: 4.0,
+                                  child: imageProvider != null
+                                      ? Image(image: imageProvider, fit: BoxFit.contain)
+                                      : const Center(
+                                          child: Text('Unable to display file preview', style: TextStyle(color: Colors.white70)),
+                                        ),
+                                ),
+                        ),
+                      ),
+
+                      // Footer Actions
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.white,
+                          border: Border(top: BorderSide(color: isDark ? Colors.white12 : Colors.black12)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              docBytes != null ? '${(docBytes.lengthInBytes / 1024).toStringAsFixed(1)} KB' : '',
+                              style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : const Color(0xFF64748B)),
+                            ),
+                            Row(
+                              children: [
+                                OutlinedButton.icon(
+                                  onPressed: () => _downloadDocumentFile(context, title, documentSource),
+                                  icon: const Icon(Icons.download_rounded, size: 16),
+                                  label: const Text('Download File', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(dialogCtx),
+                                  child: Text('Close', style: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF64748B))),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _showUserDetailsDialog(
     BuildContext context,
     CompanyEmployee employee,
     AttendanceProvider provider,
     bool isDark,
   ) {
+    int activeTab = 0;
+    final primaryColor = const Color(0xFF2E65FF);
+    final tabBg = isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.04);
+    final tabActiveBg = primaryColor.withValues(alpha: 0.18);
+
     showGlassDialog(
       context: context,
       title: employee.name,
-      subtitle: 'System User Profile',
+      subtitle: 'Employee Profile & Records',
       icon: Icons.person,
-      content: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildDetailRow('User ID', employee.id, isDark),
-          _buildDetailRow('Email', employee.email, isDark),
-          _buildDetailRow('Role', employee.role.toUpperCase(), isDark),
-          _buildDetailRow('Position', employee.position, isDark),
-          _buildDetailRow('Phone', employee.phoneNumber.isNotEmpty ? employee.phoneNumber : 'N/A', isDark),
-          _buildDetailRow('Hire Date', employee.startDate.isNotEmpty ? employee.startDate : 'N/A', isDark),
-          _buildDetailRow('Annual Leave Balance', '${employee.annualLeaveBalance} hours', isDark),
-          _buildDetailRow('Account Status', employee.disabled ? 'SUSPENDED' : 'ACTIVE', isDark),
-          _buildDetailRow(
-            'Face ID Biometrics',
-            employee.faceEmbedding != null ? 'ENROLLED & VERIFIED' : 'NOT ENROLLED',
-            isDark,
-            valueColor: employee.faceEmbedding != null ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
-          ),
-        ],
+      content: StatefulBuilder(
+        builder: (ctx, setDetailsState) {
+          return SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Top Segmented Tabs
+                Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: tabBg,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(9),
+                          onTap: () => setDetailsState(() => activeTab = 0),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: activeTab == 0 ? tabActiveBg : Colors.transparent,
+                              borderRadius: BorderRadius.circular(9),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.badge_outlined,
+                                  size: 15,
+                                  color: activeTab == 0 ? primaryColor : (isDark ? Colors.white60 : Colors.black54),
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  'General Info',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: activeTab == 0 ? FontWeight.bold : FontWeight.normal,
+                                    color: activeTab == 0 ? primaryColor : (isDark ? Colors.white70 : Colors.black87),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(9),
+                          onTap: () => setDetailsState(() => activeTab = 1),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: activeTab == 1 ? tabActiveBg : Colors.transparent,
+                              borderRadius: BorderRadius.circular(9),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.work_outline_rounded,
+                                  size: 15,
+                                  color: activeTab == 1 ? primaryColor : (isDark ? Colors.white60 : Colors.black54),
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  'System Info',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: activeTab == 1 ? FontWeight.bold : FontWeight.normal,
+                                    color: activeTab == 1 ? primaryColor : (isDark ? Colors.white70 : Colors.black87),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(9),
+                          onTap: () => setDetailsState(() => activeTab = 2),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: activeTab == 2 ? tabActiveBg : Colors.transparent,
+                              borderRadius: BorderRadius.circular(9),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.folder_shared_outlined,
+                                  size: 15,
+                                  color: activeTab == 2 ? primaryColor : (isDark ? Colors.white60 : Colors.black54),
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  'Documents',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: activeTab == 2 ? FontWeight.bold : FontWeight.normal,
+                                    color: activeTab == 2 ? primaryColor : (isDark ? Colors.white70 : Colors.black87),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // Content for selected tab
+                if (activeTab == 0) ...[
+                  // General Info Tab
+                  _buildDetailRow('Full Name', employee.name, isDark),
+                  _buildDetailRow('Date of Birth', employee.dateOfBirth?.isNotEmpty == true ? employee.dateOfBirth! : 'N/A', isDark),
+                  _buildDetailRow('Gender', employee.gender?.isNotEmpty == true ? employee.gender! : 'N/A', isDark),
+                  _buildDetailRow('Marital Status', employee.maritalStatus?.isNotEmpty == true ? employee.maritalStatus! : 'N/A', isDark),
+                  _buildDetailRow('Phone No', employee.phoneNumber.isNotEmpty ? employee.phoneNumber : 'N/A', isDark),
+                  _buildDetailRow('Nationality', employee.nationality?.isNotEmpty == true ? employee.nationality! : 'N/A', isDark),
+                  _buildDetailRow('Blood Group', employee.bloodGroup?.isNotEmpty == true ? employee.bloodGroup! : 'N/A', isDark),
+                  _buildDetailRow('Address', employee.address?.isNotEmpty == true ? employee.address! : 'N/A', isDark),
+                  const Divider(height: 16),
+                  _buildDetailRow('Emergency Contact', employee.emergencyContact?.isNotEmpty == true ? employee.emergencyContact! : 'N/A', isDark),
+                  _buildDetailRow('Emergency Phone', employee.emergencyPhone?.isNotEmpty == true ? employee.emergencyPhone! : 'N/A', isDark),
+                ] else if (activeTab == 1) ...[
+                  // Employment & System Tab
+                  _buildDetailRow('User ID', employee.id, isDark),
+                  _buildDetailRow('Email', employee.email, isDark),
+                  _buildDetailRow('Role', employee.role.toUpperCase(), isDark),
+                  _buildDetailRow('Position', employee.position, isDark),
+                  _buildDetailRow('Hire Date', employee.startDate.isNotEmpty ? employee.startDate : 'N/A', isDark),
+                  _buildDetailRow('Annual Leave Balance', '${employee.annualLeaveBalance} hours', isDark),
+                  _buildDetailRow('Account Status', employee.disabled ? 'SUSPENDED' : 'ACTIVE', isDark),
+                  _buildDetailRow(
+                    'Face ID Biometrics',
+                    employee.faceEmbedding != null ? 'ENROLLED & VERIFIED' : 'NOT ENROLLED',
+                    isDark,
+                    valueColor: employee.faceEmbedding != null ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+                  ),
+                ] else ...[
+                  // Documents Info Tab
+                  _buildDetailRow('National Card No', employee.nationalCardNo?.isNotEmpty == true ? employee.nationalCardNo! : 'N/A', isDark),
+                  _buildDetailRow('Passport No', employee.passportNo?.isNotEmpty == true ? employee.passportNo! : 'N/A', isDark),
+                  _buildDetailRow('Passport Expire Date', employee.passportExpiryDate?.isNotEmpty == true ? employee.passportExpiryDate! : 'N/A', isDark),
+                  _buildDetailRow('Residence Card No', employee.residenceCardNo?.isNotEmpty == true ? employee.residenceCardNo! : 'N/A', isDark),
+                  _buildDetailRow('Residence Card Expire Date', employee.residenceCardExpiryDate?.isNotEmpty == true ? employee.residenceCardExpiryDate! : 'N/A', isDark),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Document Attachments',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white70 : const Color(0xFF475569),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildDocAttachmentCard(
+                          context,
+                          'National Card',
+                          employee.nationalCardAttachment,
+                          isDark,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildDocAttachmentCard(
+                          context,
+                          'Passport',
+                          employee.passportAttachment,
+                          isDark,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildDocAttachmentCard(
+                          context,
+                          'Residence Card',
+                          employee.residenceCardAttachment,
+                          isDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          );
+        },
       ),
       actions: [
         TextButton.icon(
@@ -1429,6 +1881,65 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
     );
   }
 
+  Widget _buildDocAttachmentCard(BuildContext context, String title, String? attachment, bool isDark) {
+    final hasAttachment = attachment != null && attachment.trim().isNotEmpty;
+    final isPdf = hasAttachment ? _isPdfDocument(attachment) : false;
+    final cardBg = isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03);
+    final borderColor = isDark ? Colors.white12 : Colors.black12;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: hasAttachment ? () => _showDocumentPreviewDialog(context, title, attachment) : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: hasAttachment
+                ? (isPdf ? Colors.redAccent.withValues(alpha: 0.5) : const Color(0xFF2E65FF).withValues(alpha: 0.4))
+                : borderColor,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              hasAttachment
+                  ? (isPdf ? Icons.picture_as_pdf_rounded : Icons.image_rounded)
+                  : Icons.insert_drive_file_outlined,
+              size: 26,
+              color: hasAttachment
+                  ? (isPdf ? Colors.redAccent : const Color(0xFF2E65FF))
+                  : (isDark ? Colors.white38 : Colors.black38),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              hasAttachment ? (isPdf ? 'PDF File' : 'View File') : 'No File',
+              style: TextStyle(
+                fontSize: 9.5,
+                color: hasAttachment
+                    ? (isPdf ? Colors.redAccent : const Color(0xFF10B981))
+                    : (isDark ? Colors.white38 : Colors.black38),
+                fontWeight: hasAttachment ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildDetailRow(String label, String value, bool isDark, {Color? valueColor}) {
     final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
     final subtextColor = isDark ? Colors.white60 : const Color(0xFF64748B);
@@ -1444,12 +1955,15 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
               color: subtextColor,
             ),
           ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: valueColor ?? textColor,
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: valueColor ?? textColor,
+              ),
             ),
           ),
         ],
@@ -1474,7 +1988,10 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
     final borderColor = isDark ? Colors.white12 : Colors.black12;
     final dividerColor = isDark ? Colors.white12 : Colors.black12;
     final cancelColor = isDark ? Colors.white70 : const Color(0xFF64748B);
+    final primaryColor = const Color(0xFF2E65FF);
     final nowStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+    // Basic & System Controllers
     final userIdController = TextEditingController(
       text: employee != null ? employee.id : provider.getNextEmployeeId(),
     );
@@ -1495,7 +2012,29 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
               : nowStr),
     );
     final groupEndDateController = TextEditingController();
+
+    // General Info Controllers & State
+    final dobController = TextEditingController(text: employee?.dateOfBirth ?? '');
+    String? selectedGender = employee?.gender;
+    String? selectedMaritalStatus = employee?.maritalStatus;
+    final emergencyContactController = TextEditingController(text: employee?.emergencyContact ?? '');
+    final emergencyPhoneController = TextEditingController(text: employee?.emergencyPhone ?? '');
+    String? selectedBloodGroup = employee?.bloodGroup;
+    final nationalityController = TextEditingController(text: employee?.nationality ?? '');
+    final addressController = TextEditingController(text: employee?.address ?? '');
+
+    // Documents Info Controllers & State
+    final nationalCardNoController = TextEditingController(text: employee?.nationalCardNo ?? '');
+    final passportNoController = TextEditingController(text: employee?.passportNo ?? '');
+    final passportExpiryController = TextEditingController(text: employee?.passportExpiryDate ?? '');
+    final residenceCardNoController = TextEditingController(text: employee?.residenceCardNo ?? '');
+    final residenceCardExpiryController = TextEditingController(text: employee?.residenceCardExpiryDate ?? '');
+
+    String? nationalCardAttachment = employee?.nationalCardAttachment;
+    String? passportAttachment = employee?.passportAttachment;
+    String? residenceCardAttachment = employee?.residenceCardAttachment;
     
+    int activeFormTab = 0; // 0: General Info, 1: System & Job, 2: Documents Info
     String selectedRole = employee?.role ?? 'employee';
     String? selectedStructure = employee?.structureId;
     String? selectedGroup = employee?.groupId;
@@ -1521,6 +2060,275 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
       }
     }
 
+    Future<void> pickAttachment({
+      required BuildContext ctx,
+      required String docTitle,
+      required Function(String? base64) onPicked,
+    }) async {
+      final picker = ImagePicker();
+      showModalBottomSheet(
+        context: ctx,
+        backgroundColor: dropdownBg,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (bCtx) => SafeArea(
+          child: Wrap(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Text(
+                  'Attach $docTitle',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: textColor),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.picture_as_pdf_rounded, color: Colors.redAccent),
+                title: Text('Select PDF Document', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+                subtitle: Text('Attach .pdf file', style: TextStyle(color: subtextColor, fontSize: 11)),
+                onTap: () async {
+                  Navigator.pop(bCtx);
+                  await Future.delayed(const Duration(milliseconds: 150));
+                  try {
+                    FilePickerResult? result;
+                    try {
+                      result = await FilePicker.pickFiles(
+                        type: FileType.custom,
+                        allowedExtensions: ['pdf', 'PDF'],
+                        withData: true,
+                      );
+                    } catch (e1) {
+                      debugPrint('FilePicker custom extension failed, trying any: $e1');
+                      result = await FilePicker.pickFiles(
+                        type: FileType.any,
+                        withData: true,
+                      );
+                    }
+
+                    if (result != null && result.files.isNotEmpty) {
+                      final file = result.files.first;
+                      final nameLower = file.name.toLowerCase();
+                      if (!nameLower.endsWith('.pdf')) {
+                        if (ctx.mounted) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            const SnackBar(
+                              content: Text('Please select a valid PDF (.pdf) file.'),
+                              backgroundColor: Colors.orangeAccent,
+                            ),
+                          );
+                        }
+                        return;
+                      }
+
+                      Uint8List? fileBytes = file.bytes;
+                      final filePath = file.path;
+                      if (fileBytes == null && filePath != null) {
+                        try {
+                          final f = File(filePath);
+                          if (f.existsSync()) {
+                            fileBytes = await f.readAsBytes();
+                          }
+                        } catch (readErr) {
+                          debugPrint('Error reading file from path: $readErr');
+                        }
+                      }
+
+                      if (fileBytes != null && fileBytes.isNotEmpty) {
+                        if (fileBytes.lengthInBytes > 4 * 1024 * 1024) {
+                          if (ctx.mounted) {
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              const SnackBar(
+                                content: Text('PDF is too large (max 4 MB). Please select a smaller file.'),
+                                backgroundColor: Colors.redAccent,
+                              ),
+                            );
+                          }
+                          return;
+                        }
+
+                        onPicked(base64Encode(fileBytes));
+                        if (ctx.mounted) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            SnackBar(
+                              content: Text('${file.name} attached successfully!'),
+                              backgroundColor: const Color(0xFF10B981),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      } else {
+                        if (ctx.mounted) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            const SnackBar(
+                              content: Text('Could not read the selected PDF file content.'),
+                              backgroundColor: Colors.redAccent,
+                            ),
+                          );
+                        }
+                      }
+                    }
+                  } catch (e, stack) {
+                    debugPrint('PDF picker error: $e\n$stack');
+                    if (ctx.mounted) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        SnackBar(
+                          content: Text('Error opening file picker: $e'),
+                          backgroundColor: Colors.redAccent,
+                        ),
+                      );
+                    }
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined, color: Color(0xFF10B981)),
+                title: Text('Choose Image from Gallery', style: TextStyle(color: textColor)),
+                subtitle: Text('Attach photo or scanned image', style: TextStyle(color: subtextColor, fontSize: 11)),
+                onTap: () async {
+                  Navigator.pop(bCtx);
+                  try {
+                    final image = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1200, maxHeight: 1200, imageQuality: 80);
+                    if (image != null) {
+                      final bytes = await image.readAsBytes();
+                      try {
+                        final decoded = img.decodeImage(bytes);
+                        if (decoded != null) {
+                          final resized = img.copyResize(decoded, width: 800);
+                          final compressed = img.encodeJpg(resized, quality: 75);
+                          onPicked(base64Encode(compressed));
+                        } else {
+                          onPicked(base64Encode(bytes));
+                        }
+                      } catch (_) {
+                        onPicked(base64Encode(bytes));
+                      }
+                    }
+                  } catch (e) {
+                    debugPrint('Gallery error: $e');
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt_outlined, color: Color(0xFF2E65FF)),
+                title: Text('Take Photo with Camera', style: TextStyle(color: textColor)),
+                subtitle: Text('Capture ID or document card', style: TextStyle(color: subtextColor, fontSize: 11)),
+                onTap: () async {
+                  Navigator.pop(bCtx);
+                  try {
+                    final photo = await picker.pickImage(source: ImageSource.camera, maxWidth: 1200, maxHeight: 1200, imageQuality: 80);
+                    if (photo != null) {
+                      final bytes = await photo.readAsBytes();
+                      try {
+                        final decoded = img.decodeImage(bytes);
+                        if (decoded != null) {
+                          final resized = img.copyResize(decoded, width: 800);
+                          final compressed = img.encodeJpg(resized, quality: 75);
+                          onPicked(base64Encode(compressed));
+                        } else {
+                          onPicked(base64Encode(bytes));
+                        }
+                      } catch (_) {
+                        onPicked(base64Encode(bytes));
+                      }
+                    }
+                  } catch (e) {
+                    debugPrint('Camera error: $e');
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    Widget buildAttachmentPickerBox({
+      required BuildContext ctx,
+      required String title,
+      required String? attachmentValue,
+      required VoidCallback onPick,
+      required VoidCallback onRemove,
+    }) {
+      final hasFile = attachmentValue != null && attachmentValue.trim().isNotEmpty;
+      final isPdf = hasFile ? _isPdfDocument(attachmentValue) : false;
+      return Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: hasFile
+                ? (isPdf ? Colors.redAccent.withValues(alpha: 0.5) : primaryColor.withValues(alpha: 0.5))
+                : borderColor,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: hasFile
+                    ? (isPdf ? Colors.redAccent.withValues(alpha: 0.15) : primaryColor.withValues(alpha: 0.15))
+                    : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                hasFile
+                    ? (isPdf ? Icons.picture_as_pdf_rounded : Icons.check_circle_rounded)
+                    : Icons.attach_file_rounded,
+                color: hasFile ? (isPdf ? Colors.redAccent : primaryColor) : iconColor,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 12.5),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    hasFile ? (isPdf ? 'PDF Attached' : 'Image Attached') : 'No file attached',
+                    style: TextStyle(
+                      color: hasFile ? (isPdf ? Colors.redAccent : const Color(0xFF10B981)) : subtextColor,
+                      fontSize: 11,
+                      fontWeight: hasFile ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (hasFile) ...[
+              IconButton(
+                icon: const Icon(Icons.visibility_outlined, size: 20, color: Color(0xFF2E65FF)),
+                tooltip: 'Preview / Download',
+                onPressed: () => _showDocumentPreviewDialog(ctx, title, attachmentValue),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent),
+                tooltip: 'Remove',
+                onPressed: onRemove,
+              ),
+            ] else ...[
+              OutlinedButton.icon(
+                onPressed: onPick,
+                icon: const Icon(Icons.upload_file, size: 15),
+                label: const Text('Attach', style: TextStyle(fontSize: 11)),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
     showGlassDialog(
       context: context,
       title: isEditing ? 'Edit User' : 'Add New User',
@@ -1528,149 +2336,310 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
       icon: isEditing ? Icons.edit_note_rounded : Icons.person_add_rounded,
       content: StatefulBuilder(
         builder: (context, setDialogState) {
+          final tabBg = isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.04);
+          final tabActiveBg = primaryColor.withValues(alpha: 0.18);
+
           return SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      flex: 4,
-                      child: TextField(
-                        controller: userIdController,
-                        style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
-                        keyboardType: TextInputType.text,
-                        decoration: InputDecoration(
-                          labelText: 'User ID *',
-                          labelStyle: TextStyle(color: labelColor),
-                          prefixIcon: const Icon(Icons.tag_rounded, size: 18, color: Color(0xFF2E65FF)),
-                          helperText: isEditing ? 'Device/System ID' : 'Auto-sequence ID',
-                          helperStyle: TextStyle(color: subtextColor, fontSize: 10),
+                // Top Tab Bar
+                Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: tabBg,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(9),
+                          onTap: () => setDialogState(() => activeFormTab = 0),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: activeFormTab == 0 ? tabActiveBg : Colors.transparent,
+                              borderRadius: BorderRadius.circular(9),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.badge_outlined,
+                                  size: 15,
+                                  color: activeFormTab == 0 ? primaryColor : (isDark ? Colors.white60 : Colors.black54),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'General Info',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: activeFormTab == 0 ? FontWeight.bold : FontWeight.normal,
+                                    color: activeFormTab == 0 ? primaryColor : (isDark ? Colors.white70 : Colors.black87),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 7,
-                      child: TextField(
-                        controller: nameController,
-                        style: TextStyle(color: textColor),
-                        decoration: InputDecoration(
-                          labelText: 'Full Name *',
-                          labelStyle: TextStyle(color: labelColor),
-                          prefixIcon: Icon(Icons.person_outline, size: 18, color: iconColor),
+                      Expanded(
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(9),
+                          onTap: () => setDialogState(() => activeFormTab = 1),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: activeFormTab == 1 ? tabActiveBg : Colors.transparent,
+                              borderRadius: BorderRadius.circular(9),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.work_outline_rounded,
+                                  size: 15,
+                                  color: activeFormTab == 1 ? primaryColor : (isDark ? Colors.white60 : Colors.black54),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Job & System',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: activeFormTab == 1 ? FontWeight.bold : FontWeight.normal,
+                                    color: activeFormTab == 1 ? primaryColor : (isDark ? Colors.white70 : Colors.black87),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: emailController,
-                  style: TextStyle(color: textColor),
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: InputDecoration(
-                    labelText: 'Email Address *',
-                    labelStyle: TextStyle(color: labelColor),
+                      Expanded(
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(9),
+                          onTap: () => setDialogState(() => activeFormTab = 2),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: activeFormTab == 2 ? tabActiveBg : Colors.transparent,
+                              borderRadius: BorderRadius.circular(9),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.folder_shared_outlined,
+                                  size: 15,
+                                  color: activeFormTab == 2 ? primaryColor : (isDark ? Colors.white60 : Colors.black54),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Documents',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: activeFormTab == 2 ? FontWeight.bold : FontWeight.normal,
+                                    color: activeFormTab == 2 ? primaryColor : (isDark ? Colors.white70 : Colors.black87),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: positionController,
-                  style: TextStyle(color: textColor),
-                  decoration: InputDecoration(
-                    labelText: 'Position / Job Title',
-                    labelStyle: TextStyle(color: labelColor),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: passwordController,
-                  style: TextStyle(color: textColor),
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Login Password (optional)',
-                    labelStyle: TextStyle(color: labelColor),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                
-                // Role Selection Dropdown
-                DropdownButtonFormField<String>(
-                  initialValue: selectedRole,
-                  dropdownColor: dropdownBg,
-                  style: TextStyle(color: textColor),
-                  decoration: InputDecoration(
-                    labelText: 'Access Role *',
-                    labelStyle: TextStyle(color: labelColor),
-                  ),
-                  items: [
-                    DropdownMenuItem(value: 'employee', child: Text('Employee', style: TextStyle(color: textColor))),
-                    DropdownMenuItem(value: 'supervisor', child: Text('Supervisor', style: TextStyle(color: textColor))),
-                    DropdownMenuItem(value: 'hr', child: Text('HR / Admin', style: TextStyle(color: textColor))),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) {
-                      setDialogState(() => selectedRole = val);
-                    }
-                  },
-                ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
 
-                // Structure Dropdown
-                DropdownButtonFormField<String?>(
-                  initialValue: selectedStructure,
-                  dropdownColor: dropdownBg,
-                  style: TextStyle(color: textColor),
-                  decoration: InputDecoration(
-                    labelText: 'Structure / Department',
-                    labelStyle: TextStyle(color: labelColor),
+                // ================= TAB 0: GENERAL INFO =================
+                if (activeFormTab == 0) ...[
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 4,
+                        child: TextField(
+                          controller: userIdController,
+                          style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+                          keyboardType: TextInputType.text,
+                          decoration: InputDecoration(
+                            labelText: 'User ID *',
+                            labelStyle: TextStyle(color: labelColor),
+                            prefixIcon: const Icon(Icons.tag_rounded, size: 18, color: Color(0xFF2E65FF)),
+                            helperText: isEditing ? 'Device/System ID' : 'Auto-sequence ID',
+                            helperStyle: TextStyle(color: subtextColor, fontSize: 10),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 7,
+                        child: TextField(
+                          controller: nameController,
+                          style: TextStyle(color: textColor),
+                          decoration: InputDecoration(
+                            labelText: 'Full Name *',
+                            labelStyle: TextStyle(color: labelColor),
+                            prefixIcon: Icon(Icons.person_outline, size: 18, color: iconColor),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  items: [
-                    DropdownMenuItem(value: null, child: Text('None (Unassigned)', style: TextStyle(color: textColor))),
-                    ...provider.structures.map(
-                      (s) => DropdownMenuItem(value: s.id, child: Text(s.name, style: TextStyle(color: textColor))),
-                    ),
-                  ],
-                  onChanged: (val) {
-                    setDialogState(() => selectedStructure = val);
-                  },
-                ),
-                const SizedBox(height: 12),
+                  const SizedBox(height: 12),
 
-                // Group / Shift Dropdown
-                DropdownButtonFormField<String?>(
-                  initialValue: selectedGroup,
-                  dropdownColor: dropdownBg,
-                  style: TextStyle(color: textColor),
-                  decoration: InputDecoration(
-                    labelText: 'Employee Group (Shift)',
-                    labelStyle: TextStyle(color: labelColor),
+                  // Date of Birth & Gender
+                  Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          onTap: () async {
+                            final current = DateTime.tryParse(dobController.text) ?? DateTime(1995, 1, 1);
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: current,
+                              firstDate: DateTime(1940),
+                              lastDate: DateTime.now(),
+                            );
+                            if (picked != null) {
+                              setDialogState(() {
+                                dobController.text = DateFormat('yyyy-MM-dd').format(picked);
+                              });
+                            }
+                          },
+                          child: IgnorePointer(
+                            child: TextField(
+                              controller: dobController,
+                              style: TextStyle(color: textColor),
+                              decoration: InputDecoration(
+                                labelText: 'BirthDay',
+                                labelStyle: TextStyle(color: labelColor),
+                                prefixIcon: Icon(Icons.cake_outlined, size: 18, color: iconColor),
+                                hintText: 'YYYY-MM-DD',
+                                hintStyle: TextStyle(color: hintColor),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          initialValue: selectedGender,
+                          dropdownColor: dropdownBg,
+                          style: TextStyle(color: textColor),
+                          decoration: InputDecoration(
+                            labelText: 'Gender',
+                            labelStyle: TextStyle(color: labelColor),
+                            prefixIcon: Icon(Icons.wc_outlined, size: 18, color: iconColor),
+                          ),
+                          items: [
+                            DropdownMenuItem(value: null, child: Text('Not Specified', style: TextStyle(color: textColor))),
+                            DropdownMenuItem(value: 'Male', child: Text('Male', style: TextStyle(color: textColor))),
+                            DropdownMenuItem(value: 'Female', child: Text('Female', style: TextStyle(color: textColor))),
+                            DropdownMenuItem(value: 'Other', child: Text('Other', style: TextStyle(color: textColor))),
+                          ],
+                          onChanged: (val) => setDialogState(() => selectedGender = val),
+                        ),
+                      ),
+                    ],
                   ),
-                  items: [
-                    DropdownMenuItem(value: null, child: Text('None (Standard)', style: TextStyle(color: textColor))),
-                    ...provider.groups.map(
-                      (g) {
-                        final shift = provider.shifts.where((s) => s.id == g.shiftId).firstOrNull;
-                        final shiftName = shift != null ? ' (${shift.name})' : '';
-                        return DropdownMenuItem(value: g.id, child: Text('${g.name}$shiftName', style: TextStyle(color: textColor)));
-                      },
+                  const SizedBox(height: 12),
+
+                  // Marital Status & Blood Group
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          initialValue: selectedMaritalStatus,
+                          dropdownColor: dropdownBg,
+                          style: TextStyle(color: textColor),
+                          decoration: InputDecoration(
+                            labelText: 'Marital Status',
+                            labelStyle: TextStyle(color: labelColor),
+                            prefixIcon: Icon(Icons.favorite_border_rounded, size: 18, color: iconColor),
+                          ),
+                          items: [
+                            DropdownMenuItem(value: null, child: Text('Not Specified', style: TextStyle(color: textColor))),
+                            DropdownMenuItem(value: 'Single', child: Text('Single', style: TextStyle(color: textColor))),
+                            DropdownMenuItem(value: 'Married', child: Text('Married', style: TextStyle(color: textColor))),
+                            DropdownMenuItem(value: 'Divorced', child: Text('Divorced', style: TextStyle(color: textColor))),
+                            DropdownMenuItem(value: 'Widowed', child: Text('Widowed', style: TextStyle(color: textColor))),
+                          ],
+                          onChanged: (val) => setDialogState(() => selectedMaritalStatus = val),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          initialValue: selectedBloodGroup,
+                          dropdownColor: dropdownBg,
+                          style: TextStyle(color: textColor),
+                          decoration: InputDecoration(
+                            labelText: 'Blood Group',
+                            labelStyle: TextStyle(color: labelColor),
+                            prefixIcon: Icon(Icons.bloodtype_outlined, size: 18, color: iconColor),
+                          ),
+                          items: [
+                            DropdownMenuItem(value: null, child: Text('Not Specified', style: TextStyle(color: textColor))),
+                            ...['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(
+                              (bg) => DropdownMenuItem(value: bg, child: Text(bg, style: TextStyle(color: textColor))),
+                            ),
+                          ],
+                          onChanged: (val) => setDialogState(() => selectedBloodGroup = val),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Phone No & Nationality
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: phoneController,
+                          style: TextStyle(color: textColor),
+                          keyboardType: TextInputType.phone,
+                          decoration: InputDecoration(
+                            labelText: 'Phone No',
+                            labelStyle: TextStyle(color: labelColor),
+                            prefixIcon: Icon(Icons.phone_outlined, size: 18, color: iconColor),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: nationalityController,
+                          style: TextStyle(color: textColor),
+                          decoration: InputDecoration(
+                            labelText: 'Nationality',
+                            labelStyle: TextStyle(color: labelColor),
+                            prefixIcon: Icon(Icons.public_outlined, size: 18, color: iconColor),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Address
+                  TextField(
+                    controller: addressController,
+                    style: TextStyle(color: textColor),
+                    decoration: InputDecoration(
+                      labelText: 'Address',
+                      labelStyle: TextStyle(color: labelColor),
+                      prefixIcon: Icon(Icons.home_outlined, size: 18, color: iconColor),
                     ),
-                  ],
-                  onChanged: (val) {
-                    setDialogState(() {
-                      selectedGroup = val;
-                      if (val != employee?.groupId) {
-                        groupStartDateController.text = nowStr;
-                        groupEndDateController.text = '';
-                      }
-                    });
-                  },
-                ),
-                if (selectedGroup != null) ...[
-                  const SizedBox(height: 8),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Emergency / Close personal relations
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -1681,335 +2650,598 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.date_range_rounded, size: 16, color: Color(0xFF2E65FF)),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Shift Change Effective Dates',
-                              style: TextStyle(
-                                color: textColor,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
+                        Text(
+                          'Emergency & Close Personal Contacts',
+                          style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 12),
                         ),
                         const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: InkWell(
-                                onTap: () async {
-                                  final initial = DateTime.tryParse(groupStartDateController.text) ?? DateTime.now();
-                                  final picked = await showDatePicker(
-                                    context: context,
-                                    initialDate: initial,
-                                    firstDate: DateTime(2000),
-                                    lastDate: DateTime(2100),
-                                    builder: (context, child) => Theme(
-                                      data: isDark
-                                          ? ThemeData.dark().copyWith(
-                                              colorScheme: const ColorScheme.dark(
-                                                primary: Color(0xFF2E65FF),
-                                                surface: Color(0xFF1E293B),
-                                              ),
-                                            )
-                                          : ThemeData.light().copyWith(
-                                              colorScheme: const ColorScheme.light(
-                                                primary: Color(0xFF2E65FF),
-                                              ),
-                                            ),
-                                      child: child!,
-                                    ),
-                                  );
-                                  if (picked != null) {
-                                    setDialogState(() {
-                                      groupStartDateController.text = DateFormat('yyyy-MM-dd').format(picked);
-                                    });
-                                  }
-                                },
-                                child: IgnorePointer(
-                                  child: TextField(
-                                    controller: groupStartDateController,
-                                    style: TextStyle(color: textColor, fontSize: 13),
-                                    decoration: InputDecoration(
-                                      labelText: 'Start Date *',
-                                      labelStyle: TextStyle(color: labelColor, fontSize: 12),
-                                      suffixIcon: Icon(Icons.calendar_today, size: 16, color: iconColor),
-                                      isDense: true,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: InkWell(
-                                onTap: () async {
-                                  final initial = DateTime.tryParse(groupEndDateController.text) ?? DateTime.now();
-                                  final picked = await showDatePicker(
-                                    context: context,
-                                    initialDate: initial,
-                                    firstDate: DateTime(2000),
-                                    lastDate: DateTime(2100),
-                                    builder: (context, child) => Theme(
-                                      data: isDark
-                                          ? ThemeData.dark().copyWith(
-                                              colorScheme: const ColorScheme.dark(
-                                                primary: Color(0xFF2E65FF),
-                                                surface: Color(0xFF1E293B),
-                                              ),
-                                            )
-                                          : ThemeData.light().copyWith(
-                                              colorScheme: const ColorScheme.light(
-                                                primary: Color(0xFF2E65FF),
-                                              ),
-                                            ),
-                                      child: child!,
-                                    ),
-                                  );
-                                  if (picked != null) {
-                                    setDialogState(() {
-                                      groupEndDateController.text = DateFormat('yyyy-MM-dd').format(picked);
-                                    });
-                                  }
-                                },
-                                child: IgnorePointer(
-                                  child: TextField(
-                                    controller: groupEndDateController,
-                                    style: TextStyle(color: textColor, fontSize: 13),
-                                    decoration: InputDecoration(
-                                      labelText: 'End Date (Optional)',
-                                      labelStyle: TextStyle(color: labelColor, fontSize: 12),
-                                      hintText: 'Ongoing',
-                                      hintStyle: TextStyle(color: hintColor, fontSize: 12),
-                                      suffixIcon: groupEndDateController.text.isNotEmpty
-                                          ? IconButton(
-                                              icon: Icon(Icons.clear, size: 16, color: iconColor),
-                                              onPressed: () {
-                                                setDialogState(() => groupEndDateController.clear());
-                                              },
-                                            )
-                                          : Icon(Icons.calendar_today, size: 16, color: iconColor),
-                                      isDense: true,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Days prior to this start date will keep their previous shift.',
-                          style: TextStyle(
-                            color: subtextColor,
-                            fontSize: 10.5,
-                            fontStyle: FontStyle.italic,
+                        TextField(
+                          controller: emergencyContactController,
+                          style: TextStyle(color: textColor),
+                          decoration: InputDecoration(
+                            labelText: 'Close personal relationships (e.g. Spouse, Father, Brother)',
+                            labelStyle: TextStyle(color: labelColor, fontSize: 12),
+                            prefixIcon: Icon(Icons.people_outline, size: 18, color: iconColor),
                           ),
                         ),
-                        if (tempGroupHistory.length > 1) ...[
-                          const SizedBox(height: 10),
-                          Divider(color: dividerColor, height: 1),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Recorded Shift Periods:',
-                            style: TextStyle(color: labelColor, fontSize: 11, fontWeight: FontWeight.bold),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: emergencyPhoneController,
+                          style: TextStyle(color: textColor),
+                          keyboardType: TextInputType.phone,
+                          decoration: InputDecoration(
+                            labelText: 'Close personal Phone No',
+                            labelStyle: TextStyle(color: labelColor, fontSize: 12),
+                            prefixIcon: Icon(Icons.contact_phone_outlined, size: 18, color: iconColor),
                           ),
-                          const SizedBox(height: 4),
-                          ...tempGroupHistory.asMap().entries.map((entry) {
-                            final idx = entry.key;
-                            final h = entry.value;
-                            final grp = provider.groups.where((g) => g.id == h.groupId).firstOrNull;
-                            final shf = provider.shifts.where((s) => s.id == grp?.shiftId).firstOrNull;
-                            final gTitle = grp != null
-                                ? '${grp.name}${shf != null ? ' (${shf.name})' : ''}'
-                                : 'Unknown Group';
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 2),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      '• $gTitle: ${h.startDate} to ${h.endDate.isEmpty ? 'Ongoing' : h.endDate}',
-                                      style: TextStyle(color: subtextColor, fontSize: 11),
-                                    ),
-                                  ),
-                                  InkWell(
-                                    onTap: () {
-                                      setDialogState(() {
-                                        tempGroupHistory.removeAt(idx);
-                                      });
-                                    },
-                                    child: const Icon(Icons.close, size: 14, color: Colors.redAccent),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }),
-                        ],
+                        ),
                       ],
                     ),
                   ),
-                ],
-                const SizedBox(height: 12),
+                ]
 
-                TextField(
-                  controller: phoneController,
-                  style: TextStyle(color: textColor),
-                  keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(
-                    labelText: 'Phone Number',
-                    labelStyle: TextStyle(color: labelColor),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: annualLeaveBalanceController,
-                  style: TextStyle(color: textColor),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(
-                    labelText: 'Annual Leave Balance (Hours)',
-                    labelStyle: TextStyle(color: labelColor),
-                    prefixIcon: const Icon(Icons.beach_access_rounded, size: 18, color: Color(0xFF10B981)),
-                    helperText: 'Remaining available annual leave in hours (e.g. 24h = 3 eight-hour workdays)',
-                    helperStyle: TextStyle(color: subtextColor, fontSize: 10),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // Face ID Biometrics Section
-                if (provider.isHRManager)
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: cardBg,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: borderColor),
+                // ================= TAB 1: SYSTEM & JOB =================
+                else if (activeFormTab == 1) ...[
+                  TextField(
+                    controller: emailController,
+                    style: TextStyle(color: textColor),
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: InputDecoration(
+                      labelText: 'Email Address *',
+                      labelStyle: TextStyle(color: labelColor),
+                      prefixIcon: Icon(Icons.email_outlined, size: 18, color: iconColor),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              formFaceEmbedding != null ? Icons.face_retouching_natural : Icons.face_outlined,
-                              size: 18,
-                              color: formFaceEmbedding != null ? const Color(0xFF10B981) : iconColor,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Face ID Biometrics',
-                              style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13),
-                            ),
-                            const Spacer(),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: formFaceEmbedding != null
-                                    ? const Color(0xFF10B981).withValues(alpha: 0.15)
-                                    : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                formFaceEmbedding != null ? 'ENROLLED' : 'NOT ENROLLED',
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: positionController,
+                    style: TextStyle(color: textColor),
+                    decoration: InputDecoration(
+                      labelText: 'Position / Job Title',
+                      labelStyle: TextStyle(color: labelColor),
+                      prefixIcon: Icon(Icons.badge_outlined, size: 18, color: iconColor),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: passwordController,
+                    style: TextStyle(color: textColor),
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      labelText: 'Login Password (optional)',
+                      labelStyle: TextStyle(color: labelColor),
+                      prefixIcon: Icon(Icons.lock_outline, size: 18, color: iconColor),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  // Role Selection Dropdown
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedRole,
+                    dropdownColor: dropdownBg,
+                    style: TextStyle(color: textColor),
+                    decoration: InputDecoration(
+                      labelText: 'Access Role *',
+                      labelStyle: TextStyle(color: labelColor),
+                      prefixIcon: Icon(Icons.security_outlined, size: 18, color: iconColor),
+                    ),
+                    items: [
+                      DropdownMenuItem(value: 'employee', child: Text('Employee', style: TextStyle(color: textColor))),
+                      DropdownMenuItem(value: 'supervisor', child: Text('Supervisor', style: TextStyle(color: textColor))),
+                      DropdownMenuItem(value: 'hr', child: Text('HR / Admin', style: TextStyle(color: textColor))),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        setDialogState(() => selectedRole = val);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Structure Dropdown
+                  DropdownButtonFormField<String?>(
+                    initialValue: selectedStructure,
+                    dropdownColor: dropdownBg,
+                    style: TextStyle(color: textColor),
+                    decoration: InputDecoration(
+                      labelText: 'Structure / Department',
+                      labelStyle: TextStyle(color: labelColor),
+                      prefixIcon: Icon(Icons.corporate_fare_outlined, size: 18, color: iconColor),
+                    ),
+                    items: [
+                      DropdownMenuItem(value: null, child: Text('None (Unassigned)', style: TextStyle(color: textColor))),
+                      ...provider.structures.map(
+                        (s) => DropdownMenuItem(value: s.id, child: Text(s.name, style: TextStyle(color: textColor))),
+                      ),
+                    ],
+                    onChanged: (val) {
+                      setDialogState(() => selectedStructure = val);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Group / Shift Dropdown
+                  DropdownButtonFormField<String?>(
+                    initialValue: selectedGroup,
+                    dropdownColor: dropdownBg,
+                    style: TextStyle(color: textColor),
+                    decoration: InputDecoration(
+                      labelText: 'Employee Group (Shift)',
+                      labelStyle: TextStyle(color: labelColor),
+                      prefixIcon: Icon(Icons.schedule_outlined, size: 18, color: iconColor),
+                    ),
+                    items: [
+                      DropdownMenuItem(value: null, child: Text('None (Standard)', style: TextStyle(color: textColor))),
+                      ...provider.groups.map(
+                        (g) {
+                          final shift = provider.shifts.where((s) => s.id == g.shiftId).firstOrNull;
+                          final shiftName = shift != null ? ' (${shift.name})' : '';
+                          return DropdownMenuItem(value: g.id, child: Text('${g.name}$shiftName', style: TextStyle(color: textColor)));
+                        },
+                      ),
+                    ],
+                    onChanged: (val) {
+                      setDialogState(() {
+                        selectedGroup = val;
+                        if (val != employee?.groupId) {
+                          groupStartDateController.text = nowStr;
+                          groupEndDateController.text = '';
+                        }
+                      });
+                    },
+                  ),
+                  if (selectedGroup != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: cardBg,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: borderColor),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.date_range_rounded, size: 16, color: Color(0xFF2E65FF)),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Shift Change Effective Dates',
                                 style: TextStyle(
-                                  fontSize: 10,
+                                  color: textColor,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.bold,
-                                  color: formFaceEmbedding != null ? const Color(0xFF10B981) : subtextColor,
                                 ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Enabling Face ID requires this employee to verify their face when clocking in & out.',
-                          style: TextStyle(color: subtextColor, fontSize: 11),
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () async {
-                                  final res = await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (c) => FaceAuthScreen(
-                                        title: 'Scan Face: ${nameController.text.trim().isNotEmpty ? nameController.text.trim() : "User"}',
-                                        checkForDuplicate: true,
-                                        excludeEmployeeId: employee?.id,
-                                      ),
-                                    ),
-                                  );
-                                  if (res != null && res is List<double>) {
-                                    final duplicate = provider.findDuplicateFaceEmployee(res, excludeEmployeeId: employee?.id);
-                                    if (duplicate != null) {
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Row(
-                                              children: [
-                                                const Icon(Icons.warning_amber_rounded, color: Colors.white),
-                                                const SizedBox(width: 8),
-                                                Expanded(
-                                                  child: Text(
-                                                    provider.translate('duplicate_face_detected').replaceAll('{name}', duplicate.name),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            backgroundColor: const Color(0xFFEF4444),
-                                            duration: const Duration(seconds: 4),
-                                          ),
-                                        );
-                                      }
-                                      return;
-                                    }
-                                    setDialogState(() {
-                                      formFaceEmbedding = res;
-                                    });
-                                  }
-                                },
-                                icon: const Icon(Icons.camera_alt_outlined, size: 16),
-                                label: const Text('Scan Camera', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(vertical: 10),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                ),
-                              ),
-                            ),
-                            if (formFaceEmbedding != null) ...[
-                              const SizedBox(width: 8),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline, color: Color(0xFFEF4444), size: 20),
-                                tooltip: 'Remove Face ID',
-                                onPressed: () {
-                                  setDialogState(() {
-                                    formFaceEmbedding = null;
-                                  });
-                                },
                               ),
                             ],
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () async {
+                                    final initial = DateTime.tryParse(groupStartDateController.text) ?? DateTime.now();
+                                    final picked = await showDatePicker(
+                                      context: context,
+                                      initialDate: initial,
+                                      firstDate: DateTime(2000),
+                                      lastDate: DateTime(2100),
+                                    );
+                                    if (picked != null) {
+                                      setDialogState(() {
+                                        groupStartDateController.text = DateFormat('yyyy-MM-dd').format(picked);
+                                      });
+                                    }
+                                  },
+                                  child: IgnorePointer(
+                                    child: TextField(
+                                      controller: groupStartDateController,
+                                      style: TextStyle(color: textColor, fontSize: 13),
+                                      decoration: InputDecoration(
+                                        labelText: 'Start Date *',
+                                        labelStyle: TextStyle(color: labelColor, fontSize: 12),
+                                        suffixIcon: Icon(Icons.calendar_today, size: 16, color: iconColor),
+                                        isDense: true,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () async {
+                                    final initial = DateTime.tryParse(groupEndDateController.text) ?? DateTime.now();
+                                    final picked = await showDatePicker(
+                                      context: context,
+                                      initialDate: initial,
+                                      firstDate: DateTime(2000),
+                                      lastDate: DateTime(2100),
+                                    );
+                                    if (picked != null) {
+                                      setDialogState(() {
+                                        groupEndDateController.text = DateFormat('yyyy-MM-dd').format(picked);
+                                      });
+                                    }
+                                  },
+                                  child: IgnorePointer(
+                                    child: TextField(
+                                      controller: groupEndDateController,
+                                      style: TextStyle(color: textColor, fontSize: 13),
+                                      decoration: InputDecoration(
+                                        labelText: 'End Date (Optional)',
+                                        labelStyle: TextStyle(color: labelColor, fontSize: 12),
+                                        hintText: 'Ongoing',
+                                        hintStyle: TextStyle(color: hintColor, fontSize: 12),
+                                        suffixIcon: groupEndDateController.text.isNotEmpty
+                                            ? IconButton(
+                                                icon: Icon(Icons.clear, size: 16, color: iconColor),
+                                                onPressed: () {
+                                                  setDialogState(() => groupEndDateController.clear());
+                                                },
+                                              )
+                                            : Icon(Icons.calendar_today, size: 16, color: iconColor),
+                                        isDense: true,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Days prior to this start date will keep their previous shift.',
+                            style: TextStyle(
+                              color: subtextColor,
+                              fontSize: 10.5,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                          if (tempGroupHistory.length > 1) ...[
+                            const SizedBox(height: 10),
+                            Divider(color: dividerColor, height: 1),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Recorded Shift Periods:',
+                              style: TextStyle(color: labelColor, fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 4),
+                            ...tempGroupHistory.asMap().entries.map((entry) {
+                              final idx = entry.key;
+                              final h = entry.value;
+                              final grp = provider.groups.where((g) => g.id == h.groupId).firstOrNull;
+                              final shf = provider.shifts.where((s) => s.id == grp?.shiftId).firstOrNull;
+                              final gTitle = grp != null
+                                  ? '${grp.name}${shf != null ? ' (${shf.name})' : ''}'
+                                  : 'Unknown Group';
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 2),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        '• $gTitle: ${h.startDate} to ${h.endDate.isEmpty ? 'Ongoing' : h.endDate}',
+                                        style: TextStyle(color: subtextColor, fontSize: 11),
+                                      ),
+                                    ),
+                                    InkWell(
+                                      onTap: () {
+                                        setDialogState(() {
+                                          tempGroupHistory.removeAt(idx);
+                                        });
+                                      },
+                                      child: const Icon(Icons.close, size: 14, color: Colors.redAccent),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
                           ],
+                        ],
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+
+                  TextField(
+                    controller: annualLeaveBalanceController,
+                    style: TextStyle(color: textColor),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      labelText: 'Annual Leave Balance (Hours)',
+                      labelStyle: TextStyle(color: labelColor),
+                      prefixIcon: const Icon(Icons.beach_access_rounded, size: 18, color: Color(0xFF10B981)),
+                      helperText: 'Remaining available annual leave in hours (e.g. 24h = 3 eight-hour workdays)',
+                      helperStyle: TextStyle(color: subtextColor, fontSize: 10),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Face ID Biometrics Section
+                  if (provider.isHRManager)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: cardBg,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: borderColor),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                formFaceEmbedding != null ? Icons.face_retouching_natural : Icons.face_outlined,
+                                size: 18,
+                                color: formFaceEmbedding != null ? const Color(0xFF10B981) : iconColor,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Face ID Biometrics',
+                                style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: formFaceEmbedding != null
+                                      ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                                      : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  formFaceEmbedding != null ? 'ENROLLED' : 'NOT ENROLLED',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: formFaceEmbedding != null ? const Color(0xFF10B981) : subtextColor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Enabling Face ID requires this employee to verify their face when clocking in & out.',
+                            style: TextStyle(color: subtextColor, fontSize: 11),
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () async {
+                                    final res = await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (c) => FaceAuthScreen(
+                                          title: 'Scan Face: ${nameController.text.trim().isNotEmpty ? nameController.text.trim() : "User"}',
+                                          checkForDuplicate: true,
+                                          excludeEmployeeId: employee?.id,
+                                        ),
+                                      ),
+                                    );
+                                    if (res != null && res is List<double>) {
+                                      final duplicate = provider.findDuplicateFaceEmployee(res, excludeEmployeeId: employee?.id);
+                                      if (duplicate != null) {
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Row(
+                                                children: [
+                                                  const Icon(Icons.warning_amber_rounded, color: Colors.white),
+                                                  const SizedBox(width: 8),
+                                                  Expanded(
+                                                    child: Text(
+                                                      provider.translate('duplicate_face_detected').replaceAll('{name}', duplicate.name),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              backgroundColor: const Color(0xFFEF4444),
+                                              duration: const Duration(seconds: 4),
+                                            ),
+                                          );
+                                        }
+                                        return;
+                                      }
+                                      setDialogState(() {
+                                        formFaceEmbedding = res;
+                                      });
+                                    }
+                                  },
+                                  icon: const Icon(Icons.camera_alt_outlined, size: 16),
+                                  label: const Text('Scan Camera', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                ),
+                              ),
+                              if (formFaceEmbedding != null) ...[
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline, color: Color(0xFFEF4444), size: 20),
+                                  tooltip: 'Remove Face ID',
+                                  onPressed: () {
+                                    setDialogState(() {
+                                      formFaceEmbedding = null;
+                                    });
+                                  },
+                                ),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: 12),
+
+                  // Active / Suspended Switch
+                  SwitchListTile(
+                    title: Text('Suspend Account', style: TextStyle(color: textColor, fontSize: 13)),
+                    subtitle: Text('Prevent login & clocking', style: TextStyle(color: subtextColor, fontSize: 11)),
+                    value: isDisabled,
+                    activeThumbColor: Colors.redAccent,
+                    onChanged: (val) {
+                      setDialogState(() => isDisabled = val);
+                    },
+                  ),
+                ]
+
+                // ================= TAB 2: DOCUMENTS INFO =================
+                else ...[
+                  // National Card No
+                  TextField(
+                    controller: nationalCardNoController,
+                    style: TextStyle(color: textColor),
+                    decoration: InputDecoration(
+                      labelText: 'National Card No',
+                      labelStyle: TextStyle(color: labelColor),
+                      prefixIcon: Icon(Icons.credit_card_outlined, size: 18, color: iconColor),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  buildAttachmentPickerBox(
+                    ctx: context,
+                    title: 'National Card Attach',
+                    attachmentValue: nationalCardAttachment,
+                    onPick: () => pickAttachment(
+                      ctx: context,
+                      docTitle: 'National Card',
+                      onPicked: (val) => setDialogState(() => nationalCardAttachment = val),
+                    ),
+                    onRemove: () => setDialogState(() => nationalCardAttachment = null),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Passport No & Expire Date
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: passportNoController,
+                          style: TextStyle(color: textColor),
+                          decoration: InputDecoration(
+                            labelText: 'Passport No',
+                            labelStyle: TextStyle(color: labelColor),
+                            prefixIcon: Icon(Icons.flight_outlined, size: 18, color: iconColor),
+                          ),
                         ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () async {
+                            final current = DateTime.tryParse(passportExpiryController.text) ?? DateTime.now().add(const Duration(days: 365));
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: current,
+                              firstDate: DateTime(2000),
+                              lastDate: DateTime(2050),
+                            );
+                            if (picked != null) {
+                              setDialogState(() {
+                                passportExpiryController.text = DateFormat('yyyy-MM-dd').format(picked);
+                              });
+                            }
+                          },
+                          child: IgnorePointer(
+                            child: TextField(
+                              controller: passportExpiryController,
+                              style: TextStyle(color: textColor),
+                              decoration: InputDecoration(
+                                labelText: 'Passport Expire Date',
+                                labelStyle: TextStyle(color: labelColor),
+                                prefixIcon: Icon(Icons.event_outlined, size: 18, color: iconColor),
+                                hintText: 'YYYY-MM-DD',
+                                hintStyle: TextStyle(color: hintColor),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 12),
+                  const SizedBox(height: 10),
+                  buildAttachmentPickerBox(
+                    ctx: context,
+                    title: 'Passport Attach',
+                    attachmentValue: passportAttachment,
+                    onPick: () => pickAttachment(
+                      ctx: context,
+                      docTitle: 'Passport',
+                      onPicked: (val) => setDialogState(() => passportAttachment = val),
+                    ),
+                    onRemove: () => setDialogState(() => passportAttachment = null),
+                  ),
+                  const SizedBox(height: 16),
 
-                // Active / Suspended Switch
-                SwitchListTile(
-                  title: Text('Suspend Account', style: TextStyle(color: textColor, fontSize: 13)),
-                  subtitle: Text('Prevent login & clocking', style: TextStyle(color: subtextColor, fontSize: 11)),
-                  value: isDisabled,
-                  activeThumbColor: Colors.redAccent,
-                  onChanged: (val) {
-                    setDialogState(() => isDisabled = val);
-                  },
-                ),
+                  // Residence Card No & Expire Date
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: residenceCardNoController,
+                          style: TextStyle(color: textColor),
+                          decoration: InputDecoration(
+                            labelText: 'Residence Card No',
+                            labelStyle: TextStyle(color: labelColor),
+                            prefixIcon: Icon(Icons.perm_identity_rounded, size: 18, color: iconColor),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () async {
+                            final current = DateTime.tryParse(residenceCardExpiryController.text) ?? DateTime.now().add(const Duration(days: 365));
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: current,
+                              firstDate: DateTime(2000),
+                              lastDate: DateTime(2050),
+                            );
+                            if (picked != null) {
+                              setDialogState(() {
+                                residenceCardExpiryController.text = DateFormat('yyyy-MM-dd').format(picked);
+                              });
+                            }
+                          },
+                          child: IgnorePointer(
+                            child: TextField(
+                              controller: residenceCardExpiryController,
+                              style: TextStyle(color: textColor),
+                              decoration: InputDecoration(
+                                labelText: 'Residence Card Expire Date',
+                                labelStyle: TextStyle(color: labelColor),
+                                prefixIcon: Icon(Icons.event_outlined, size: 18, color: iconColor),
+                                hintText: 'YYYY-MM-DD',
+                                hintStyle: TextStyle(color: hintColor),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  buildAttachmentPickerBox(
+                    ctx: context,
+                    title: 'Residence Card Attach',
+                    attachmentValue: residenceCardAttachment,
+                    onPick: () => pickAttachment(
+                      ctx: context,
+                      docTitle: 'Residence Card',
+                      onPicked: (val) => setDialogState(() => residenceCardAttachment = val),
+                    ),
+                    onRemove: () => setDialogState(() => residenceCardAttachment = null),
+                  ),
+                ],
               ],
             ),
           );
@@ -2220,6 +3452,27 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                 salaryHistory: sHistory,
                 faceEmbedding: formFaceEmbedding,
                 overrideFaceEmbedding: true,
+                // General Info
+                dateOfBirth: dobController.text.trim(),
+                gender: selectedGender,
+                maritalStatus: selectedMaritalStatus,
+                emergencyContact: emergencyContactController.text.trim(),
+                emergencyPhone: emergencyPhoneController.text.trim(),
+                bloodGroup: selectedBloodGroup,
+                nationality: nationalityController.text.trim(),
+                address: addressController.text.trim(),
+                // Documents Info
+                nationalCardNo: nationalCardNoController.text.trim(),
+                passportNo: passportNoController.text.trim(),
+                passportExpiryDate: passportExpiryController.text.trim(),
+                residenceCardNo: residenceCardNoController.text.trim(),
+                residenceCardExpiryDate: residenceCardExpiryController.text.trim(),
+                nationalCardAttachment: nationalCardAttachment,
+                overrideNationalCardAttachment: true,
+                passportAttachment: passportAttachment,
+                overridePassportAttachment: true,
+                residenceCardAttachment: residenceCardAttachment,
+                overrideResidenceCardAttachment: true,
               );
               provider.updateEmployee(newOrUpdatedEmp, oldId: employee.id);
             } else {
@@ -2254,6 +3507,24 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                 salaryHistory: initialHistory,
                 annualLeaveBalance: leaveBalanceVal,
                 faceEmbedding: formFaceEmbedding,
+                // General Info
+                dateOfBirth: dobController.text.trim(),
+                gender: selectedGender,
+                maritalStatus: selectedMaritalStatus,
+                emergencyContact: emergencyContactController.text.trim(),
+                emergencyPhone: emergencyPhoneController.text.trim(),
+                bloodGroup: selectedBloodGroup,
+                nationality: nationalityController.text.trim(),
+                address: addressController.text.trim(),
+                // Documents Info
+                nationalCardNo: nationalCardNoController.text.trim(),
+                passportNo: passportNoController.text.trim(),
+                passportExpiryDate: passportExpiryController.text.trim(),
+                residenceCardNo: residenceCardNoController.text.trim(),
+                residenceCardExpiryDate: residenceCardExpiryController.text.trim(),
+                nationalCardAttachment: nationalCardAttachment,
+                passportAttachment: passportAttachment,
+                residenceCardAttachment: residenceCardAttachment,
               );
               provider.addEmployee(newOrUpdatedEmp);
             }
@@ -2278,20 +3549,20 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
 
     showGlassDialog(
       context: context,
-      title: 'Re-sequence User IDs',
-      subtitle: 'Number all employees 1, 2, 3...',
+      title: provider.translate('resequence_ids'),
+      subtitle: '1, 2, 3...',
       icon: Icons.format_list_numbered_rounded,
       content: Text(
-        'This will automatically update all employees to sequential simple numbers starting from 1 (1, 2, 3, 4...) and migrate their attendance history and requests. Are you sure you want to proceed?',
+        '${provider.translate('resequence_ids')} (1, 2, 3...)? ${provider.translate('delete_confirm_desc')}',
         style: TextStyle(color: textColor, fontSize: 13, height: 1.4),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text('Cancel', style: TextStyle(color: cancelColor)),
+          child: Text(provider.translate('cancel'), style: TextStyle(color: cancelColor)),
         ),
         NeuButton(
-          label: 'Re-sequence Now',
+          label: provider.translate('confirm'),
           variant: NeuButtonVariant.primary,
           height: 38,
           padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -2300,9 +3571,9 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
             await provider.resequenceEmployeeIds();
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('All employee IDs have been re-sequenced to 1, 2, 3... successfully!'),
-                  backgroundColor: Color(0xFF10B981),
+                SnackBar(
+                  content: Text('${provider.translate('resequence_ids')}: ${provider.translate('completed')}'),
+                  backgroundColor: const Color(0xFF10B981),
                 ),
               );
             }
@@ -2319,17 +3590,17 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
 
     showGlassDialog(
       context: context,
-      title: 'Delete User Account',
-      subtitle: 'Permanent Action',
+      title: provider.translate('delete_user'),
+      subtitle: provider.translate('delete_confirm_title'),
       icon: Icons.delete_forever_rounded,
       content: Text(
-        'Are you sure you want to delete ${employee.name} (${employee.email})? This action cannot be undone.',
+        '${provider.translate('confirm_delete')} ${employee.name} (${employee.email})? ${provider.translate('delete_confirm_desc')}',
         style: TextStyle(color: textColor),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text('Cancel', style: TextStyle(color: cancelColor)),
+          child: Text(provider.translate('cancel'), style: TextStyle(color: cancelColor)),
         ),
         NeuButton(
           onPressed: () {
@@ -2337,13 +3608,13 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
             Navigator.pop(context);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('${employee.name} deleted successfully.'),
+                content: Text('${employee.name} - ${provider.translate('completed')}'),
                 backgroundColor: Colors.red,
               ),
             );
           },
           variant: NeuButtonVariant.danger,
-          label: 'Delete',
+          label: provider.translate('delete'),
           height: 36,
           padding: const EdgeInsets.symmetric(horizontal: 16),
         ),
@@ -2373,8 +3644,8 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
 
     showGlassDialog(
       context: context,
-      title: 'Face ID - ${employee.name}',
-      subtitle: 'Employee Biometric Clock In/Out Enrollment',
+      title: '${provider.translate('face_id')} - ${employee.name}',
+      subtitle: provider.translate('face_id_desc'),
       icon: Icons.face_retouching_natural,
       content: StatefulBuilder(
         builder: (ctx, setDialogState) {
@@ -2444,7 +3715,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
-                              hasFace ? 'FACE ID ENROLLED & ACTIVE' : 'NO FACE ID REGISTERED',
+                              hasFace ? provider.translate('face_id_enrolled') : provider.translate('face_id_not_enrolled'),
                               style: TextStyle(
                                 fontSize: 9.5,
                                 fontWeight: FontWeight.bold,
@@ -2460,7 +3731,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
               ),
               const SizedBox(height: 14),
               Text(
-                'Enroll or update biometric face data for this employee to enable secure facial clock in and clock out.',
+                provider.translate('face_id_desc'),
                 style: TextStyle(color: subtextColor, fontSize: 12),
               ),
               const SizedBox(height: 16),
@@ -2473,7 +3744,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                     context,
                     MaterialPageRoute(
                       builder: (c) => FaceAuthScreen(
-                        title: 'Scan Face: ${currentEmp.name}',
+                        title: '${provider.translate('face_verification')}: ${currentEmp.name}',
                         checkForDuplicate: true,
                         excludeEmployeeId: currentEmp.id,
                       ),
@@ -2510,7 +3781,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                           children: [
                             const Icon(Icons.check_circle_rounded, color: Colors.white),
                             const SizedBox(width: 8),
-                            Expanded(child: Text('Face ID registered successfully for ${currentEmp.name}!')),
+                            Expanded(child: Text(provider.translate('face_id_enrolled_success'))),
                           ],
                         ),
                         backgroundColor: const Color(0xFF10B981),
@@ -2519,7 +3790,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                   }
                 },
                 icon: const Icon(Icons.camera_alt_rounded, size: 18),
-                label: Text(hasFace ? 'Re-scan with Camera' : 'Enroll via Camera'),
+                label: Text(hasFace ? provider.translate('rescan_face_id') : provider.translate('setup_face_id')),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF00E5CE),
                   foregroundColor: const Color(0xFF0A2342),
@@ -2538,13 +3809,13 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                     setDialogState(() {});
                     scaffoldMessenger.showSnackBar(
                       SnackBar(
-                        content: Text('Face ID removed for ${currentEmp.name}.'),
+                        content: Text(provider.translate('face_id_removed_success')),
                         backgroundColor: Colors.blueGrey,
                       ),
                     );
                   },
                   icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Color(0xFFEF4444)),
-                  label: const Text('Remove Face ID', style: TextStyle(color: Color(0xFFEF4444))),
+                  label: Text(provider.translate('remove_face_id'), style: const TextStyle(color: Color(0xFFEF4444))),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Color(0xFFEF4444)),
                     padding: const EdgeInsets.symmetric(vertical: 12),
@@ -2560,7 +3831,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text('Close', style: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF64748B))),
+          child: Text(provider.translate('close'), style: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF64748B))),
         ),
       ],
     );

@@ -108,7 +108,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    _buildAddNewButton(),
+                    _buildAddNewButton(provider),
                   ],
                 ),
               ),
@@ -173,7 +173,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                             ],
                           ),
                         ),
-                        _buildAddNewButton(),
+                        _buildAddNewButton(provider),
                       ],
                     ),
                   ),
@@ -311,29 +311,29 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
     );
   }
 
-  Widget _buildAddNewButton() {
+  Widget _buildAddNewButton(AttendanceProvider provider) {
     if (_activeTab == HrTab.payroll || _activeTab == HrTab.dailyReport || _activeTab == HrTab.device) {
       return const SizedBox.shrink();
     }
     String label = '';
     switch (_activeTab) {
       case HrTab.structures:
-        label = 'Add Structure';
+        label = provider.translate('add_structure');
         break;
       case HrTab.shifts:
-        label = 'Add Shift';
+        label = provider.translate('add_shift');
         break;
       case HrTab.groups:
-        label = 'Add Group';
+        label = provider.translate('add_group');
         break;
       case HrTab.employees:
-        label = 'Add Employee';
+        label = provider.translate('add_employee');
         break;
       case HrTab.holidays:
-        label = 'Add Holiday';
+        label = provider.translate('add_holiday');
         break;
       case HrTab.locations:
-        label = 'Add Location';
+        label = provider.translate('add_location');
         break;
       case HrTab.payroll:
       case HrTab.dailyReport:
@@ -468,7 +468,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
       case HrTab.structures:
         return Column(
           children: [
-            _buildSearchBar('Search structures...'),
+            _buildSearchBar(provider.translate('search_structures')),
             const SizedBox(height: 16),
             Expanded(
               child: HrStructuresTab(
@@ -482,7 +482,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
       case HrTab.shifts:
         return Column(
           children: [
-            _buildSearchBar('Search shifts...'),
+            _buildSearchBar(provider.translate('search_shifts')),
             const SizedBox(height: 16),
             Expanded(
               child: HrShiftsTab(
@@ -496,7 +496,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
       case HrTab.groups:
         return Column(
           children: [
-            _buildSearchBar('Search groups...'),
+            _buildSearchBar(provider.translate('search_groups')),
             const SizedBox(height: 16),
             Expanded(
               child: HrGroupsTab(
@@ -510,7 +510,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
       case HrTab.employees:
         return Column(
           children: [
-            _buildSearchBar('Search employees...'),
+            _buildSearchBar(provider.translate('search_employees')),
             const SizedBox(height: 16),
             Expanded(
               child: HrEmployeesTab(
@@ -524,7 +524,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
       case HrTab.holidays:
         return Column(
           children: [
-            _buildSearchBar('Search holidays...'),
+            _buildSearchBar(provider.translate('search_holidays')),
             const SizedBox(height: 16),
             Expanded(
               child: HrHolidaysTab(
@@ -538,7 +538,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
       case HrTab.locations:
         return Column(
           children: [
-            _buildSearchBar('Search locations...'),
+            _buildSearchBar(provider.translate('search_locations')),
             const SizedBox(height: 16),
             Expanded(
               child: HrLocationsTab(
@@ -996,13 +996,49 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
       return null;
     }
 
+    String getTabDialogTitle() {
+      if (isEditing) {
+        switch (_activeTab) {
+          case HrTab.structures:
+            return provider.translate('edit_structure');
+          case HrTab.shifts:
+            return provider.translate('edit_shift');
+          case HrTab.groups:
+            return provider.translate('edit_group');
+          case HrTab.employees:
+            return provider.translate('edit_employee');
+          case HrTab.holidays:
+            return provider.translate('edit_holiday');
+          case HrTab.locations:
+            return provider.translate('edit_location');
+          default:
+            return '${provider.translate('edit')} ${_activeTab.name}';
+        }
+      } else {
+        switch (_activeTab) {
+          case HrTab.structures:
+            return provider.translate('add_new_structure');
+          case HrTab.shifts:
+            return provider.translate('add_new_shift');
+          case HrTab.groups:
+            return provider.translate('add_new_group');
+          case HrTab.employees:
+            return provider.translate('add_new_employee');
+          case HrTab.holidays:
+            return provider.translate('add_new_holiday');
+          case HrTab.locations:
+            return provider.translate('add_new_location');
+          default:
+            return '${provider.translate('add')} ${_activeTab.name}';
+        }
+      }
+    }
+
     String? dialogErrorMessage;
     showGlassDialog(
       context: context,
-      title: isEditing
-          ? 'Edit ${_activeTab.name.toUpperCase().substring(0, _activeTab.name.length - 1)}'
-          : 'Add New ${_activeTab.name.toUpperCase().substring(0, _activeTab.name.length - 1)}',
-      subtitle: 'Please fill in the details below',
+      title: getTabDialogTitle(),
+      subtitle: provider.translate('fill_details_below'),
       icon: isEditing ? Icons.edit_rounded : Icons.add_rounded,
       content: StatefulBuilder(
         builder: (context, setDialogState) {
@@ -1026,12 +1062,42 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
             children: [
               // Structure Form Fields
               if (_activeTab == HrTab.structures) ...[
-                _buildDialogField('Structure Name', nameController),
+                _buildDialogField(provider.translate('structure_name_label'), nameController),
                 const SizedBox(height: 12),
-                _buildDialogField('Location (e.g. Downtown)', extraController1),
+                if (provider.locations.isNotEmpty) ...[
+                  _buildDropdownField(
+                    label: provider.translate('company_location_preset_optional'),
+                    value: null,
+                    items: [
+                      DropdownMenuItem(
+                        value: null,
+                        child: Text(provider.translate('custom_location')),
+                      ),
+                      ...provider.locations.map(
+                        (loc) => DropdownMenuItem(
+                          value: loc.id,
+                          child: Text('${loc.name} (${loc.radius.round()}m)'),
+                        ),
+                      ),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        final found = provider.locations.firstWhere((l) => l.id == val);
+                        setDialogState(() {
+                          extraController1.text = found.name;
+                          selectedLatitude = found.latitude;
+                          selectedLongitude = found.longitude;
+                          selectedRadius = found.radius;
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                _buildDialogField(provider.translate('location_eg_downtown'), extraController1),
                 const SizedBox(height: 12),
                 _buildDialogField(
-                  'Capacity (e.g. 100)',
+                  provider.translate('capacity_eg_100'),
                   extraController2,
                   keyboardType: TextInputType.number,
                 ),
@@ -1059,7 +1125,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            'GPS Geofencing Settings',
+                            provider.translate('gps_geofencing_settings'),
                             style: TextStyle(
                               color: textColor,
                               fontSize: 13,
@@ -1076,7 +1142,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                               selectedLatitude != null &&
                                       selectedLongitude != null
                                   ? 'Lat: ${selectedLatitude!.toStringAsFixed(4)}, Lng: ${selectedLongitude!.toStringAsFixed(4)}\nRadius: ${selectedRadius?.round() ?? 0}m'
-                                  : 'No Location Set',
+                                  : provider.translate('no_location_set'),
                               style: TextStyle(
                                 color: selectedLatitude != null ? const Color(0xFF10B981) : mutedColor,
                                 fontSize: 13,
@@ -1086,7 +1152,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                           NeuButton(
                             variant: NeuButtonVariant.navy,
                             icon: const Icon(Icons.map, size: 16),
-                            label: selectedLatitude != null ? 'Change on Map' : 'Pick on Map',
+                            label: provider.translate(selectedLatitude != null ? 'change_on_map' : 'pick_on_map'),
                             height: 36,
                             padding: const EdgeInsets.symmetric(horizontal: 14),
                             onPressed: () async {
@@ -1113,6 +1179,19 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                               }
                             },
                           ),
+                          if (selectedLatitude != null) ...[
+                            const SizedBox(width: 8),
+                            TextButton(
+                              onPressed: () {
+                                setDialogState(() {
+                                  selectedLatitude = null;
+                                  selectedLongitude = null;
+                                  selectedRadius = null;
+                                });
+                              },
+                              child: Text(provider.translate('clear_btn'), style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
+                            ),
+                          ],
                         ],
                       ),
                     ],
@@ -1120,12 +1199,12 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                 ),
                 const SizedBox(height: 12),
                 _buildDropdownField(
-                  label: 'Parent Structure',
+                  label: provider.translate('parent_structure'),
                   value: selectedParentId,
                   items: [
-                    const DropdownMenuItem(
+                    DropdownMenuItem(
                       value: null,
-                      child: Text('None (No Parent)'),
+                      child: Text(provider.translate('none_no_parent')),
                     ),
                     ...provider.structures
                         .where((s) => structure == null || s.id != structure.id)
@@ -1144,12 +1223,12 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                 ),
                 const SizedBox(height: 12),
                 _buildDropdownField(
-                  label: 'Supervisor of this Structure',
+                  label: provider.translate('supervisor_of_structure'),
                   value: selectedSupervisorId,
                   items: [
-                    const DropdownMenuItem(
+                    DropdownMenuItem(
                       value: null,
-                      child: Text('None (No Supervisor)'),
+                      child: Text(provider.translate('none_no_supervisor')),
                     ),
                     ...provider.employees.map(
                       (e) => DropdownMenuItem(
@@ -2069,13 +2148,13 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
               // Group Form Fields
               if (_activeTab == HrTab.groups) ...[
                 _buildDialogField(
-                  'Group Name',
+                  provider.translate('group_name'),
                   nameController,
                   hintText: 'e.g., Engineering Team',
                 ),
                 const SizedBox(height: 12),
                 _buildDropdownField(
-                  label: 'Shift',
+                  label: provider.translate('single_shift'),
                   value: selectedShiftId,
                   items: provider.shifts
                       .map(
@@ -2091,20 +2170,20 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                 ),
                 const SizedBox(height: 16),
                 _buildGroupedContainer(
-                  title: 'Annual Leave Settings',
+                  title: provider.translate('annual_leave_settings'),
                   children: [
                     _buildDropdownField(
-                      label: 'Annual Leave Addition Type',
+                      label: provider.translate('annual_leave_addition_type'),
                       value: annualLeaveAdditionTypeValue,
-                      items: const [
-                        DropdownMenuItem(value: 'None', child: Text('None')),
+                      items: [
+                        DropdownMenuItem(value: 'None', child: Text(provider.translate('opt_none'))),
                         DropdownMenuItem(
                           value: 'Monthly',
-                          child: Text('Monthly'),
+                          child: Text(provider.translate('opt_monthly')),
                         ),
                         DropdownMenuItem(
                           value: 'Yearly',
-                          child: Text('Yearly'),
+                          child: Text(provider.translate('opt_yearly')),
                         ),
                       ],
                       onChanged: (val) {
@@ -2116,7 +2195,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                     if (annualLeaveAdditionTypeValue != 'None') ...[
                       const SizedBox(height: 12),
                       _buildDialogField(
-                        'Annual Leave Addition Hours',
+                        provider.translate('annual_leave_addition_hours'),
                         annualLeaveAdditionHoursController,
                         keyboardType: TextInputType.number,
                         hintText: 'e.g., 160',
@@ -2126,17 +2205,17 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                 ),
                 const SizedBox(height: 16),
                 _buildGroupedContainer(
-                  title: 'Form Rules',
+                  title: provider.translate('form_rules'),
                   children: [
                     _buildDialogField(
-                      'Missed Punch Limit Per Month',
+                      provider.translate('missed_punch_limit_per_month'),
                       missedPunchLimitController,
                       keyboardType: TextInputType.number,
                       hintText: 'e.g., 3',
                     ),
                     const SizedBox(height: 12),
                     _buildDialogField(
-                      'Annual Leave Deadline (Days)',
+                      provider.translate('annual_leave_deadline_days'),
                       annualLeaveDeadlineController,
                       keyboardType: TextInputType.number,
                       hintText: 'e.g., 2',
@@ -2145,13 +2224,13 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                 ),
                 const SizedBox(height: 16),
                 _buildGroupedContainer(
-                  title: 'Permissions & Rules',
+                  title: provider.translate('permissions_rules'),
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Can Edit Company Info',
+                          provider.translate('can_edit_company_info'),
                           style: TextStyle(
                             color: textColor,
                             fontSize: 14,
@@ -2174,7 +2253,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Overtime Allowed',
+                          provider.translate('overtime_allowed'),
                           style: TextStyle(
                             color: textColor,
                             fontSize: 14,
@@ -2197,7 +2276,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                       Divider(color: isDark ? Colors.white10 : Colors.black12),
                       const SizedBox(height: 8),
                       Text(
-                        'Overtime Settings',
+                        provider.translate('overtime_settings'),
                         style: TextStyle(
                           color: subtextColor,
                           fontSize: 12,
@@ -2209,7 +2288,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                         children: [
                           Expanded(
                             child: _buildDialogField(
-                              'Min Overtime (mins)',
+                              provider.translate('min_overtime_mins'),
                               minOvertimeController,
                               keyboardType: TextInputType.number,
                               hintText: 'e.g., 60',
@@ -2218,7 +2297,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                           const SizedBox(width: 16),
                           Expanded(
                             child: _buildDialogField(
-                              'Max Overtime (mins)',
+                              provider.translate('max_overtime_mins'),
                               maxOvertimeController,
                               keyboardType: TextInputType.number,
                               hintText: 'e.g., 240',
@@ -2228,7 +2307,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                       ),
                       const SizedBox(height: 16),
                       _buildRatioSelector(
-                        label: 'Holiday Overtime Multiplier',
+                        label: provider.translate('holiday_overtime_multiplier'),
                         currentValue: holidayOvertimeRatioValue,
                         onChanged: (val) {
                           setDialogState(() {
@@ -2238,7 +2317,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                       ),
                       const SizedBox(height: 16),
                       _buildRatioSelector(
-                        label: 'Weekend Overtime Multiplier',
+                        label: provider.translate('weekend_overtime_multiplier'),
                         currentValue: weekendOvertimeRatioValue,
                         onChanged: (val) {
                           setDialogState(() {
@@ -2251,13 +2330,13 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                 ),
                 const SizedBox(height: 16),
                 _buildGroupedContainer(
-                  title: 'Delay Penalties (3 Levels)',
+                  title: provider.translate('delay_penalties_levels'),
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Enable Delay Penalties',
+                          provider.translate('enable_delay_penalties'),
                           style: TextStyle(
                             color: textColor,
                             fontSize: 14,
@@ -2280,7 +2359,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                       Divider(color: isDark ? Colors.white10 : Colors.black12),
                       const SizedBox(height: 8),
                       Text(
-                        'Level 1 Penalty',
+                        provider.translate('level_1_penalty'),
                         style: TextStyle(
                           color: subtextColor,
                           fontSize: 12,
@@ -2292,7 +2371,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                         children: [
                           Expanded(
                             child: _buildDialogField(
-                              'Min min',
+                              provider.translate('min_min'),
                               delayT1MinController,
                               keyboardType: TextInputType.number,
                             ),
@@ -2300,7 +2379,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: _buildDialogField(
-                              'Max min',
+                              provider.translate('max_min'),
                               delayT1MaxController,
                               keyboardType: TextInputType.number,
                             ),
@@ -2308,7 +2387,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: _buildDialogField(
-                              'Penalty (IQD)',
+                              provider.translate('penalty_iqd'),
                               delayT1PenaltyController,
                               keyboardType: TextInputType.number,
                             ),
@@ -2319,7 +2398,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                       Divider(color: isDark ? Colors.white10 : Colors.black12),
                       const SizedBox(height: 8),
                       Text(
-                        'Level 2 Penalty',
+                        provider.translate('level_2_penalty'),
                         style: TextStyle(
                           color: subtextColor,
                           fontSize: 12,
@@ -2331,7 +2410,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                         children: [
                           Expanded(
                             child: _buildDialogField(
-                              'Min min',
+                              provider.translate('min_min'),
                               delayT2MinController,
                               keyboardType: TextInputType.number,
                             ),
@@ -2339,7 +2418,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: _buildDialogField(
-                              'Max min',
+                              provider.translate('max_min'),
                               delayT2MaxController,
                               keyboardType: TextInputType.number,
                             ),
@@ -2347,7 +2426,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: _buildDialogField(
-                              'Penalty (IQD)',
+                              provider.translate('penalty_iqd'),
                               delayT2PenaltyController,
                               keyboardType: TextInputType.number,
                             ),
@@ -2358,7 +2437,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                       Divider(color: isDark ? Colors.white10 : Colors.black12),
                       const SizedBox(height: 8),
                       Text(
-                        'Level 3 Penalty',
+                        provider.translate('level_3_penalty'),
                         style: TextStyle(
                           color: subtextColor,
                           fontSize: 12,
@@ -2370,7 +2449,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                         children: [
                           Expanded(
                             child: _buildDialogField(
-                              'Min min',
+                              provider.translate('min_min'),
                               delayT3MinController,
                               keyboardType: TextInputType.number,
                             ),
@@ -2381,7 +2460,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Max min',
+                                  provider.translate('max_min'),
                                   style: TextStyle(
                                     color: mutedColor,
                                     fontSize: 12,
@@ -2390,7 +2469,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                                 ),
                                 const SizedBox(height: 10),
                                 Text(
-                                  'and more',
+                                  '+',
                                   style: TextStyle(
                                     color: subtextColor,
                                     fontSize: 14,
@@ -2402,7 +2481,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: _buildDialogField(
-                              'Penalty (IQD)',
+                              provider.translate('penalty_iqd'),
                               delayT3PenaltyController,
                               keyboardType: TextInputType.number,
                             ),
@@ -2578,16 +2657,16 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
               ],
               // Employee Form Fields
               if (_activeTab == HrTab.employees) ...[
-                _buildDialogField('Employee Name', nameController),
+                _buildDialogField(provider.translate('employee_name_label'), nameController),
                 const SizedBox(height: 12),
                 _buildDialogField(
-                  'Email Address',
+                  provider.translate('email_address_label'),
                   extraController1,
                   keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 12),
                 _buildDialogField(
-                  'Phone Number',
+                  provider.translate('phone_number_label'),
                   phoneController,
                   keyboardType: TextInputType.phone,
                 ),
@@ -2596,7 +2675,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                   children: [
                     Expanded(
                       child: _buildDialogField(
-                        'Employment Start Date',
+                        provider.translate('employment_start_date'),
                         startDateController,
                         suffixIcon: Icons.calendar_today,
                         onSuffixTap: () =>
@@ -2607,24 +2686,24 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                     const SizedBox(width: 16),
                     Expanded(
                       child: _buildDialogField(
-                        'Employment End Date',
+                        provider.translate('employment_end_date'),
                         endDateController,
                         suffixIcon: Icons.calendar_today,
                         onSuffixTap: () =>
                             _selectDate(context, endDateController),
-                        hintText: 'yyyy-MM-dd (Optional)',
+                        hintText: provider.translate('date_optional_hint'),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
                 _buildDropdownField(
-                  label: 'Organization Structure',
+                  label: provider.translate('organization_structure'),
                   value: selectedStructureId,
                   items: [
-                    const DropdownMenuItem(
+                    DropdownMenuItem(
                       value: null,
-                      child: Text('None (No Structure)'),
+                      child: Text(provider.translate('none_no_structure')),
                     ),
                     ...provider.structures.map(
                       (s) => DropdownMenuItem(value: s.id, child: Text(s.name)),
@@ -2639,7 +2718,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
 
                 const SizedBox(height: 12),
                 Text(
-                  'Group History',
+                  provider.translate('group_history'),
                   style: TextStyle(
                     color: textColor,
                     fontSize: 14,
@@ -2649,7 +2728,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                 const SizedBox(height: 8),
                 if (tempGroupHistory.isEmpty)
                   Text(
-                    'No group history recorded.',
+                    provider.translate('no_group_history'),
                     style: TextStyle(color: mutedColor, fontSize: 12),
                   )
                 else
@@ -2711,7 +2790,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                                     ),
                                   ),
                                   Text(
-                                    '${h.startDate} to ${h.endDate.isEmpty ? 'Ongoing' : h.endDate}',
+                                    '${h.startDate} ${provider.translate('to_ongoing')} ${h.endDate.isEmpty ? '' : h.endDate}',
                                     style: TextStyle(
                                       color: subtextColor,
                                       fontSize: 11,
@@ -2757,7 +2836,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                 const SizedBox(height: 8),
                 TextButton.icon(
                   icon: const Icon(Icons.add, size: 16),
-                  label: const Text('Add Group Period'),
+                  label: Text(provider.translate('add_group_period_btn')),
                   style: TextButton.styleFrom(
                     foregroundColor: const Color(0xFF2E65FF),
                     padding: const EdgeInsets.symmetric(
@@ -2779,18 +2858,18 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                 ),
                 const SizedBox(height: 12),
                 _buildDialogField(
-                  'Annual Leave Balance (Hours)',
+                  provider.translate('annual_leave_balance_hours'),
                   annualLeaveBalanceController,
                   keyboardType: TextInputType.number,
-                  hintText: 'e.g., 160',
+                  hintText: provider.translate('annual_leave_hours_hint'),
                 ),
                 const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Disable User',
-                      style: TextStyle(
+                    Text(
+                      provider.translate('disable_user'),
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -2809,10 +2888,10 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                 ),
                 const SizedBox(height: 16),
                 _buildGroupedContainer(
-                  title: 'Active Position Settings',
+                  title: provider.translate('position'),
                   children: [
                     _buildDialogField(
-                      'Position / Title',
+                      provider.translate('position'),
                       extraController2,
                       onChanged: (_) {
                         setDialogState(() {});
@@ -2820,7 +2899,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                     ),
                     const SizedBox(height: 12),
                     _buildDialogField(
-                      'Position Start Date',
+                      provider.translate('start_date_label'),
                       positionStartDateController,
                       suffixIcon: Icons.calendar_today,
                       onSuffixTap: () =>
@@ -2869,7 +2948,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
               // Holiday Form Fields
               if (_activeTab == HrTab.holidays) ...[
                 _buildDialogField(
-                  'Holiday Name',
+                  provider.translate('holiday_name'),
                   nameController,
                   hintText: 'e.g. Eid al-Fitr',
                 ),
@@ -2878,7 +2957,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                   children: [
                     Expanded(
                       child: _buildDialogField(
-                        'From Date',
+                        provider.translate('from_date'),
                         fromDateController,
                         suffixIcon: Icons.calendar_today,
                         onSuffixTap: () =>
@@ -2889,7 +2968,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                     const SizedBox(width: 16),
                     Expanded(
                       child: _buildDialogField(
-                        'To Date',
+                        provider.translate('to_date'),
                         toDateController,
                         suffixIcon: Icons.calendar_today,
                         onSuffixTap: () =>
@@ -2901,10 +2980,10 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                 ),
                 const SizedBox(height: 16),
                 _buildGroupedContainer(
-                  title: 'Applies to Groups',
+                  title: provider.translate('applies_to_groups'),
                   children: [
                     Text(
-                      'Select groups or leave empty to apply to all groups.',
+                      provider.translate('select_groups_holiday'),
                       style: TextStyle(color: mutedColor, fontSize: 12),
                     ),
                     const SizedBox(height: 12),
@@ -2949,7 +3028,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
               // Location Form Fields
               if (_activeTab == HrTab.locations) ...[
                 _buildDialogField(
-                  'Location Name',
+                  provider.translate('location_name_label'),
                   nameController,
                   hintText: 'e.g. Main Office HQ',
                 ),
@@ -2958,7 +3037,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                   children: [
                     Expanded(
                       child: _buildDialogField(
-                        'Latitude',
+                        provider.translate('latitude_label'),
                         TextEditingController(
                           text: selectedLatitude?.toStringAsFixed(4) ?? '',
                         ),
@@ -2968,7 +3047,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                     const SizedBox(width: 16),
                     Expanded(
                       child: _buildDialogField(
-                        'Longitude',
+                        provider.translate('longitude_label'),
                         TextEditingController(
                           text: selectedLongitude?.toStringAsFixed(4) ?? '',
                         ),
@@ -2981,9 +3060,9 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                 NeuButton(
                   variant: NeuButtonVariant.navy,
                   icon: const Icon(Icons.map, size: 16),
-                  label: selectedLatitude != null
-                      ? 'Update Map Settings'
-                      : 'Pick on Map',
+                  label: provider.translate(selectedLatitude != null
+                      ? 'update_map_settings'
+                      : 'pick_on_map'),
                   height: 38,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   onPressed: () async {
@@ -3009,7 +3088,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                 if (selectedRadius != null) ...[
                   const SizedBox(height: 8),
                   Text(
-                    'Selected Radius: ${selectedRadius!.round()} meters',
+                    provider.translate('selected_radius_meters').replaceAll('{radius}', selectedRadius!.round().toString()),
                     style: TextStyle(
                       color: subtextColor,
                       fontSize: 12,
@@ -3018,10 +3097,10 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                 ],
                 const SizedBox(height: 16),
                 _buildGroupedContainer(
-                  title: 'Assigned to Groups',
+                  title: provider.translate('assigned_to_groups'),
                   children: [
                     Text(
-                      'Select which groups can clock in/out at this location.',
+                      provider.translate('select_groups_clock_location'),
                       style: TextStyle(color: mutedColor, fontSize: 12),
                     ),
                     const SizedBox(height: 12),
@@ -3102,7 +3181,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                   TextButton(
                     onPressed: () => Navigator.pop(context),
                     child: Text(
-                      'Cancel',
+                      provider.translate('cancel'),
                       style: TextStyle(
                         color: isDark ? Colors.white60 : Colors.black54,
                       ),
@@ -3110,14 +3189,14 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                   ),
                   const SizedBox(width: 8),
                   NeuButton(
-                    label: isEditing ? 'Save Changes' : 'Create',
+                    label: isEditing ? provider.translate('save_changes') : provider.translate('create_btn'),
                     variant: NeuButtonVariant.primary,
                     height: 40,
                     padding: const EdgeInsets.symmetric(horizontal: 22),
                     onPressed: () {
                       if (nameController.text.trim().isEmpty) {
                         setDialogState(() {
-                          dialogErrorMessage = 'Name is required';
+                          dialogErrorMessage = provider.translate('name_is_required');
                         });
                         return;
                       }
@@ -3145,7 +3224,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                             ),
                           );
                           _showSuccessSnackBar(
-                            'Structure updated successfully',
+                            provider.translate('structure_updated_success'),
                           );
                         } else {
                           provider.addStructure(
@@ -3161,7 +3240,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                               radius: selectedRadius,
                             ),
                           );
-                          _showSuccessSnackBar('Structure added successfully');
+                          _showSuccessSnackBar(provider.translate('structure_added_success'));
                         }
                       } else if (_activeTab == HrTab.shifts) {
                         final forgivenessVal =
@@ -3188,7 +3267,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                               crossMidnightCutoff: crossMidnightCutoffController.text.trim(),
                             ),
                           );
-                          _showSuccessSnackBar('Shift updated successfully');
+                          _showSuccessSnackBar(provider.translate('shift_updated_success'));
                         } else {
                           provider.addShift(
                             WorkShift(
@@ -3208,12 +3287,12 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                               crossMidnightCutoff: crossMidnightCutoffController.text.trim(),
                             ),
                           );
-                          _showSuccessSnackBar('Shift added successfully');
+                          _showSuccessSnackBar(provider.translate('shift_added_success'));
                         }
                       } else if (_activeTab == HrTab.groups) {
                         if (selectedShiftId == null) {
                           setDialogState(() {
-                            dialogErrorMessage = 'Please select a shift first';
+                            dialogErrorMessage = provider.translate('select_shift_first');
                           });
                           return;
                         }
@@ -3316,7 +3395,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                               earlyExitTier3Penalty: e3Pen,
                             ),
                           );
-                          _showSuccessSnackBar('Group updated successfully');
+                          _showSuccessSnackBar(provider.translate('group_updated_success'));
                         } else {
                           provider.addGroup(
                             EmployeeGroup(
@@ -3355,13 +3434,13 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                               earlyExitTier3Penalty: e3Pen,
                             ),
                           );
-                          _showSuccessSnackBar('Group added successfully');
+                          _showSuccessSnackBar(provider.translate('group_added_success'));
                         }
                       } else if (_activeTab == HrTab.employees) {
                         if (tempGroupHistory.isEmpty) {
                           setDialogState(() {
                             dialogErrorMessage =
-                                'Employee must be assigned to at least one group.';
+                                provider.translate('group_history_required');
                           });
                           return;
                         }
@@ -3454,7 +3533,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                               annualLeaveBalance: annualLeaveBalanceVal,
                             ),
                           );
-                          _showSuccessSnackBar('Employee updated successfully');
+                          _showSuccessSnackBar(provider.translate('employee_updated_success'));
                         } else {
                           provider.addEmployee(
                             CompanyEmployee(
@@ -3487,14 +3566,14 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                               annualLeaveBalance: annualLeaveBalanceVal,
                             ),
                           );
-                          _showSuccessSnackBar('Employee added successfully');
+                          _showSuccessSnackBar(provider.translate('employee_added_success'));
                         }
                       } else if (_activeTab == HrTab.holidays) {
                         final fromVal = fromDateController.text.trim();
                         final toVal = toDateController.text.trim();
                         if (fromVal.isEmpty || toVal.isEmpty) {
                           setDialogState(() {
-                            dialogErrorMessage = 'Dates are required';
+                            dialogErrorMessage = provider.translate('dates_are_required');
                           });
                           return;
                         }
@@ -3507,7 +3586,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                               groupIds: selectedHolidayGroupIds,
                             ),
                           );
-                          _showSuccessSnackBar('Holiday updated successfully');
+                          _showSuccessSnackBar(provider.translate('holiday_updated_success'));
                         } else {
                           provider.addHoliday(
                             Holiday(
@@ -3518,7 +3597,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                               groupIds: selectedHolidayGroupIds,
                             ),
                           );
-                          _showSuccessSnackBar('Holiday added successfully');
+                          _showSuccessSnackBar(provider.translate('holiday_added_success'));
                         }
                       } else if (_activeTab == HrTab.locations) {
                         if (selectedLatitude == null ||
@@ -3526,7 +3605,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                             selectedRadius == null) {
                           setDialogState(() {
                             dialogErrorMessage =
-                                'Please pick a location on the map';
+                                provider.translate('pick_location_map_prompt');
                           });
                           return;
                         }
@@ -3540,7 +3619,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                               groupIds: selectedLocationGroupIds,
                             ),
                           );
-                          _showSuccessSnackBar('Location updated successfully');
+                          _showSuccessSnackBar(provider.translate('location_updated_success'));
                         } else {
                           provider.addLocation(
                             WorkLocation(
@@ -3552,7 +3631,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                               groupIds: selectedLocationGroupIds,
                             ),
                           );
-                          _showSuccessSnackBar('Location added successfully');
+                          _showSuccessSnackBar(provider.translate('location_added_success'));
                         }
                       }
 
@@ -4259,14 +4338,14 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
 
     showGlassDialog(
       context: context,
-      title: 'Payroll History',
+      title: provider.translate('payroll_history_title'),
       subtitle: employee.name,
       icon: Icons.monetization_on,
       content: SizedBox(
         width: double.maxFinite,
         child: displayHistory.isEmpty
             ? Text(
-                'No payroll history.',
+                provider.translate('no_payroll_history'),
                 style: TextStyle(color: subtextColor),
               )
             : ListView.builder(
@@ -4284,7 +4363,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                       ),
                     ),
                     subtitle: Text(
-                      '${entry.startDate} to ${entry.endDate ?? 'Present'}',
+                      '${entry.startDate} ${provider.translate('to_ongoing')} ${entry.endDate ?? provider.translate('present_label')}',
                       style: TextStyle(
                         color: subtextColor,
                       ),
@@ -4303,11 +4382,11 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text('Close', style: TextStyle(color: isDark ? Colors.white70 : Colors.black54)),
+          child: Text(provider.translate('close'), style: TextStyle(color: isDark ? Colors.white70 : Colors.black54)),
         ),
         NeuButton(
           icon: const Icon(Icons.add_rounded, size: 18),
-          label: 'Add',
+          label: provider.translate('add'),
           variant: NeuButtonVariant.primary,
           height: 38,
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -4371,8 +4450,8 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
     showGlassDialog(
       context: context,
       title: isEditing
-          ? 'Edit Payroll Configuration'
-          : 'Add Payroll Configuration',
+          ? provider.translate('edit_payroll_config')
+          : provider.translate('add_payroll_config'),
       subtitle: employee.name,
       icon: isEditing ? Icons.edit_note : Icons.add_circle_outline,
       content: StatefulBuilder(
@@ -4404,7 +4483,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                       style: TextStyle(color: textColor),
                       onChanged: (_) => setState(() {}),
                       decoration: InputDecoration(
-                        labelText: 'Basic Salary',
+                        labelText: provider.translate('basic_salary'),
                         labelStyle: TextStyle(
                           color: subtextColor,
                         ),
@@ -4427,7 +4506,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                       dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
                       style: TextStyle(color: textColor),
                       decoration: InputDecoration(
-                        labelText: 'Currency',
+                        labelText: provider.translate('currency'),
                         labelStyle: TextStyle(
                           color: subtextColor,
                         ),
@@ -4461,7 +4540,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                 style: TextStyle(color: textColor),
                 onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
-                  labelText: 'Working Hours',
+                  labelText: provider.translate('working_hours_month'),
                   labelStyle: TextStyle(
                     color: subtextColor,
                   ),
@@ -4483,7 +4562,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                 ),
                 style: TextStyle(color: textColor),
                 decoration: InputDecoration(
-                  labelText: provider.translate('food_allowance'),
+                  labelText: provider.translate('food_allowance_label'),
                   labelStyle: TextStyle(
                     color: subtextColor,
                   ),
@@ -4505,7 +4584,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                 ),
                 style: TextStyle(color: textColor),
                 decoration: InputDecoration(
-                  labelText: provider.translate('transportation_allowance'),
+                  labelText: provider.translate('transport_allowance_label'),
                   labelStyle: TextStyle(
                     color: subtextColor,
                   ),
@@ -4527,7 +4606,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                 ),
                 style: TextStyle(color: textColor),
                 decoration: InputDecoration(
-                  labelText: provider.translate('other_allowance'),
+                  labelText: provider.translate('other_allowance_label'),
                   labelStyle: TextStyle(
                     color: subtextColor,
                   ),
@@ -4572,7 +4651,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        'Start Date: ${DateFormat('yyyy-MM-dd').format(selectedStartDate)}',
+                        '${provider.translate('start_date_label')}: ${DateFormat('yyyy-MM-dd').format(selectedStartDate)}',
                         style: TextStyle(
                           color: textColor,
                           fontSize: 15,
@@ -4615,8 +4694,8 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                       Expanded(
                         child: Text(
                           selectedEndDate != null
-                              ? 'End Date: ${DateFormat('yyyy-MM-dd').format(selectedEndDate!)}'
-                              : 'End Date: Not set (Present)',
+                              ? '${provider.translate('end_date_optional_label')}: ${DateFormat('yyyy-MM-dd').format(selectedEndDate!)}'
+                              : '${provider.translate('end_date_optional_label')}: ${provider.translate('present_label')}',
                           style: TextStyle(
                             color: textColor,
                             fontSize: 15,
@@ -4649,7 +4728,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Calculated Rates:',
+                      provider.translate('calculated_duration'),
                       style: TextStyle(
                         color: subtextColor,
                         fontSize: 12,
@@ -4657,7 +4736,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Hourly Rate: ${hourlyRate.toStringAsFixed(2)} $selectedCurrency/hr',
+                      '${provider.translate('hourly_rate')}: ${hourlyRate.toStringAsFixed(2)} $selectedCurrency',
                       style: TextStyle(
                         color: isDark ? const Color(0xFF34D399) : const Color(0xFF059669),
                         fontWeight: FontWeight.bold,
@@ -4666,7 +4745,7 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Daily Rate: ${dailyRate.toStringAsFixed(2)} $selectedCurrency/day',
+                      '${provider.translate('daily_rate')}: ${dailyRate.toStringAsFixed(2)} $selectedCurrency',
                       style: TextStyle(
                         color: isDark ? const Color(0xFF34D399) : const Color(0xFF059669),
                         fontWeight: FontWeight.bold,
@@ -4706,9 +4785,9 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                         Navigator.pop(context);
                         _showPayrollHistoryDialog(updatedEmployee, provider);
                       },
-                      child: const Text(
-                        'Delete',
-                        style: TextStyle(color: Colors.red),
+                      child: Text(
+                        provider.translate('delete'),
+                        style: const TextStyle(color: Colors.red),
                       ),
                     ),
                   TextButton(
@@ -4717,12 +4796,12 @@ class _HrManagementScreenMobileState extends State<HrManagementScreenMobile> {
                       _showPayrollHistoryDialog(employee, provider);
                     },
                     child: Text(
-                      'Cancel',
+                      provider.translate('cancel'),
                       style: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
                     ),
                   ),
                   NeuButton(
-                    label: isEditing ? 'Save' : 'Add',
+                    label: isEditing ? provider.translate('save') : provider.translate('add'),
                     variant: NeuButtonVariant.primary,
                     height: 40,
                     padding: const EdgeInsets.symmetric(horizontal: 22),

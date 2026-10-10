@@ -351,14 +351,14 @@ class _HrStructuresTabState extends State<HrStructuresTab> {
   void _showDeleteConfirm(BuildContext context, String id, AttendanceProvider provider) {
     showGlassDialog(
       context: context,
-      title: 'Delete Structure',
-      subtitle: 'Remove organizational unit',
+      title: '${provider.translate('delete')} ${provider.translate('structures')}',
+      subtitle: provider.translate('delete_confirm_title'),
       icon: Icons.delete_outline,
-      content: const Text('Are you sure you want to delete this organizational structure?'),
+      content: Text(provider.translate('delete_confirm_desc')),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(provider.translate('cancel')),
         ),
         NeuButton(
           onPressed: () {
@@ -366,7 +366,7 @@ class _HrStructuresTabState extends State<HrStructuresTab> {
             Navigator.pop(context);
           },
           variant: NeuButtonVariant.danger,
-          label: 'Delete',
+          label: provider.translate('delete'),
           height: 36,
           padding: const EdgeInsets.symmetric(horizontal: 16),
         ),
@@ -404,8 +404,8 @@ void showStructureDialog(BuildContext context, {OrgStructure? structure}) {
 
   showGlassDialog(
     context: context,
-    title: structure == null ? 'Add Structure' : 'Edit Structure',
-    subtitle: structure == null ? 'Create new department/unit' : 'Update department settings and location',
+    title: structure == null ? provider.translate('add_new_structure') : provider.translate('edit_structure'),
+    subtitle: provider.translate('fill_details_below'),
     icon: Icons.account_tree_outlined,
     content: StatefulBuilder(
       builder: (context, setDialogState) {
@@ -418,11 +418,11 @@ void showStructureDialog(BuildContext context, {OrgStructure? structure}) {
               // Structure Name
               TextField(
                 controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Structure Name *',
+                decoration: InputDecoration(
+                  labelText: provider.translate('structure_name_label'),
                   hintText: 'e.g. Main Office, Marketing Dept',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.corporate_fare_rounded, size: 20),
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.corporate_fare_rounded, size: 20),
                 ),
               ),
               const SizedBox(height: 14),
@@ -431,15 +431,15 @@ void showStructureDialog(BuildContext context, {OrgStructure? structure}) {
               if (provider.locations.isNotEmpty) ...[
                 DropdownButtonFormField<String?>(
                   initialValue: selectedPredefinedLocationId,
-                  decoration: const InputDecoration(
-                    labelText: 'Company Location Preset',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.pin_drop_outlined, size: 20),
+                  decoration: InputDecoration(
+                    labelText: provider.translate('company_location_preset_optional'),
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.pin_drop_outlined, size: 20),
                   ),
                   items: [
-                    const DropdownMenuItem(
+                    DropdownMenuItem(
                       value: null,
-                      child: Text('Custom / Manual Location'),
+                      child: Text(provider.translate('custom_location')),
                     ),
                     ...provider.locations.map(
                       (loc) => DropdownMenuItem(
@@ -467,11 +467,11 @@ void showStructureDialog(BuildContext context, {OrgStructure? structure}) {
               // Location Name (free-text or prefilled)
               TextField(
                 controller: locationController,
-                decoration: const InputDecoration(
-                  labelText: 'Location Name / City / Branch',
+                decoration: InputDecoration(
+                  labelText: provider.translate('location_eg_downtown'),
                   hintText: 'e.g. Downtown, Suly Branch, Floor 2',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.location_on_outlined, size: 20),
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.location_on_outlined, size: 20),
                 ),
               ),
               const SizedBox(height: 14),
@@ -499,9 +499,9 @@ void showStructureDialog(BuildContext context, {OrgStructure? structure}) {
                           color: selectedLatitude != null ? const Color(0xFF10B981) : Colors.white70,
                         ),
                         const SizedBox(width: 8),
-                        const Text(
-                          'GPS Coordinates & Geofencing',
-                          style: TextStyle(
+                        Text(
+                          provider.translate('gps_geofencing_settings'),
+                          style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                           ),
@@ -512,7 +512,7 @@ void showStructureDialog(BuildContext context, {OrgStructure? structure}) {
                     Text(
                       selectedLatitude != null && selectedLongitude != null
                           ? 'Lat: ${selectedLatitude!.toStringAsFixed(5)}, Lng: ${selectedLongitude!.toStringAsFixed(5)} • Radius: ${selectedRadius?.round() ?? 100}m'
-                          : 'No coordinates set. Clock-in geofence will be disabled.',
+                          : provider.translate('no_location_set'),
                       style: TextStyle(
                         fontSize: 12,
                         color: selectedLatitude != null ? const Color(0xFF10B981) : Colors.white54,
@@ -523,7 +523,7 @@ void showStructureDialog(BuildContext context, {OrgStructure? structure}) {
                       children: [
                         NeuButton(
                           icon: const Icon(Icons.map_rounded, size: 15),
-                          label: selectedLatitude != null ? 'Change on Map' : 'Pick on Map',
+                          label: provider.translate(selectedLatitude != null ? 'change_on_map' : 'pick_on_map'),
                           variant: NeuButtonVariant.navy,
                           height: 34,
                           fontSize: 12,
@@ -560,9 +560,9 @@ void showStructureDialog(BuildContext context, {OrgStructure? structure}) {
                                 selectedPredefinedLocationId = null;
                               });
                             },
-                            child: const Text(
-                              'Clear GPS',
-                              style: TextStyle(fontSize: 12, color: Colors.redAccent),
+                            child: Text(
+                              provider.translate('clear_btn'),
+                              style: const TextStyle(fontSize: 12, color: Colors.redAccent),
                             ),
                           ),
                         ],
@@ -577,11 +577,11 @@ void showStructureDialog(BuildContext context, {OrgStructure? structure}) {
               TextField(
                 controller: capacityController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Staff Capacity (Optional)',
+                decoration: InputDecoration(
+                  labelText: provider.translate('capacity_eg_100'),
                   hintText: 'e.g. 50',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.people_outline, size: 20),
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.people_outline, size: 20),
                 ),
               ),
               const SizedBox(height: 14),
@@ -601,15 +601,15 @@ void showStructureDialog(BuildContext context, {OrgStructure? structure}) {
                   return DropdownButtonFormField<String?>(
                     key: ValueKey(selectedParentId),
                     initialValue: selectedParentId,
-                    decoration: const InputDecoration(
-                      labelText: 'Parent Department',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.folder_outlined, size: 20),
+                    decoration: InputDecoration(
+                      labelText: provider.translate('parent_structure'),
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.folder_outlined, size: 20),
                     ),
                     items: [
-                      const DropdownMenuItem(
+                      DropdownMenuItem(
                         value: null,
-                        child: Text('None (Top-Level Structure)'),
+                        child: Text(provider.translate('none_no_parent')),
                       ),
                       if (selectedParentId != null && !hasCurrentParent)
                         DropdownMenuItem(
@@ -644,15 +644,15 @@ void showStructureDialog(BuildContext context, {OrgStructure? structure}) {
                   return DropdownButtonFormField<String?>(
                     key: ValueKey(selectedSupervisorId),
                     initialValue: selectedSupervisorId,
-                    decoration: const InputDecoration(
-                      labelText: 'Department Supervisor',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.shield_outlined, size: 20),
+                    decoration: InputDecoration(
+                      labelText: provider.translate('supervisor_of_structure'),
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.shield_outlined, size: 20),
                     ),
                     items: [
-                      const DropdownMenuItem(
+                      DropdownMenuItem(
                         value: null,
-                        child: Text('None (No Supervisor)'),
+                        child: Text(provider.translate('none_no_supervisor')),
                       ),
                       if (selectedSupervisorId != null && !hasCurrentSupervisor)
                         DropdownMenuItem(
@@ -680,10 +680,10 @@ void showStructureDialog(BuildContext context, {OrgStructure? structure}) {
     actions: [
       TextButton(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Cancel'),
+        child: Text(provider.translate('cancel')),
       ),
       NeuButton(
-        label: 'Save Structure',
+        label: provider.translate('save_changes'),
         variant: NeuButtonVariant.primary,
         height: 38,
         padding: const EdgeInsets.symmetric(horizontal: 18),

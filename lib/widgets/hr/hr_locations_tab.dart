@@ -293,17 +293,17 @@ class _HrLocationsTabState extends State<HrLocationsTab> {
   void _showDeleteConfirm(BuildContext context, String id, AttendanceProvider provider) {
     showGlassDialog(
       context: context,
-      title: 'Delete Location',
-      subtitle: 'Remove work branch location',
+      title: '${provider.translate('delete')} ${provider.translate('locations')}',
+      subtitle: provider.translate('delete_confirm_title'),
       icon: Icons.delete_outline,
-      content: const Text('Are you sure you want to delete this work location?'),
+      content: Text(provider.translate('delete_confirm_desc')),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(provider.translate('cancel')),
         ),
         NeuButton(
-          label: 'Delete',
+          label: provider.translate('delete'),
           variant: NeuButtonVariant.danger,
           height: 36,
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -326,8 +326,8 @@ void showLocationDialog(BuildContext context, {WorkLocation? location}) {
 
   showGlassDialog(
     context: context,
-    title: location == null ? 'Add Location' : 'Edit Location',
-    subtitle: location == null ? 'Define geofence location' : 'Update branch location details',
+    title: location == null ? provider.translate('add_new_location') : provider.translate('edit_location'),
+    subtitle: provider.translate('fill_details_below'),
     icon: Icons.location_on_outlined,
     content: SingleChildScrollView(
       child: Column(
@@ -335,36 +335,36 @@ void showLocationDialog(BuildContext context, {WorkLocation? location}) {
         children: [
           TextField(
             controller: nameController,
-            decoration: const InputDecoration(
-              labelText: 'Location Name',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: provider.translate('location_name_label'),
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: latController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Latitude',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: provider.translate('latitude_label'),
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: lngController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Longitude',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: provider.translate('longitude_label'),
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: radiusController,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Radius (Meters)',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: '${provider.translate('radius')} (${provider.translate('meters')})',
+              border: const OutlineInputBorder(),
             ),
           ),
         ],
@@ -373,10 +373,10 @@ void showLocationDialog(BuildContext context, {WorkLocation? location}) {
     actions: [
       TextButton(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Cancel'),
+        child: Text(provider.translate('cancel')),
       ),
       NeuButton(
-        label: 'Save',
+        label: provider.translate('save_changes'),
         variant: NeuButtonVariant.primary,
         height: 38,
         padding: const EdgeInsets.symmetric(horizontal: 18),

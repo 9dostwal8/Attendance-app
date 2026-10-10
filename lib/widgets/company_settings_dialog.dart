@@ -8,10 +8,11 @@ import '../models/hr_models.dart';
 import 'glass_dialog.dart';
 
 Future<void> showCompanySettingsDialog(BuildContext context) async {
+  final provider = Provider.of<AttendanceProvider>(context, listen: false);
   await showGlassDialog(
     context: context,
-    title: 'Company Settings',
-    subtitle: 'Manage company branding and details',
+    title: provider.translate('company_settings'),
+    subtitle: provider.translate('manage_company_branding'),
     icon: Icons.business,
     content: const CompanySettingsForm(),
   );
@@ -84,13 +85,13 @@ class _CompanySettingsFormState extends State<CompanySettingsForm> {
   }
 
   Future<void> _save() async {
+    final provider = Provider.of<AttendanceProvider>(context, listen: false);
     if (_nameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Company name is required')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(provider.translate('name_is_required'))));
       return;
     }
 
     setState(() => _isLoading = true);
-    final provider = Provider.of<AttendanceProvider>(context, listen: false);
     
     final newProfile = CompanyProfile(
       name: _nameController.text.trim(),
@@ -105,13 +106,14 @@ class _CompanySettingsFormState extends State<CompanySettingsForm> {
     if (mounted) {
       setState(() => _isLoading = false);
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Company settings saved')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(provider.translate('company_settings_saved'))));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final provider = Provider.of<AttendanceProvider>(context);
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -145,7 +147,7 @@ class _CompanySettingsFormState extends State<CompanySettingsForm> {
         const SizedBox(height: 8),
         Center(
           child: Text(
-            'Tap to upload logo',
+            provider.translate('tap_to_upload_logo'),
             style: TextStyle(
               fontSize: 12,
               color: isDark ? Colors.white54 : Colors.black54,
@@ -155,13 +157,13 @@ class _CompanySettingsFormState extends State<CompanySettingsForm> {
         const SizedBox(height: 24),
 
         // Fields
-        _buildTextField('Company Name', _nameController, Icons.business),
+        _buildTextField(provider.translate('company_name'), _nameController, Icons.business),
         const SizedBox(height: 16),
-        _buildTextField('Email', _emailController, Icons.email),
+        _buildTextField(provider.translate('email'), _emailController, Icons.email),
         const SizedBox(height: 16),
-        _buildTextField('Phone', _phoneController, Icons.phone),
+        _buildTextField(provider.translate('phone'), _phoneController, Icons.phone),
         const SizedBox(height: 16),
-        _buildTextField('Address', _addressController, Icons.location_on),
+        _buildTextField(provider.translate('address'), _addressController, Icons.location_on),
         const SizedBox(height: 32),
 
         // Save Button
@@ -178,7 +180,7 @@ class _CompanySettingsFormState extends State<CompanySettingsForm> {
           ),
           child: _isLoading
               ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-              : const Text('Save Changes', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              : Text(provider.translate('save_changes'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         ),
       ],
     );

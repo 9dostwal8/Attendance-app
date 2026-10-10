@@ -1,5 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/attendance_provider.dart';
 
 Future<T?> showGlassDialog<T>({
   required BuildContext context,
@@ -10,6 +12,14 @@ Future<T?> showGlassDialog<T>({
   List<Color>? iconBackgroundColor,
   List<Widget>? actions,
 }) {
+  AttendanceProvider? provider;
+  try {
+    provider = Provider.of<AttendanceProvider>(context, listen: false);
+  } catch (_) {}
+  final textDirection = provider?.currentLanguageDirection ??
+      Directionality.maybeOf(context) ??
+      TextDirection.ltr;
+
   final gradientColors = iconBackgroundColor ??
       const [
         Color(0xFF2E65FF),
@@ -33,11 +43,13 @@ Future<T?> showGlassDialog<T>({
       );
     },
     pageBuilder: (ctx, anim, secondAnim) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 48.0),
-          child: Material(
-            color: Colors.transparent,
+      return Directionality(
+        textDirection: textDirection,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 48.0),
+            child: Material(
+              color: Colors.transparent,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(28),
               child: BackdropFilter(
@@ -187,7 +199,8 @@ Future<T?> showGlassDialog<T>({
             ),
           ),
         ),
-      );
-    },
-  );
+      ),
+    );
+  },
+);
 }

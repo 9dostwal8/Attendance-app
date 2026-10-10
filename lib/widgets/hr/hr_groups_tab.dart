@@ -324,17 +324,17 @@ class _HrGroupsTabState extends State<HrGroupsTab> {
   void _showDeleteConfirm(BuildContext context, String id, AttendanceProvider provider) {
     showGlassDialog(
       context: context,
-      title: 'Delete Group',
-      subtitle: 'Remove employee classification group',
+      title: '${provider.translate('delete')} ${provider.translate('groups')}',
+      subtitle: provider.translate('delete_confirm_title'),
       icon: Icons.delete_outline,
-      content: const Text('Are you sure you want to delete this employee group?'),
+      content: Text(provider.translate('delete_confirm_desc')),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(provider.translate('cancel')),
         ),
         NeuButton(
-          label: 'Delete',
+          label: provider.translate('delete'),
           variant: NeuButtonVariant.danger,
           height: 36,
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -354,17 +354,17 @@ void showGroupDialog(BuildContext context, {EmployeeGroup? group}) {
 
   showGlassDialog(
     context: context,
-    title: group == null ? 'Add Group' : 'Edit Group',
-    subtitle: group == null ? 'Create new group' : 'Update group settings',
+    title: group == null ? provider.translate('add_new_group') : provider.translate('edit_group'),
+    subtitle: provider.translate('fill_details_below'),
     icon: Icons.group_outlined,
     content: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         TextField(
           controller: nameController,
-          decoration: const InputDecoration(
-            labelText: 'Group Name',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            labelText: provider.translate('group_name'),
+            border: const OutlineInputBorder(),
           ),
         ),
       ],
@@ -372,10 +372,10 @@ void showGroupDialog(BuildContext context, {EmployeeGroup? group}) {
     actions: [
       TextButton(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Cancel'),
+        child: Text(provider.translate('cancel')),
       ),
       NeuButton(
-        label: 'Save',
+        label: provider.translate('save_changes'),
         variant: NeuButtonVariant.primary,
         height: 38,
         padding: const EdgeInsets.symmetric(horizontal: 18),

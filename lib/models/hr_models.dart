@@ -813,6 +813,26 @@ class CompanyEmployee {
   final String? fcmToken;
   final String? password;
 
+  // General Info
+  final String? dateOfBirth;
+  final String? gender;
+  final String? maritalStatus;
+  final String? emergencyContact; // Close personal relationships
+  final String? emergencyPhone;   // Close personal phone no
+  final String? bloodGroup;
+  final String? nationality;
+  final String? address;
+
+  // Documents Info
+  final String? nationalCardNo;
+  final String? passportNo;
+  final String? passportExpiryDate;
+  final String? residenceCardNo;
+  final String? residenceCardExpiryDate;
+  final String? nationalCardAttachment;
+  final String? passportAttachment;
+  final String? residenceCardAttachment;
+
   CompanyEmployee({
     required this.id,
     required this.name,
@@ -843,6 +863,22 @@ class CompanyEmployee {
     this.languagePreference = 'en',
     this.fcmToken,
     this.password,
+    this.dateOfBirth,
+    this.gender,
+    this.maritalStatus,
+    this.emergencyContact,
+    this.emergencyPhone,
+    this.bloodGroup,
+    this.nationality,
+    this.address,
+    this.nationalCardNo,
+    this.passportNo,
+    this.passportExpiryDate,
+    this.residenceCardNo,
+    this.residenceCardExpiryDate,
+    this.nationalCardAttachment,
+    this.passportAttachment,
+    this.residenceCardAttachment,
   });
 
   CompanyEmployee copyWith({
@@ -882,6 +918,25 @@ class CompanyEmployee {
     bool overrideFcmToken = false,
     String? password,
     bool overridePassword = false,
+    String? dateOfBirth,
+    String? gender,
+    String? maritalStatus,
+    String? emergencyContact,
+    String? emergencyPhone,
+    String? bloodGroup,
+    String? nationality,
+    String? address,
+    String? nationalCardNo,
+    String? passportNo,
+    String? passportExpiryDate,
+    String? residenceCardNo,
+    String? residenceCardExpiryDate,
+    String? nationalCardAttachment,
+    bool overrideNationalCardAttachment = false,
+    String? passportAttachment,
+    bool overridePassportAttachment = false,
+    String? residenceCardAttachment,
+    bool overrideResidenceCardAttachment = false,
   }) {
     return CompanyEmployee(
       id: id ?? this.id,
@@ -913,6 +968,28 @@ class CompanyEmployee {
       languagePreference: languagePreference ?? this.languagePreference,
       fcmToken: overrideFcmToken ? fcmToken : (fcmToken ?? this.fcmToken),
       password: overridePassword ? password : (password ?? this.password),
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      gender: gender ?? this.gender,
+      maritalStatus: maritalStatus ?? this.maritalStatus,
+      emergencyContact: emergencyContact ?? this.emergencyContact,
+      emergencyPhone: emergencyPhone ?? this.emergencyPhone,
+      bloodGroup: bloodGroup ?? this.bloodGroup,
+      nationality: nationality ?? this.nationality,
+      address: address ?? this.address,
+      nationalCardNo: nationalCardNo ?? this.nationalCardNo,
+      passportNo: passportNo ?? this.passportNo,
+      passportExpiryDate: passportExpiryDate ?? this.passportExpiryDate,
+      residenceCardNo: residenceCardNo ?? this.residenceCardNo,
+      residenceCardExpiryDate: residenceCardExpiryDate ?? this.residenceCardExpiryDate,
+      nationalCardAttachment: overrideNationalCardAttachment
+          ? nationalCardAttachment
+          : (nationalCardAttachment ?? this.nationalCardAttachment),
+      passportAttachment: overridePassportAttachment
+          ? passportAttachment
+          : (passportAttachment ?? this.passportAttachment),
+      residenceCardAttachment: overrideResidenceCardAttachment
+          ? residenceCardAttachment
+          : (residenceCardAttachment ?? this.residenceCardAttachment),
     );
   }
 
@@ -947,6 +1024,22 @@ class CompanyEmployee {
       'languagePreference': languagePreference,
       'fcmToken': fcmToken,
       'password': password,
+      'dateOfBirth': dateOfBirth,
+      'gender': gender,
+      'maritalStatus': maritalStatus,
+      'emergencyContact': emergencyContact,
+      'emergencyPhone': emergencyPhone,
+      'bloodGroup': bloodGroup,
+      'nationality': nationality,
+      'address': address,
+      'nationalCardNo': nationalCardNo,
+      'passportNo': passportNo,
+      'passportExpiryDate': passportExpiryDate,
+      'residenceCardNo': residenceCardNo,
+      'residenceCardExpiryDate': residenceCardExpiryDate,
+      'nationalCardAttachment': nationalCardAttachment,
+      'passportAttachment': passportAttachment,
+      'residenceCardAttachment': residenceCardAttachment,
     };
   }
 
@@ -1000,6 +1093,22 @@ class CompanyEmployee {
       languagePreference: map['languagePreference'] ?? 'en',
       fcmToken: map['fcmToken'],
       password: map['password'],
+      dateOfBirth: map['dateOfBirth'],
+      gender: map['gender'],
+      maritalStatus: map['maritalStatus'],
+      emergencyContact: map['emergencyContact'],
+      emergencyPhone: map['emergencyPhone'],
+      bloodGroup: map['bloodGroup'],
+      nationality: map['nationality'],
+      address: map['address'],
+      nationalCardNo: map['nationalCardNo'],
+      passportNo: map['passportNo'],
+      passportExpiryDate: map['passportExpiryDate'],
+      residenceCardNo: map['residenceCardNo'],
+      residenceCardExpiryDate: map['residenceCardExpiryDate'],
+      nationalCardAttachment: map['nationalCardAttachment'],
+      passportAttachment: map['passportAttachment'],
+      residenceCardAttachment: map['residenceCardAttachment'],
     );
   }
 }

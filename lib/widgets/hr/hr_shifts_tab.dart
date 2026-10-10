@@ -757,8 +757,10 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
 
   showGlassDialog(
     context: context,
-    title: isEditing ? 'Edit Work Shift' : 'Add Work Shift',
-    subtitle: isEditing ? 'Update all shift timings and rules' : 'Define shift working hours and rules',
+    title: isEditing ? provider.translate('edit_shift') : provider.translate('add_new_shift'),
+    subtitle: isEditing
+        ? provider.translate('update_all_shift_timings')
+        : provider.translate('define_shift_working_hours'),
     icon: Icons.access_time_rounded,
     content: StatefulBuilder(
       builder: (context, setDialogState) {
@@ -780,11 +782,11 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
             children: [
               TextField(
                 controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Shift Name *',
-                  hintText: 'e.g., Morning Shift',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.badge_outlined),
+                decoration: InputDecoration(
+                  labelText: '${provider.translate('shift_name_label')} *',
+                  hintText: provider.translate('shift_name_hint'),
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.badge_outlined),
                 ),
               ),
               const SizedBox(height: 16),
@@ -800,9 +802,9 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Shift Type',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    Text(
+                      provider.translate('shift_type'),
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
                     Row(
@@ -837,7 +839,7 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    '1. Normal Shift',
+                                    provider.translate('normal_shift_btn'),
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 12,
@@ -891,7 +893,7 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    '2. Special Shift',
+                                    provider.translate('special_shift_btn'),
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 12,
@@ -908,8 +910,8 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                     const SizedBox(height: 8),
                     Text(
                       !isSpecialShift
-                          ? 'Normal Shift: Standard hours (e.g. 09:00-17:00, or 17:00-01:00 overnight). Clock-outs before the cutoff time count towards previous day. Missing punches are sorted chronologically.'
-                          : 'Special Shift: Continuous/multi-day cycle (e.g. 24h work on Day 1, Days 2-3 rest). Clock-in on Day 1 waits for next punch across days as clock-out and credits all hours to Day 1.',
+                          ? provider.translate('normal_shift_desc')
+                          : provider.translate('special_shift_desc'),
                       style: TextStyle(
                         fontSize: 11,
                         color: isDark ? Colors.white60 : Colors.black54,
@@ -929,18 +931,18 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                 ),
                 child: Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Rotating Shift Cycle',
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                            provider.translate('rotating_shift_cycle'),
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                           ),
-                          SizedBox(height: 2),
+                          const SizedBox(height: 2),
                           Text(
-                            'Shift schedule repeats continuously every N days (e.g. 3 days, 4 days)',
-                            style: TextStyle(fontSize: 11, color: Colors.grey),
+                            provider.translate('rotating_shift_desc'),
+                            style: const TextStyle(fontSize: 11, color: Colors.grey),
                           ),
                         ],
                       ),
@@ -969,18 +971,18 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                 ),
                 child: Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Special Shift (12h / 24h)',
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                            provider.translate('special_shift_12_24'),
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                           ),
-                          SizedBox(height: 2),
+                          const SizedBox(height: 2),
                           Text(
-                            'Flexible / continuous shift. No delay or early exit penalties. Deficit calculated strictly as (shift time - work time).',
-                            style: TextStyle(fontSize: 11, color: Colors.grey),
+                            provider.translate('special_shift_12_24_desc'),
+                            style: const TextStyle(fontSize: 11, color: Colors.grey),
                           ),
                         ],
                       ),
@@ -1008,10 +1010,10 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                       child: TextField(
                         controller: startController,
                         readOnly: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Start Time',
-                          border: OutlineInputBorder(),
-                          suffixIcon: Icon(Icons.access_time_rounded),
+                        decoration: InputDecoration(
+                          labelText: provider.translate('start_time'),
+                          border: const OutlineInputBorder(),
+                          suffixIcon: const Icon(Icons.access_time_rounded),
                         ),
                         onTap: () => selectTime(context, startController, () {
                           setDialogState(() {
@@ -1030,10 +1032,10 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                       child: TextField(
                         controller: endController,
                         readOnly: true,
-                        decoration: const InputDecoration(
-                          labelText: 'End Time',
-                          border: OutlineInputBorder(),
-                          suffixIcon: Icon(Icons.access_time_rounded),
+                        decoration: InputDecoration(
+                          labelText: provider.translate('end_time'),
+                          border: const OutlineInputBorder(),
+                          suffixIcon: const Icon(Icons.access_time_rounded),
                         ),
                         onTap: () => selectTime(context, endController, () {
                           setDialogState(() {
@@ -1052,8 +1054,8 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                 const SizedBox(height: 12),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Overnight Shift (Crosses Midnight)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                  subtitle: const Text('Checkouts up to cutoff calculate to previous date', style: TextStyle(fontSize: 11)),
+                  title: Text(provider.translate('overnight_shift'), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                  subtitle: Text(provider.translate('overnight_shift_desc'), style: const TextStyle(fontSize: 11)),
                   value: isOvernight,
                   activeThumbColor: const Color(0xFF8B5CF6),
                   onChanged: (val) {
@@ -1070,10 +1072,10 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                   TextField(
                     controller: crossMidnightCutoffController,
                     readOnly: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Next-Day Attribution Cutoff (e.g. 03:00)',
-                      border: OutlineInputBorder(),
-                      suffixIcon: Icon(Icons.access_time_rounded),
+                    decoration: InputDecoration(
+                      labelText: provider.translate('next_day_cutoff'),
+                      border: const OutlineInputBorder(),
+                      suffixIcon: const Icon(Icons.access_time_rounded),
                     ),
                     onTap: () => selectTime(context, crossMidnightCutoffController, () {
                       setDialogState(() {});
@@ -1083,22 +1085,22 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                 const SizedBox(height: 16),
 
                 // Working Days
-                const Text(
-                  'Working Days',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                Text(
+                  provider.translate('working_days'),
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    {'label': 'Saturday', 'value': 6},
-                    {'label': 'Sunday', 'value': 7},
-                    {'label': 'Monday', 'value': 1},
-                    {'label': 'Tuesday', 'value': 2},
-                    {'label': 'Wednesday', 'value': 3},
-                    {'label': 'Thursday', 'value': 4},
-                    {'label': 'Friday', 'value': 5},
+                    {'label': provider.translate('day_saturday'), 'value': 6},
+                    {'label': provider.translate('day_sunday'), 'value': 7},
+                    {'label': provider.translate('day_monday'), 'value': 1},
+                    {'label': provider.translate('day_tuesday'), 'value': 2},
+                    {'label': provider.translate('day_wednesday'), 'value': 3},
+                    {'label': provider.translate('day_thursday'), 'value': 4},
+                    {'label': provider.translate('day_friday'), 'value': 5},
                   ].map((dayMap) {
                     final dayVal = dayMap['value'] as int;
                     final isSelected = workingDays.contains(dayVal);
@@ -1349,13 +1351,13 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
-                                      'Cycle Anchor Date (Day 1 starts on)',
-                                      style: TextStyle(fontSize: 10, color: Colors.grey),
+                                    Text(
+                                      provider.translate('cycle_anchor_date'),
+                                      style: const TextStyle(fontSize: 10, color: Colors.grey),
                                     ),
                                     Text(
                                       rotationStartDateController.text.isEmpty
-                                          ? 'Select Start Date'
+                                          ? provider.translate('select_start_date')
                                           : rotationStartDateController.text,
                                       style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                                     ),
@@ -1369,7 +1371,7 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Day 1 begins on this date. The schedule will repeat every $rotationDays days continuously.',
+                        provider.translate('day_begins_desc').replaceAll('{days}', rotationDays.toString()),
                         style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: isDark ? Colors.white60 : Colors.black54),
                       ),
                     ],
@@ -1378,7 +1380,7 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                 const SizedBox(height: 14),
 
                 Text(
-                  'Rotation Schedule ($rotationDays-Day Cycle)',
+                  provider.translate('rotation_schedule_label').replaceAll('{days}', rotationDays.toString()),
                   style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
@@ -1635,10 +1637,10 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                     child: TextField(
                       controller: delayController,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Delay Forgiveness (mins)',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.timer_outlined),
+                      decoration: InputDecoration(
+                        labelText: provider.translate('delay_allowance_mins'),
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.timer_outlined),
                       ),
                     ),
                   ),
@@ -1647,10 +1649,10 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
                     child: TextField(
                       controller: earlyExitController,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Early Exit Allowance (mins)',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.exit_to_app_rounded),
+                      decoration: InputDecoration(
+                        labelText: provider.translate('early_exit_allowance_mins'),
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.exit_to_app_rounded),
                       ),
                     ),
                   ),
@@ -1664,10 +1666,10 @@ void showShiftDialog(BuildContext context, {WorkShift? shift}) {
     actions: [
       TextButton(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Cancel'),
+        child: Text(provider.translate('cancel')),
       ),
       NeuButton(
-        label: isEditing ? 'Save Changes' : 'Create Shift',
+        label: isEditing ? provider.translate('save_changes') : provider.translate('create_shift_btn'),
         variant: NeuButtonVariant.primary,
         height: 38,
         padding: const EdgeInsets.symmetric(horizontal: 18),

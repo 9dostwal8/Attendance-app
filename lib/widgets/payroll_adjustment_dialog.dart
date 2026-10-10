@@ -30,7 +30,7 @@ Future<void> showPayrollAdjustmentDialog({
   await showGeneralDialog(
     context: context,
     barrierDismissible: true,
-    barrierLabel: 'Payroll Adjustment',
+    barrierLabel: provider.translate('payroll_adjustment'),
     barrierColor: Colors.black.withValues(alpha: 0.5),
     transitionDuration: const Duration(milliseconds: 250),
     pageBuilder: (ctx, anim1, anim2) {
@@ -48,6 +48,46 @@ Future<void> showPayrollAdjustmentDialog({
       );
     },
   );
+}
+
+String getLocalizedPayrollCategory(String category, AttendanceProvider provider) {
+  switch (category) {
+    case 'Bonus':
+      return provider.translate('cat_bonus');
+    case 'Commission / Incentive':
+      return provider.translate('cat_commission_incentive');
+    case 'Overtime Adjustment':
+      return provider.translate('cat_overtime_adjustment');
+    case 'Special Allowance':
+      return provider.translate('cat_special_allowance');
+    case 'Housing Allowance':
+      return provider.translate('cat_housing_allowance');
+    case 'Food Allowance':
+      return provider.translate('cat_food_allowance');
+    case 'Other Addition':
+      return provider.translate('cat_other_addition');
+    case 'Loan Repayment':
+      return provider.translate('cat_loan_repayment');
+    case 'Fine / Penalty':
+      return provider.translate('cat_fine_penalty');
+    case 'Salary Advance':
+      return provider.translate('cat_salary_advance');
+    case 'Equipment / Damage':
+      return provider.translate('cat_equipment_damage');
+    case 'Absence / Deficit Adjustment':
+      return provider.translate('cat_absence_deficit');
+    case 'Insurance / Tax':
+      return provider.translate('cat_insurance_tax');
+    case 'Other Deduction':
+      return provider.translate('cat_other_deduction');
+    default:
+      return category;
+  }
+}
+
+String formatLocalizedPayrollDate(DateTime date, AttendanceProvider provider) {
+  final monthName = provider.translate('month_${date.month}');
+  return '$monthName ${date.day}, ${date.year}';
 }
 
 class _PayrollAdjustmentDialogContent extends StatefulWidget {
@@ -173,10 +213,11 @@ class _PayrollAdjustmentDialogContentState
   }
 
   Future<void> _submit() async {
+    final provider = Provider.of<AttendanceProvider>(context, listen: false);
     if (!_formKey.currentState!.validate()) return;
     if (_selectedEmployee == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an employee.')),
+        SnackBar(content: Text(provider.translate('select_employee_error'))),
       );
       return;
     }
@@ -184,14 +225,13 @@ class _PayrollAdjustmentDialogContentState
     final double amount = double.tryParse(_amountController.text.trim()) ?? 0.0;
     if (amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid amount greater than 0.')),
+        SnackBar(content: Text(provider.translate('valid_amount_error'))),
       );
       return;
     }
 
     setState(() => _isSaving = true);
 
-    final provider = Provider.of<AttendanceProvider>(context, listen: false);
     final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
     final monthStr = DateFormat('yyyy-MM').format(_selectedDate);
 
@@ -213,14 +253,18 @@ class _PayrollAdjustmentDialogContentState
 
     if (mounted) {
       Navigator.of(context).pop();
+      final typeLabel = provider.translate(_type == 'addition' ? 'addition' : 'deduction');
+      final amountLabel = _currency == 'USD' ? '\$$amount' : '$amount $_currency';
+      final msg = provider.translate('adjustment_recorded_msg')
+          .replaceAll('{type}', typeLabel)
+          .replaceAll('{amount}', amountLabel)
+          .replaceAll('{name}', _selectedEmployee!.name);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: _type == 'addition'
               ? const Color(0xFF10B981)
               : const Color(0xFFEF4444),
-          content: Text(
-            '${_type == 'addition' ? 'Addition' : 'Deduction'} of ${_currency == 'USD' ? '\$$amount' : '$amount $_currency'} recorded for ${_selectedEmployee!.name}.',
-          ),
+          content: Text(msg),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -241,8 +285,10 @@ class _PayrollAdjustmentDialogContentState
         ? const Color(0xFF10B981).withValues(alpha: 0.15)
         : const Color(0xFFEF4444).withValues(alpha: 0.15);
 
-    return Center(
-      child: Padding(
+    return Directionality(
+      textDirection: provider.currentLanguageDirection,
+      child: Center(
+        child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
         child: Material(
           color: Colors.transparent,
@@ -316,8 +362,8 @@ class _PayrollAdjustmentDialogContentState
                                   const SizedBox(height: 2),
                                   Text(
                                     isAddition
-                                        ? 'Record bonus, incentive, allowance, or adjustment'
-                                        : 'Record loan repayment, fine, penalty, or deduction',
+                                        ? provider.translate('addition_desc')
+                                        : provider.translate('deduction_desc'),
                                     style: TextStyle(
                                       color: isDark ? Colors.white60 : Colors.black54,
                                       fontSize: 12.5,
@@ -573,7 +619,9 @@ class _PayrollAdjustmentDialogContentState
 
                         // Category Dropdown
                         Text(
-                          isAddition ? 'Addition Type / Reason' : 'Deduction Type / Reason',
+                          isAddition
+                              ? provider.translate('addition_type_reason')
+                              : provider.translate('deduction_type_reason'),
                           style: TextStyle(
                             color: isDark ? Colors.white70 : Colors.black87,
                             fontSize: 12.5,
@@ -612,7 +660,7 @@ class _PayrollAdjustmentDialogContentState
                                       ),
                                       const SizedBox(width: 10),
                                       Text(
-                                        cat,
+                                        getLocalizedPayrollCategory(cat, provider),
                                         style: TextStyle(
                                           color: isDark ? Colors.white : Colors.black87,
                                           fontSize: 13,
@@ -699,11 +747,11 @@ class _PayrollAdjustmentDialogContentState
                                     ),
                                     validator: (val) {
                                       if (val == null || val.trim().isEmpty) {
-                                        return 'Required';
+                                        return provider.translate('valid_amount_error');
                                       }
                                       final num = double.tryParse(val.trim());
                                       if (num == null || num <= 0) {
-                                        return 'Enter > 0';
+                                        return provider.translate('valid_amount_error');
                                       }
                                       return null;
                                     },
@@ -800,7 +848,7 @@ class _PayrollAdjustmentDialogContentState
                                 ),
                                 const SizedBox(width: 10),
                                 Text(
-                                  DateFormat('MMMM d, yyyy').format(_selectedDate),
+                                  formatLocalizedPayrollDate(_selectedDate, provider),
                                   style: TextStyle(
                                     color: isDark ? Colors.white : Colors.black87,
                                     fontSize: 13.5,
@@ -838,8 +886,8 @@ class _PayrollAdjustmentDialogContentState
                           ),
                           decoration: InputDecoration(
                             hintText: isAddition
-                                ? 'e.g. Q3 Sales performance bonus, outstanding achievement'
-                                : 'e.g. Monthly loan repayment installment 2/6, damaged office chair',
+                                ? provider.translate('addition_notes_hint')
+                                : provider.translate('deduction_notes_hint'),
                             hintStyle: TextStyle(
                               color: isDark ? Colors.white38 : Colors.black38,
                               fontSize: 12.5,
@@ -933,8 +981,9 @@ class _PayrollAdjustmentDialogContentState
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   IconData _getCategoryIcon(String category) {
     switch (category) {
@@ -991,7 +1040,7 @@ Future<void> showManageAdjustmentsDialog({
   await showGeneralDialog(
     context: context,
     barrierDismissible: true,
-    barrierLabel: 'Manage Adjustments',
+    barrierLabel: provider.translate('monthly_adjustments'),
     barrierColor: Colors.black.withValues(alpha: 0.5),
     transitionDuration: const Duration(milliseconds: 250),
     pageBuilder: (ctx, anim1, anim2) {
@@ -1035,8 +1084,10 @@ class _ManageAdjustmentsDialogContent extends StatelessWidget {
       return true;
     }).toList();
 
-    return Center(
-      child: Padding(
+    return Directionality(
+      textDirection: provider.currentLanguageDirection,
+      child: Center(
+        child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
         child: Material(
           color: Colors.transparent,
@@ -1098,8 +1149,8 @@ class _ManageAdjustmentsDialogContent extends StatelessWidget {
                               ),
                               Text(
                                 filterEmployee != null
-                                    ? 'Showing adjustments for ${filterEmployee!.name}'
-                                    : '${monthAdjustments.length} records found',
+                                    ? provider.translate('showing_adjustments_for').replaceAll('{name}', filterEmployee!.name)
+                                    : provider.translate('records_found').replaceAll('{count}', monthAdjustments.length.toString()),
                                 style: TextStyle(
                                   color: isDark ? Colors.white60 : Colors.black54,
                                   fontSize: 12,
@@ -1227,7 +1278,7 @@ class _ManageAdjustmentsDialogContent extends StatelessWidget {
                                                   borderRadius: BorderRadius.circular(6),
                                                 ),
                                                 child: Text(
-                                                  adj.category,
+                                                  getLocalizedPayrollCategory(adj.category, provider),
                                                   style: TextStyle(
                                                     color: color,
                                                     fontSize: 11,
@@ -1249,7 +1300,7 @@ class _ManageAdjustmentsDialogContent extends StatelessWidget {
                                           ],
                                           const SizedBox(height: 3),
                                           Text(
-                                            'Date: ${adj.date}',
+                                            '${provider.translate('date')}: ${adj.date}',
                                             style: TextStyle(
                                               color: isDark ? Colors.white38 : Colors.black38,
                                               fontSize: 11,
@@ -1274,13 +1325,21 @@ class _ManageAdjustmentsDialogContent extends StatelessWidget {
                                         size: 20,
                                       ),
                                       onPressed: () async {
+                                        final typeLabel = provider.translate(adj.type == 'addition' ? 'addition' : 'deduction');
+                                        final catLabel = getLocalizedPayrollCategory(adj.category, provider);
+                                        final amountStr = adj.currency == 'USD'
+                                            ? '\$${adj.amount.toStringAsFixed(2)}'
+                                            : '${adj.amount.toStringAsFixed(0)} ${adj.currency}';
+                                        final confirmMsg = provider.translate('confirm_delete_adj_msg')
+                                            .replaceAll('{type}', typeLabel)
+                                            .replaceAll('{category}', catLabel)
+                                            .replaceAll('{amount}', amountStr)
+                                            .replaceAll('{name}', emp.name);
                                         final confirmed = await showDialog<bool>(
                                           context: context,
                                           builder: (c) => AlertDialog(
                                             title: Text(provider.translate('delete_adjustment_title')),
-                                            content: Text(
-                                              'Are you sure you want to remove this ${adj.type} (${adj.category}) of ${adj.amount} for ${emp.name}?',
-                                            ),
+                                            content: Text(confirmMsg),
                                             actions: [
                                               TextButton(
                                                 onPressed: () => Navigator.of(c).pop(false),
@@ -1347,6 +1406,7 @@ class _ManageAdjustmentsDialogContent extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

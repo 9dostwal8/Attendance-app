@@ -305,17 +305,17 @@ class _HrHolidaysTabState extends State<HrHolidaysTab> {
   void _showDeleteConfirm(BuildContext context, String id, AttendanceProvider provider) {
     showGlassDialog(
       context: context,
-      title: 'Delete Holiday',
-      subtitle: 'Remove holiday configuration',
+      title: '${provider.translate('delete')} ${provider.translate('holidays')}',
+      subtitle: provider.translate('delete_confirm_title'),
       icon: Icons.delete_outline,
-      content: const Text('Are you sure you want to delete this official holiday?'),
+      content: Text(provider.translate('delete_confirm_desc')),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(provider.translate('cancel')),
         ),
         NeuButton(
-          label: 'Delete',
+          label: provider.translate('delete'),
           variant: NeuButtonVariant.danger,
           height: 36,
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -337,33 +337,35 @@ void showHolidayDialog(BuildContext context, {Holiday? holiday}) {
 
   showGlassDialog(
     context: context,
-    title: holiday == null ? 'Add Holiday' : 'Edit Holiday',
-    subtitle: holiday == null ? 'Schedule company holiday' : 'Update holiday dates',
+    title: holiday == null ? provider.translate('add_new_holiday') : provider.translate('edit_holiday'),
+    subtitle: provider.translate('fill_details_below'),
     icon: Icons.beach_access_outlined,
     content: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         TextField(
           controller: nameController,
-          decoration: const InputDecoration(
-            labelText: 'Holiday Name',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            labelText: provider.translate('holiday_name'),
+            border: const OutlineInputBorder(),
           ),
         ),
         const SizedBox(height: 12),
         TextField(
           controller: fromController,
-          decoration: const InputDecoration(
-            labelText: 'From Date (yyyy-MM-dd)',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            labelText: provider.translate('from_date'),
+            hintText: 'yyyy-MM-dd',
+            border: const OutlineInputBorder(),
           ),
         ),
         const SizedBox(height: 12),
         TextField(
           controller: toController,
-          decoration: const InputDecoration(
-            labelText: 'To Date (yyyy-MM-dd)',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            labelText: provider.translate('to_date'),
+            hintText: 'yyyy-MM-dd',
+            border: const OutlineInputBorder(),
           ),
         ),
       ],
@@ -371,10 +373,10 @@ void showHolidayDialog(BuildContext context, {Holiday? holiday}) {
     actions: [
       TextButton(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Cancel'),
+        child: Text(provider.translate('cancel')),
       ),
       NeuButton(
-        label: 'Save',
+        label: provider.translate('save_changes'),
         variant: NeuButtonVariant.primary,
         height: 38,
         padding: const EdgeInsets.symmetric(horizontal: 18),
