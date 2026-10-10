@@ -1,3 +1,5 @@
+// ignore_for_file: constant_identifier_names
+
 // lib/src/zk_constants.dart
 
 /// The maximum value for an unsigned short integer.
