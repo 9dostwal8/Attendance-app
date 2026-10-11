@@ -187,7 +187,12 @@ class ExportService {
     DateTime month,
     CompanyProfile? profile,
   ) async {
-    final pdf = pw.Document();
+    final fonts = await _loadPdfFonts();
+    final pdfTheme = pw.ThemeData.withFont(
+      base: fonts['base'] ?? pw.Font.helvetica(),
+      bold: fonts['bold'] ?? fonts['base'] ?? pw.Font.helveticaBold(),
+    );
+    final pdf = pw.Document(theme: pdfTheme);
 
     final headers = [
       'Emp',
@@ -834,10 +839,10 @@ class ExportService {
     pw.Font? baseFont;
     pw.Font? boldFont;
     try {
-      final fontDataSpeda = await rootBundle.load('assets/fonts/Speda.ttf');
-      baseFont = pw.Font.ttf(fontDataSpeda);
       final fontDataUni = await rootBundle.load('assets/fonts/UniQAIDAR_NewsHeadLine_025.ttf');
-      boldFont = pw.Font.ttf(fontDataUni);
+      final uniFont = pw.Font.ttf(fontDataUni);
+      baseFont = uniFont;
+      boldFont = uniFont;
     } catch (e) {
       debugPrint('Could not load custom fonts for PDF: $e');
     }
