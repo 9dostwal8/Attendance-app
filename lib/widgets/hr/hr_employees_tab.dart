@@ -2078,14 +2078,14 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                 child: Text(
-                  'Attach $docTitle',
+                  provider.translate('attach_doc_title').replaceAll('{title}', docTitle),
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: textColor),
                 ),
               ),
               ListTile(
                 leading: const Icon(Icons.picture_as_pdf_rounded, color: Colors.redAccent),
-                title: Text('Select PDF Document', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
-                subtitle: Text('Attach .pdf file', style: TextStyle(color: subtextColor, fontSize: 11)),
+                title: Text(provider.translate('select_pdf_document'), style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+                subtitle: Text(provider.translate('attach_pdf_file'), style: TextStyle(color: subtextColor, fontSize: 11)),
                 onTap: () async {
                   Navigator.pop(bCtx);
                   await Future.delayed(const Duration(milliseconds: 150));
@@ -2182,8 +2182,8 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
               ),
               ListTile(
                 leading: const Icon(Icons.photo_library_outlined, color: Color(0xFF10B981)),
-                title: Text('Choose Image from Gallery', style: TextStyle(color: textColor)),
-                subtitle: Text('Attach photo or scanned image', style: TextStyle(color: subtextColor, fontSize: 11)),
+                title: Text(provider.translate('choose_image_gallery'), style: TextStyle(color: textColor)),
+                subtitle: Text(provider.translate('attach_photo_scanned'), style: TextStyle(color: subtextColor, fontSize: 11)),
                 onTap: () async {
                   Navigator.pop(bCtx);
                   try {
@@ -2210,8 +2210,8 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
               ),
               ListTile(
                 leading: const Icon(Icons.camera_alt_outlined, color: Color(0xFF2E65FF)),
-                title: Text('Take Photo with Camera', style: TextStyle(color: textColor)),
-                subtitle: Text('Capture ID or document card', style: TextStyle(color: subtextColor, fontSize: 11)),
+                title: Text(provider.translate('take_photo_camera'), style: TextStyle(color: textColor)),
+                subtitle: Text(provider.translate('capture_id_doc'), style: TextStyle(color: subtextColor, fontSize: 11)),
                 onTap: () async {
                   Navigator.pop(bCtx);
                   try {
@@ -2292,7 +2292,9 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    hasFile ? (isPdf ? 'PDF Attached' : 'Image Attached') : 'No file attached',
+                    hasFile
+                        ? (isPdf ? provider.translate('pdf_attached') : provider.translate('image_attached'))
+                        : provider.translate('no_file_attached'),
                     style: TextStyle(
                       color: hasFile ? (isPdf ? Colors.redAccent : const Color(0xFF10B981)) : subtextColor,
                       fontSize: 11,
@@ -2305,19 +2307,19 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
             if (hasFile) ...[
               IconButton(
                 icon: const Icon(Icons.visibility_outlined, size: 20, color: Color(0xFF2E65FF)),
-                tooltip: 'Preview / Download',
+                tooltip: provider.translate('preview_download'),
                 onPressed: () => _showDocumentPreviewDialog(ctx, title, attachmentValue),
               ),
               IconButton(
                 icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent),
-                tooltip: 'Remove',
+                tooltip: provider.translate('remove_action'),
                 onPressed: onRemove,
               ),
             ] else ...[
               OutlinedButton.icon(
                 onPressed: onPick,
                 icon: const Icon(Icons.upload_file, size: 15),
-                label: const Text('Attach', style: TextStyle(fontSize: 11)),
+                label: Text(provider.translate('attach_action'), style: const TextStyle(fontSize: 11)),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -2331,8 +2333,8 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
 
     showGlassDialog(
       context: context,
-      title: isEditing ? 'Edit User' : 'Add New User',
-      subtitle: isEditing ? 'Update user properties' : 'Create new system account',
+      title: isEditing ? provider.translate('edit_user') : provider.translate('add_new_user'),
+      subtitle: isEditing ? provider.translate('update_user_properties') : provider.translate('create_new_system_account'),
       icon: isEditing ? Icons.edit_note_rounded : Icons.person_add_rounded,
       content: StatefulBuilder(
         builder: (context, setDialogState) {
@@ -2373,7 +2375,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  'General Info',
+                                  provider.translate('general_info'),
                                   style: TextStyle(
                                     fontSize: 11.5,
                                     fontWeight: activeFormTab == 0 ? FontWeight.bold : FontWeight.normal,
@@ -2405,7 +2407,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  'Job & System',
+                                  provider.translate('job_and_system'),
                                   style: TextStyle(
                                     fontSize: 11.5,
                                     fontWeight: activeFormTab == 1 ? FontWeight.bold : FontWeight.normal,
@@ -2437,7 +2439,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  'Documents',
+                                  provider.translate('documents'),
                                   style: TextStyle(
                                     fontSize: 11.5,
                                     fontWeight: activeFormTab == 2 ? FontWeight.bold : FontWeight.normal,
@@ -2466,10 +2468,10 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                           style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
                           keyboardType: TextInputType.text,
                           decoration: InputDecoration(
-                            labelText: 'User ID *',
+                            labelText: '${provider.translate('user_id')} *',
                             labelStyle: TextStyle(color: labelColor),
                             prefixIcon: const Icon(Icons.tag_rounded, size: 18, color: Color(0xFF2E65FF)),
-                            helperText: isEditing ? 'Device/System ID' : 'Auto-sequence ID',
+                            helperText: isEditing ? provider.translate('device_system_id') : provider.translate('auto_sequence_id'),
                             helperStyle: TextStyle(color: subtextColor, fontSize: 10),
                           ),
                         ),
@@ -2481,7 +2483,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                           controller: nameController,
                           style: TextStyle(color: textColor),
                           decoration: InputDecoration(
-                            labelText: 'Full Name *',
+                            labelText: '${provider.translate('full_name')} *',
                             labelStyle: TextStyle(color: labelColor),
                             prefixIcon: Icon(Icons.person_outline, size: 18, color: iconColor),
                           ),
@@ -2515,7 +2517,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                               controller: dobController,
                               style: TextStyle(color: textColor),
                               decoration: InputDecoration(
-                                labelText: 'BirthDay',
+                                labelText: provider.translate('birthday'),
                                 labelStyle: TextStyle(color: labelColor),
                                 prefixIcon: Icon(Icons.cake_outlined, size: 18, color: iconColor),
                                 hintText: 'YYYY-MM-DD',
@@ -2532,15 +2534,15 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                           dropdownColor: dropdownBg,
                           style: TextStyle(color: textColor),
                           decoration: InputDecoration(
-                            labelText: 'Gender',
+                            labelText: provider.translate('gender'),
                             labelStyle: TextStyle(color: labelColor),
                             prefixIcon: Icon(Icons.wc_outlined, size: 18, color: iconColor),
                           ),
                           items: [
-                            DropdownMenuItem(value: null, child: Text('Not Specified', style: TextStyle(color: textColor))),
-                            DropdownMenuItem(value: 'Male', child: Text('Male', style: TextStyle(color: textColor))),
-                            DropdownMenuItem(value: 'Female', child: Text('Female', style: TextStyle(color: textColor))),
-                            DropdownMenuItem(value: 'Other', child: Text('Other', style: TextStyle(color: textColor))),
+                            DropdownMenuItem(value: null, child: Text(provider.translate('not_specified'), style: TextStyle(color: textColor))),
+                            DropdownMenuItem(value: 'Male', child: Text(provider.translate('male'), style: TextStyle(color: textColor))),
+                            DropdownMenuItem(value: 'Female', child: Text(provider.translate('female'), style: TextStyle(color: textColor))),
+                            DropdownMenuItem(value: 'Other', child: Text(provider.translate('other'), style: TextStyle(color: textColor))),
                           ],
                           onChanged: (val) => setDialogState(() => selectedGender = val),
                         ),
@@ -2558,16 +2560,16 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                           dropdownColor: dropdownBg,
                           style: TextStyle(color: textColor),
                           decoration: InputDecoration(
-                            labelText: 'Marital Status',
+                            labelText: provider.translate('marital_status'),
                             labelStyle: TextStyle(color: labelColor),
                             prefixIcon: Icon(Icons.favorite_border_rounded, size: 18, color: iconColor),
                           ),
                           items: [
-                            DropdownMenuItem(value: null, child: Text('Not Specified', style: TextStyle(color: textColor))),
-                            DropdownMenuItem(value: 'Single', child: Text('Single', style: TextStyle(color: textColor))),
-                            DropdownMenuItem(value: 'Married', child: Text('Married', style: TextStyle(color: textColor))),
-                            DropdownMenuItem(value: 'Divorced', child: Text('Divorced', style: TextStyle(color: textColor))),
-                            DropdownMenuItem(value: 'Widowed', child: Text('Widowed', style: TextStyle(color: textColor))),
+                            DropdownMenuItem(value: null, child: Text(provider.translate('not_specified'), style: TextStyle(color: textColor))),
+                            DropdownMenuItem(value: 'Single', child: Text(provider.translate('single'), style: TextStyle(color: textColor))),
+                            DropdownMenuItem(value: 'Married', child: Text(provider.translate('married'), style: TextStyle(color: textColor))),
+                            DropdownMenuItem(value: 'Divorced', child: Text(provider.translate('divorced'), style: TextStyle(color: textColor))),
+                            DropdownMenuItem(value: 'Widowed', child: Text(provider.translate('widowed'), style: TextStyle(color: textColor))),
                           ],
                           onChanged: (val) => setDialogState(() => selectedMaritalStatus = val),
                         ),
@@ -2579,12 +2581,12 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                           dropdownColor: dropdownBg,
                           style: TextStyle(color: textColor),
                           decoration: InputDecoration(
-                            labelText: 'Blood Group',
+                            labelText: provider.translate('blood_group'),
                             labelStyle: TextStyle(color: labelColor),
                             prefixIcon: Icon(Icons.bloodtype_outlined, size: 18, color: iconColor),
                           ),
                           items: [
-                            DropdownMenuItem(value: null, child: Text('Not Specified', style: TextStyle(color: textColor))),
+                            DropdownMenuItem(value: null, child: Text(provider.translate('not_specified'), style: TextStyle(color: textColor))),
                             ...['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(
                               (bg) => DropdownMenuItem(value: bg, child: Text(bg, style: TextStyle(color: textColor))),
                             ),
@@ -2605,7 +2607,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                           style: TextStyle(color: textColor),
                           keyboardType: TextInputType.phone,
                           decoration: InputDecoration(
-                            labelText: 'Phone No',
+                            labelText: provider.translate('phone_no'),
                             labelStyle: TextStyle(color: labelColor),
                             prefixIcon: Icon(Icons.phone_outlined, size: 18, color: iconColor),
                           ),
@@ -2617,7 +2619,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                           controller: nationalityController,
                           style: TextStyle(color: textColor),
                           decoration: InputDecoration(
-                            labelText: 'Nationality',
+                            labelText: provider.translate('nationality'),
                             labelStyle: TextStyle(color: labelColor),
                             prefixIcon: Icon(Icons.public_outlined, size: 18, color: iconColor),
                           ),
@@ -2632,7 +2634,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                     controller: addressController,
                     style: TextStyle(color: textColor),
                     decoration: InputDecoration(
-                      labelText: 'Address',
+                      labelText: provider.translate('address'),
                       labelStyle: TextStyle(color: labelColor),
                       prefixIcon: Icon(Icons.home_outlined, size: 18, color: iconColor),
                     ),
@@ -2651,7 +2653,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Emergency & Close Personal Contacts',
+                          provider.translate('emergency_and_close_contacts'),
                           style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 12),
                         ),
                         const SizedBox(height: 10),
@@ -2659,7 +2661,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                           controller: emergencyContactController,
                           style: TextStyle(color: textColor),
                           decoration: InputDecoration(
-                            labelText: 'Close personal relationships (e.g. Spouse, Father, Brother)',
+                            labelText: provider.translate('close_personal_relationships'),
                             labelStyle: TextStyle(color: labelColor, fontSize: 12),
                             prefixIcon: Icon(Icons.people_outline, size: 18, color: iconColor),
                           ),
@@ -2670,7 +2672,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                           style: TextStyle(color: textColor),
                           keyboardType: TextInputType.phone,
                           decoration: InputDecoration(
-                            labelText: 'Close personal Phone No',
+                            labelText: provider.translate('close_personal_phone_no'),
                             labelStyle: TextStyle(color: labelColor, fontSize: 12),
                             prefixIcon: Icon(Icons.contact_phone_outlined, size: 18, color: iconColor),
                           ),
@@ -2687,7 +2689,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                     style: TextStyle(color: textColor),
                     keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
-                      labelText: 'Email Address *',
+                      labelText: '${provider.translate('email_address_label')} *',
                       labelStyle: TextStyle(color: labelColor),
                       prefixIcon: Icon(Icons.email_outlined, size: 18, color: iconColor),
                     ),
@@ -2697,7 +2699,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                     controller: positionController,
                     style: TextStyle(color: textColor),
                     decoration: InputDecoration(
-                      labelText: 'Position / Job Title',
+                      labelText: provider.translate('position_job_title'),
                       labelStyle: TextStyle(color: labelColor),
                       prefixIcon: Icon(Icons.badge_outlined, size: 18, color: iconColor),
                     ),
@@ -2708,7 +2710,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                     style: TextStyle(color: textColor),
                     obscureText: true,
                     decoration: InputDecoration(
-                      labelText: 'Login Password (optional)',
+                      labelText: provider.translate('login_password_optional'),
                       labelStyle: TextStyle(color: labelColor),
                       prefixIcon: Icon(Icons.lock_outline, size: 18, color: iconColor),
                     ),
@@ -2721,14 +2723,14 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                     dropdownColor: dropdownBg,
                     style: TextStyle(color: textColor),
                     decoration: InputDecoration(
-                      labelText: 'Access Role *',
+                      labelText: provider.translate('access_role'),
                       labelStyle: TextStyle(color: labelColor),
                       prefixIcon: Icon(Icons.security_outlined, size: 18, color: iconColor),
                     ),
                     items: [
-                      DropdownMenuItem(value: 'employee', child: Text('Employee', style: TextStyle(color: textColor))),
-                      DropdownMenuItem(value: 'supervisor', child: Text('Supervisor', style: TextStyle(color: textColor))),
-                      DropdownMenuItem(value: 'hr', child: Text('HR / Admin', style: TextStyle(color: textColor))),
+                      DropdownMenuItem(value: 'employee', child: Text(provider.translate('employee_role'), style: TextStyle(color: textColor))),
+                      DropdownMenuItem(value: 'supervisor', child: Text(provider.translate('supervisor_role'), style: TextStyle(color: textColor))),
+                      DropdownMenuItem(value: 'hr', child: Text(provider.translate('role_hr_admin'), style: TextStyle(color: textColor))),
                     ],
                     onChanged: (val) {
                       if (val != null) {
@@ -2744,12 +2746,12 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                     dropdownColor: dropdownBg,
                     style: TextStyle(color: textColor),
                     decoration: InputDecoration(
-                      labelText: 'Structure / Department',
+                      labelText: provider.translate('structure_department'),
                       labelStyle: TextStyle(color: labelColor),
                       prefixIcon: Icon(Icons.corporate_fare_outlined, size: 18, color: iconColor),
                     ),
                     items: [
-                      DropdownMenuItem(value: null, child: Text('None (Unassigned)', style: TextStyle(color: textColor))),
+                      DropdownMenuItem(value: null, child: Text(provider.translate('none_unassigned'), style: TextStyle(color: textColor))),
                       ...provider.structures.map(
                         (s) => DropdownMenuItem(value: s.id, child: Text(s.name, style: TextStyle(color: textColor))),
                       ),
@@ -2766,12 +2768,12 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                     dropdownColor: dropdownBg,
                     style: TextStyle(color: textColor),
                     decoration: InputDecoration(
-                      labelText: 'Employee Group (Shift)',
+                      labelText: provider.translate('employee_group_shift'),
                       labelStyle: TextStyle(color: labelColor),
                       prefixIcon: Icon(Icons.schedule_outlined, size: 18, color: iconColor),
                     ),
                     items: [
-                      DropdownMenuItem(value: null, child: Text('None (Standard)', style: TextStyle(color: textColor))),
+                      DropdownMenuItem(value: null, child: Text(provider.translate('none_standard'), style: TextStyle(color: textColor))),
                       ...provider.groups.map(
                         (g) {
                           final shift = provider.shifts.where((s) => s.id == g.shiftId).firstOrNull;
@@ -2785,7 +2787,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                         selectedGroup = val;
                         if (val != employee?.groupId) {
                           groupStartDateController.text = nowStr;
-                          groupEndDateController.text = '';
+                          groupEndDateController.clear();
                         }
                       });
                     },
@@ -2807,7 +2809,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                               const Icon(Icons.date_range_rounded, size: 16, color: Color(0xFF2E65FF)),
                               const SizedBox(width: 6),
                               Text(
-                                'Shift Change Effective Dates',
+                                provider.translate('shift_change_effective_dates'),
                                 style: TextStyle(
                                   color: textColor,
                                   fontSize: 12,
@@ -2840,7 +2842,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                                       controller: groupStartDateController,
                                       style: TextStyle(color: textColor, fontSize: 13),
                                       decoration: InputDecoration(
-                                        labelText: 'Start Date *',
+                                        labelText: provider.translate('start_date_required'),
                                         labelStyle: TextStyle(color: labelColor, fontSize: 12),
                                         suffixIcon: Icon(Icons.calendar_today, size: 16, color: iconColor),
                                         isDense: true,
@@ -2871,9 +2873,9 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                                       controller: groupEndDateController,
                                       style: TextStyle(color: textColor, fontSize: 13),
                                       decoration: InputDecoration(
-                                        labelText: 'End Date (Optional)',
+                                        labelText: provider.translate('end_date_optional'),
                                         labelStyle: TextStyle(color: labelColor, fontSize: 12),
-                                        hintText: 'Ongoing',
+                                        hintText: provider.translate('ongoing'),
                                         hintStyle: TextStyle(color: hintColor, fontSize: 12),
                                         suffixIcon: groupEndDateController.text.isNotEmpty
                                             ? IconButton(
@@ -2893,7 +2895,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            'Days prior to this start date will keep their previous shift.',
+                            provider.translate('shift_change_help_text'),
                             style: TextStyle(
                               color: subtextColor,
                               fontSize: 10.5,
@@ -2905,7 +2907,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                             Divider(color: dividerColor, height: 1),
                             const SizedBox(height: 8),
                             Text(
-                              'Recorded Shift Periods:',
+                              provider.translate('recorded_shift_periods'),
                               style: TextStyle(color: labelColor, fontSize: 11, fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(height: 4),
@@ -2923,7 +2925,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                                   children: [
                                     Expanded(
                                       child: Text(
-                                        '• $gTitle: ${h.startDate} to ${h.endDate.isEmpty ? 'Ongoing' : h.endDate}',
+                                        '• $gTitle: ${h.startDate} to ${h.endDate.isEmpty ? provider.translate('ongoing') : h.endDate}',
                                         style: TextStyle(color: subtextColor, fontSize: 11),
                                       ),
                                     ),
@@ -2951,10 +2953,10 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                     style: TextStyle(color: textColor),
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(
-                      labelText: 'Annual Leave Balance (Hours)',
+                      labelText: provider.translate('annual_leave_balance_hours'),
                       labelStyle: TextStyle(color: labelColor),
                       prefixIcon: const Icon(Icons.beach_access_rounded, size: 18, color: Color(0xFF10B981)),
-                      helperText: 'Remaining available annual leave in hours (e.g. 24h = 3 eight-hour workdays)',
+                      helperText: provider.translate('annual_leave_balance_helper'),
                       helperStyle: TextStyle(color: subtextColor, fontSize: 10),
                     ),
                   ),
@@ -2981,7 +2983,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                'Face ID Biometrics',
+                                provider.translate('face_id_biometrics'),
                                 style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13),
                               ),
                               const Spacer(),
@@ -2994,7 +2996,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
-                                  formFaceEmbedding != null ? 'ENROLLED' : 'NOT ENROLLED',
+                                  formFaceEmbedding != null ? provider.translate('enrolled_badge') : provider.translate('not_enrolled_badge'),
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
@@ -3006,7 +3008,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            'Enabling Face ID requires this employee to verify their face when clocking in & out.',
+                            provider.translate('form_face_id_desc'),
                             style: TextStyle(color: subtextColor, fontSize: 11),
                           ),
                           const SizedBox(height: 10),
@@ -3055,7 +3057,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                                     }
                                   },
                                   icon: const Icon(Icons.camera_alt_outlined, size: 16),
-                                  label: const Text('Scan Camera', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                  label: Text(provider.translate('scan_camera'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                                   style: OutlinedButton.styleFrom(
                                     padding: const EdgeInsets.symmetric(vertical: 10),
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -3066,7 +3068,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                                 const SizedBox(width: 8),
                                 IconButton(
                                   icon: const Icon(Icons.delete_outline, color: Color(0xFFEF4444), size: 20),
-                                  tooltip: 'Remove Face ID',
+                                  tooltip: provider.translate('remove_face_id'),
                                   onPressed: () {
                                     setDialogState(() {
                                       formFaceEmbedding = null;
@@ -3083,8 +3085,8 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
 
                   // Active / Suspended Switch
                   SwitchListTile(
-                    title: Text('Suspend Account', style: TextStyle(color: textColor, fontSize: 13)),
-                    subtitle: Text('Prevent login & clocking', style: TextStyle(color: subtextColor, fontSize: 11)),
+                    title: Text(provider.translate('suspend_account'), style: TextStyle(color: textColor, fontSize: 13)),
+                    subtitle: Text(provider.translate('prevent_login_clocking'), style: TextStyle(color: subtextColor, fontSize: 11)),
                     value: isDisabled,
                     activeThumbColor: Colors.redAccent,
                     onChanged: (val) {
@@ -3100,7 +3102,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                     controller: nationalCardNoController,
                     style: TextStyle(color: textColor),
                     decoration: InputDecoration(
-                      labelText: 'National Card No',
+                      labelText: provider.translate('national_card_no'),
                       labelStyle: TextStyle(color: labelColor),
                       prefixIcon: Icon(Icons.credit_card_outlined, size: 18, color: iconColor),
                     ),
@@ -3108,11 +3110,11 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                   const SizedBox(height: 10),
                   buildAttachmentPickerBox(
                     ctx: context,
-                    title: 'National Card Attach',
+                    title: provider.translate('national_card_attach'),
                     attachmentValue: nationalCardAttachment,
                     onPick: () => pickAttachment(
                       ctx: context,
-                      docTitle: 'National Card',
+                      docTitle: provider.translate('national_card_attach'),
                       onPicked: (val) => setDialogState(() => nationalCardAttachment = val),
                     ),
                     onRemove: () => setDialogState(() => nationalCardAttachment = null),
@@ -3127,7 +3129,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                           controller: passportNoController,
                           style: TextStyle(color: textColor),
                           decoration: InputDecoration(
-                            labelText: 'Passport No',
+                            labelText: provider.translate('passport_no'),
                             labelStyle: TextStyle(color: labelColor),
                             prefixIcon: Icon(Icons.flight_outlined, size: 18, color: iconColor),
                           ),
@@ -3155,7 +3157,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                               controller: passportExpiryController,
                               style: TextStyle(color: textColor),
                               decoration: InputDecoration(
-                                labelText: 'Passport Expire Date',
+                                labelText: provider.translate('passport_expire_date'),
                                 labelStyle: TextStyle(color: labelColor),
                                 prefixIcon: Icon(Icons.event_outlined, size: 18, color: iconColor),
                                 hintText: 'YYYY-MM-DD',
@@ -3170,11 +3172,11 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                   const SizedBox(height: 10),
                   buildAttachmentPickerBox(
                     ctx: context,
-                    title: 'Passport Attach',
+                    title: provider.translate('passport_attach'),
                     attachmentValue: passportAttachment,
                     onPick: () => pickAttachment(
                       ctx: context,
-                      docTitle: 'Passport',
+                      docTitle: provider.translate('passport_attach'),
                       onPicked: (val) => setDialogState(() => passportAttachment = val),
                     ),
                     onRemove: () => setDialogState(() => passportAttachment = null),
@@ -3189,7 +3191,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                           controller: residenceCardNoController,
                           style: TextStyle(color: textColor),
                           decoration: InputDecoration(
-                            labelText: 'Residence Card No',
+                            labelText: provider.translate('residence_card_no'),
                             labelStyle: TextStyle(color: labelColor),
                             prefixIcon: Icon(Icons.perm_identity_rounded, size: 18, color: iconColor),
                           ),
@@ -3217,7 +3219,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                               controller: residenceCardExpiryController,
                               style: TextStyle(color: textColor),
                               decoration: InputDecoration(
-                                labelText: 'Residence Card Expire Date',
+                                labelText: provider.translate('residence_card_expire_date'),
                                 labelStyle: TextStyle(color: labelColor),
                                 prefixIcon: Icon(Icons.event_outlined, size: 18, color: iconColor),
                                 hintText: 'YYYY-MM-DD',
@@ -3232,11 +3234,11 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                   const SizedBox(height: 10),
                   buildAttachmentPickerBox(
                     ctx: context,
-                    title: 'Residence Card Attach',
+                    title: provider.translate('residence_card_attach'),
                     attachmentValue: residenceCardAttachment,
                     onPick: () => pickAttachment(
                       ctx: context,
-                      docTitle: 'Residence Card',
+                      docTitle: provider.translate('residence_card_attach'),
                       onPicked: (val) => setDialogState(() => residenceCardAttachment = val),
                     ),
                     onRemove: () => setDialogState(() => residenceCardAttachment = null),
@@ -3250,10 +3252,10 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text('Cancel', style: TextStyle(color: cancelColor)),
+          child: Text(provider.translate('cancel'), style: TextStyle(color: cancelColor)),
         ),
         NeuButton(
-          label: isEditing ? 'Save Changes' : 'Create User',
+          label: isEditing ? provider.translate('save_changes') : provider.translate('create_user'),
           variant: NeuButtonVariant.primary,
           height: 38,
           padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -3267,7 +3269,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
 
             if (enteredId.isEmpty || name.isEmpty || email.isEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('User ID, Name, and Email are required.')),
+                SnackBar(content: Text(provider.translate('user_required_fields_error'))),
               );
               return;
             }
@@ -3278,7 +3280,11 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
             if (conflict != null) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('User ID "$enteredId" is already used by ${conflict.name}. Please enter a unique ID.'),
+                  content: Text(
+                    provider.translate('user_id_conflict_error')
+                        .replaceAll('{id}', enteredId)
+                        .replaceAll('{name}', conflict.name),
+                  ),
                   backgroundColor: Colors.redAccent,
                 ),
               );
@@ -3532,7 +3538,7 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
             Navigator.pop(context);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(isEditing ? 'User updated successfully!' : 'New user created successfully!'),
+                content: Text(isEditing ? provider.translate('user_updated_success') : provider.translate('user_created_success_msg')),
                 backgroundColor: const Color(0xFF10B981),
               ),
             );
