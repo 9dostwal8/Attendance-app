@@ -96,6 +96,38 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
     return '${m}m';
   }
 
+  String _localizeStatus(String status, AttendanceProvider provider) {
+    switch (status) {
+      case 'Late':
+        return provider.translate('late_kpi');
+      case 'Present':
+        return provider.translate('present');
+      case 'Absent':
+        return provider.translate('absent');
+      case 'Day Off':
+        return provider.translate('day_off_status');
+      case 'Upcoming':
+        return provider.translate('upcoming_status');
+      case 'Active':
+        return provider.translate('active_status');
+      default:
+        return status;
+    }
+  }
+
+  String _localizeClockTime(String clockTime, AttendanceProvider provider) {
+    switch (clockTime) {
+      case 'No Punch':
+        return provider.translate('no_punch_label');
+      case 'Off Duty':
+        return provider.translate('off_duty_label');
+      case 'Scheduled':
+        return provider.translate('scheduled_label');
+      default:
+        return clockTime;
+    }
+  }
+
   /// Compiles full history-like attendance analytics for a single employee on the given date
   Map<String, dynamic> _compileEmployeeDayData({
     required CompanyEmployee emp,
@@ -728,7 +760,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
             if (!isToday) ...[
               const SizedBox(width: 8),
               NeuButton(
-                label: 'Today',
+                label: provider.translate('today'),
                 variant: NeuButtonVariant.primary,
                 height: 32,
                 fontSize: 11,
@@ -808,47 +840,50 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
     required int totalLateMinutes,
     required int totalWorkedMinutes,
   }) {
+    final provider = Provider.of<AttendanceProvider>(context, listen: false);
     final cards = [
       _buildMiniKpiCard(
-        title: 'Workforce',
+        title: provider.translate('workforce_kpi'),
         value: '$totalWorkforce',
-        subtitle: 'Scheduled Users',
+        subtitle: provider.translate('scheduled_users_subtitle'),
         color: const Color(0xFF00E5CE),
         icon: Icons.people_outline_rounded,
         isActive: _statusFilter == 'all',
         onTap: () => setState(() => _statusFilter = 'all'),
       ),
       _buildMiniKpiCard(
-        title: 'Present',
+        title: provider.translate('present'),
         value: '$presentCount',
-        subtitle: 'On Duty / Completed',
+        subtitle: provider.translate('on_duty_completed_subtitle'),
         color: const Color(0xFF10B981),
         icon: Icons.check_circle_outline_rounded,
         isActive: _statusFilter == 'present',
         onTap: () => setState(() => _statusFilter = 'present'),
       ),
       _buildMiniKpiCard(
-        title: 'Late',
+        title: provider.translate('late_kpi'),
         value: '$lateCount',
-        subtitle: totalLateMinutes > 0 ? '${totalLateMinutes}m delay' : 'On time',
+        subtitle: totalLateMinutes > 0
+            ? provider.translate('delay_subtitle', params: {'mins': '$totalLateMinutes'})
+            : provider.translate('on_time_subtitle'),
         color: const Color(0xFFFF5C5C),
         icon: Icons.alarm_rounded,
         isActive: _statusFilter == 'late',
         onTap: () => setState(() => _statusFilter = 'late'),
       ),
       _buildMiniKpiCard(
-        title: 'Absent',
+        title: provider.translate('absent'),
         value: '$absentCount',
-        subtitle: 'Unexcused / Off',
+        subtitle: provider.translate('unexcused_off_subtitle'),
         color: const Color(0xFFEF4444),
         icon: Icons.cancel_outlined,
         isActive: _statusFilter == 'absent',
         onTap: () => setState(() => _statusFilter = 'absent'),
       ),
       _buildMiniKpiCard(
-        title: 'Leave / Holiday',
+        title: provider.translate('leave_holiday_kpi'),
         value: '$leaveCount',
-        subtitle: 'Approved Off',
+        subtitle: provider.translate('approved_off_subtitle'),
         color: const Color(0xFF818CF8),
         icon: Icons.beach_access_rounded,
         isActive: _statusFilter == 'leave',
@@ -1022,14 +1057,14 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
       children: [
         // Structure Filter Capsule Dropdown
         _buildCapsuleDropdown(
-          label: 'Structure',
+          label: provider.translate('structure'),
           icon: Icons.apartment_rounded,
           value: _selectedStructureId ?? 'all',
           isDark: isDark,
           items: [
-            const DropdownMenuItem(
+            DropdownMenuItem(
               value: 'all',
-              child: Text('All Branches / Structures'),
+              child: Text(provider.translate('all_branches_structures')),
             ),
             ...structures.map((s) => DropdownMenuItem(
                   value: s.id,
@@ -1045,14 +1080,14 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
 
         // Shift Filter Capsule Dropdown
         _buildCapsuleDropdown(
-          label: 'Shift',
+          label: provider.translate('shift'),
           icon: Icons.schedule_rounded,
           value: _selectedShiftId ?? 'all',
           isDark: isDark,
           items: [
-            const DropdownMenuItem(
+            DropdownMenuItem(
               value: 'all',
-              child: Text('All Shifts'),
+              child: Text(provider.translate('all_shifts')),
             ),
             ...shifts.map((s) => DropdownMenuItem(
                   value: s.id,
@@ -1068,14 +1103,14 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
 
         // Group Filter Capsule Dropdown
         _buildCapsuleDropdown(
-          label: 'Group',
+          label: provider.translate('group'),
           icon: Icons.group_outlined,
           value: _selectedGroupId ?? 'all',
           isDark: isDark,
           items: [
-            const DropdownMenuItem(
+            DropdownMenuItem(
               value: 'all',
-              child: Text('All Groups'),
+              child: Text(provider.translate('all_groups')),
             ),
             ...groups.map((g) => DropdownMenuItem(
                   value: g.id,
@@ -1111,7 +1146,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                   onChanged: (val) => setState(() {}),
                   style: TextStyle(fontSize: 11.5, color: textColor),
                   decoration: InputDecoration(
-                    hintText: 'Search user...',
+                    hintText: provider.translate('search_user_hint'),
                     hintStyle: TextStyle(
                       fontSize: 11.5,
                       color: isDark ? Colors.white38 : Colors.grey,
@@ -1136,7 +1171,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
 
         if (hasActiveFilter)
           NeuButton(
-            label: 'Clear Filters',
+            label: provider.translate('clear_filters_btn'),
             icon: const Icon(Icons.clear_all_rounded, size: 15),
             variant: NeuButtonVariant.danger,
             height: 32,
@@ -1213,6 +1248,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
     bool isDark,
     Color textColor,
   ) {
+    final provider = Provider.of<AttendanceProvider>(context, listen: false);
     const columnWidths = <int, TableColumnWidth>{
       0: FlexColumnWidth(1.8), // Employee
       1: FlexColumnWidth(1.3), // Structure
@@ -1265,18 +1301,18 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                           children: [
                             TableRow(
                               children: [
-                                _buildHeaderCell('Employee', textColor: textColor),
-                                _buildHeaderCell('Branch / Structure', textColor: textColor),
-                                _buildHeaderCell('Shift Timing', textColor: textColor),
-                                _buildHeaderCell('Group', textColor: textColor),
-                                _buildHeaderCell('Clock Time', color: const Color(0xFF5B9BFF)),
-                                _buildHeaderCell('Attendance', textColor: textColor),
-                                _buildHeaderCell('Rest', color: const Color(0xFF2EBD96)),
-                                _buildHeaderCell('Duty', textColor: textColor),
-                                _buildHeaderCell('Delay', color: const Color(0xFFFF5C5C)),
-                                _buildHeaderCell('Early Exit', color: const Color(0xFFFF5C5C)),
-                                _buildHeaderCell('Overtime', color: isDark ? const Color(0xFF00FF87) : const Color(0xFF00A859)),
-                                _buildHeaderCell('Status', textColor: textColor),
+                                _buildHeaderCell(provider.translate('employee_col'), textColor: textColor),
+                                _buildHeaderCell(provider.translate('branch_structure_col'), textColor: textColor),
+                                _buildHeaderCell(provider.translate('shift_timing_col'), textColor: textColor),
+                                _buildHeaderCell(provider.translate('group_col'), textColor: textColor),
+                                _buildHeaderCell(provider.translate('clock_time'), color: const Color(0xFF5B9BFF)),
+                                _buildHeaderCell(provider.translate('attendance_col'), textColor: textColor),
+                                _buildHeaderCell(provider.translate('rest_col'), color: const Color(0xFF2EBD96)),
+                                _buildHeaderCell(provider.translate('duty_col'), textColor: textColor),
+                                _buildHeaderCell(provider.translate('delay_col'), color: const Color(0xFFFF5C5C)),
+                                _buildHeaderCell(provider.translate('early_exit_col'), color: const Color(0xFFFF5C5C)),
+                                _buildHeaderCell(provider.translate('overtime_col'), color: isDark ? const Color(0xFF00FF87) : const Color(0xFF00A859)),
+                                _buildHeaderCell(provider.translate('status'), textColor: textColor),
                               ],
                             ),
                           ],
@@ -1443,7 +1479,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                                         padding: const EdgeInsets.symmetric(
                                             horizontal: 10, vertical: 5),
                                         child: Text(
-                                          row['clockTime'] as String,
+                                          _localizeClockTime(row['clockTime'] as String, provider),
                                           style: const TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w600,
@@ -1572,7 +1608,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                                                   Icon(statusIcon, size: 12, color: statusColor),
                                                   const SizedBox(width: 4),
                                                   Text(
-                                                    statusText,
+                                                    _localizeStatus(statusText, provider),
                                                     style: TextStyle(
                                                       color: statusColor,
                                                       fontSize: 11,
@@ -1625,6 +1661,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
     bool isDark,
     Color textColor,
   ) {
+    final provider = Provider.of<AttendanceProvider>(context, listen: false);
     return ListView.separated(
       physics: const BouncingScrollPhysics(),
       itemCount: rows.length,
@@ -1695,7 +1732,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                           Icon(statusIcon, size: 12, color: statusColor),
                           const SizedBox(width: 4),
                           Text(
-                            statusText,
+                            _localizeStatus(statusText, provider),
                             style: TextStyle(
                               color: statusColor,
                               fontSize: 11,
@@ -1734,7 +1771,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          row['clockTime'] as String,
+                          _localizeClockTime(row['clockTime'] as String, provider),
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -1750,15 +1787,15 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                 // Metric Grid: Attendance, Duty, Delay, Overtime
                 Row(
                   children: [
-                    _buildMetricCol('Attendance', _formatMinutes(row['attendance'] as int), textColor),
-                    _buildMetricCol('Duty', _formatMinutes(row['duty'] as int), textColor),
+                    _buildMetricCol(provider.translate('attendance_col'), _formatMinutes(row['attendance'] as int), textColor),
+                    _buildMetricCol(provider.translate('duty_col'), _formatMinutes(row['duty'] as int), textColor),
                     _buildMetricCol(
-                      'Delay',
+                      provider.translate('delay_col'),
                       (row['delay'] as int) > 0 ? '${row['delay']}m' : '-',
                       (row['delay'] as int) > 0 ? const Color(0xFFFF5C5C) : textColor,
                     ),
                     _buildMetricCol(
-                      'Overtime',
+                      provider.translate('overtime_col'),
                       (row['overtime'] as int) > 0 ? _formatMinutes(row['overtime'] as int) : '-',
                       (row['overtime'] as int) > 0 ? const Color(0xFF00FF87) : textColor,
                     ),
@@ -1955,7 +1992,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                         children: [
                           // Shift & Department specs
                           Text(
-                            'Shift Configuration',
+                            provider.translate('shift_configuration'),
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
@@ -1971,11 +2008,11 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                             ),
                             child: Column(
                               children: [
-                                _buildDetailRow('Structure', row['structureName'] as String, textColor),
+                                _buildDetailRow(provider.translate('structure'), row['structureName'] as String, textColor),
                                 const SizedBox(height: 6),
-                                _buildDetailRow('Shift', row['shiftName'] as String, textColor),
+                                _buildDetailRow(provider.translate('shift'), row['shiftName'] as String, textColor),
                                 const SizedBox(height: 6),
-                                _buildDetailRow('Group', row['groupName'] as String, textColor),
+                                _buildDetailRow(provider.translate('group'), row['groupName'] as String, textColor),
                               ],
                             ),
                           ),
@@ -1983,7 +2020,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
 
                           // Session Timestamps
                           Text(
-                            'Punch Sessions (${records.length})',
+                            provider.translate('punch_sessions_count', params: {'count': '${records.length}'}),
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
@@ -1995,7 +2032,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                             Padding(
                               padding: const EdgeInsets.symmetric(vertical: 8),
                               child: Text(
-                                'No biometric punch sessions found for this day.',
+                                provider.translate('no_punch_sessions_day'),
                                 style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.5)),
                               ),
                             )
@@ -2004,7 +2041,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                               final inStr = DateFormat('hh:mm:ss a').format(r.checkIn);
                               final outStr = r.checkOut != null
                                   ? DateFormat('hh:mm:ss a').format(r.checkOut!)
-                                  : 'Ongoing / Not Clocked Out';
+                                  : provider.translate('ongoing_not_clocked_out');
                               return Container(
                                 margin: const EdgeInsets.only(bottom: 8),
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -2024,8 +2061,14 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                                         alignment: WrapAlignment.spaceBetween,
                                         crossAxisAlignment: WrapCrossAlignment.center,
                                         children: [
-                                          Text('In: $inStr', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: textColor)),
-                                          Text('Out: $outStr', style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.85))),
+                                          Text(
+                                            provider.translate('in_time_label', params: {'time': inStr}),
+                                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: textColor),
+                                          ),
+                                          Text(
+                                            provider.translate('out_time_label', params: {'time': outStr}),
+                                            style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.85)),
+                                          ),
                                         ],
                                       ),
                                     ),
@@ -2040,21 +2083,25 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                                         showDialog(
                                           context: context,
                                           builder: (delCtx) => AlertDialog(
-                                            title: const Row(
+                                            title: Row(
                                               children: [
-                                                Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444)),
-                                                SizedBox(width: 8),
-                                                Text('Delete Punch Session'),
+                                                const Icon(Icons.warning_amber_rounded, color: Color(0xFFEF4444)),
+                                                const SizedBox(width: 8),
+                                                Text(provider.translate('delete_punch_session_title')),
                                               ],
                                             ),
                                             content: Text(
-                                              'Are you sure you want to delete this punch session for ${emp.name}?\n\n• In: $inStr\n• Out: $outStr\n\nThis will remove the session from attendance and blacklist the punch so that ZKTeco device sync will NEVER re-import it.',
+                                              provider.translate('delete_punch_session_confirm', params: {
+                                                'name': emp.name,
+                                                'inTime': inStr,
+                                                'outTime': outStr,
+                                              }),
                                               style: const TextStyle(fontSize: 13, height: 1.4),
                                             ),
                                             actions: [
                                               TextButton(
                                                 onPressed: () => Navigator.of(delCtx).pop(),
-                                                child: const Text('Cancel'),
+                                                child: Text(provider.translate('cancel')),
                                               ),
                                               ElevatedButton(
                                                 style: ElevatedButton.styleFrom(
@@ -2071,14 +2118,14 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                                                   );
                                                   if (context.mounted) {
                                                     ScaffoldMessenger.of(context).showSnackBar(
-                                                      const SnackBar(
-                                                        content: Text('Punch session deleted and added to sync blacklist!'),
-                                                        backgroundColor: Color(0xFF10B981),
+                                                      SnackBar(
+                                                        content: Text(provider.translate('punch_deleted_blacklist_success')),
+                                                        backgroundColor: const Color(0xFF10B981),
                                                       ),
                                                     );
                                                   }
                                                 },
-                                                child: const Text('Delete & Blacklist'),
+                                                child: Text(provider.translate('delete_and_blacklist_btn')),
                                               ),
                                             ],
                                           ),
@@ -2093,7 +2140,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
 
                           // Requests for this day
                           Text(
-                            'Day Requests (${requests.length})',
+                            provider.translate('day_requests_count', params: {'count': '${requests.length}'}),
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
@@ -2105,7 +2152,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                             Padding(
                               padding: const EdgeInsets.symmetric(vertical: 8),
                               child: Text(
-                                'No leave or missing punch requests submitted for this day.',
+                                provider.translate('no_day_requests'),
                                 style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.5)),
                               ),
                             )
@@ -2175,7 +2222,7 @@ class _HrDailyReportTabState extends State<HrDailyReportTab> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: NeuButton(
-                      label: 'Close',
+                      label: provider.translate('close'),
                       variant: NeuButtonVariant.navy,
                       height: 38,
                       padding: const EdgeInsets.symmetric(horizontal: 20),

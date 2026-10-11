@@ -590,11 +590,17 @@ class AttendanceProvider with ChangeNotifier {
         : TextDirection.ltr;
   }
 
-  String translate(String key) {
+  String translate(String key, {Map<String, String>? params}) {
     final dictionary =
         TranslationKeys.translations[_currentLanguage] ??
         TranslationKeys.translations['en']!;
-    return dictionary[key] ?? key;
+    String val = dictionary[key] ?? key;
+    if (params != null && params.isNotEmpty) {
+      params.forEach((paramKey, paramVal) {
+        val = val.replaceAll('{$paramKey}', paramVal);
+      });
+    }
+    return val;
   }
 
   Future<void> setLanguage(String langCode) async {

@@ -127,7 +127,7 @@ class _HrLocationsTabState extends State<HrLocationsTab> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Radius: ${location.radius.toInt()}m',
+                      '${provider.translate('radius_label')}: ${location.radius.toInt()}m',
                       style: TextStyle(
                         fontSize: 11.5,
                         color: subtextColor,
@@ -142,7 +142,7 @@ class _HrLocationsTabState extends State<HrLocationsTab> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Tooltip(
-                    message: 'Edit Location',
+                    message: provider.translate('edit_location'),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(6),
                       onTap: () {
@@ -164,7 +164,7 @@ class _HrLocationsTabState extends State<HrLocationsTab> {
                   ),
                   const SizedBox(width: 4),
                   Tooltip(
-                    message: 'Delete Location',
+                    message: '${provider.translate('delete')} ${provider.translate('locations')}',
                     child: InkWell(
                       borderRadius: BorderRadius.circular(6),
                       onTap: () {
@@ -213,7 +213,7 @@ class _HrLocationsTabState extends State<HrLocationsTab> {
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          '${location.radius.toInt()}m Geofence',
+                          '${location.radius.toInt()}m ${provider.translate('geofence_suffix')}',
                           style: TextStyle(
                             fontSize: 11.5,
                             fontWeight: FontWeight.w500,

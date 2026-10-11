@@ -3008,7 +3008,7 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
               // Holiday Form Fields
               if (_activeTab == HrTab.holidays) ...[
                 _buildDialogField(
-                  'Holiday Name',
+                  provider.translate('holiday_name_label'),
                   nameController,
                   hintText: 'e.g. Eid al-Fitr',
                 ),
@@ -3017,7 +3017,7 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                   children: [
                     Expanded(
                       child: _buildDialogField(
-                        'From Date',
+                        provider.translate('from_date_label'),
                         fromDateController,
                         suffixIcon: Icons.calendar_today,
                         onSuffixTap: () =>
@@ -3028,7 +3028,7 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                     const SizedBox(width: 16),
                     Expanded(
                       child: _buildDialogField(
-                        'To Date',
+                        provider.translate('to_date_label'),
                         toDateController,
                         suffixIcon: Icons.calendar_today,
                         onSuffixTap: () =>
@@ -3040,10 +3040,10 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                 ),
                 const SizedBox(height: 16),
                 _buildGroupedContainer(
-                  title: 'Applies to Groups',
+                  title: provider.translate('applies_to_groups'),
                   children: [
                     Text(
-                      'Select groups or leave empty to apply to all groups.',
+                      provider.translate('select_groups_holiday'),
                       style: TextStyle(color: mutedColor, fontSize: 12),
                     ),
                     const SizedBox(height: 12),
