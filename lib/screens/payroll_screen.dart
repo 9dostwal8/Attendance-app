@@ -1354,6 +1354,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
                 profile: provider.companyProfile,
                 structures: provider.structures,
                 groups: provider.groups,
+                languageCode: provider.currentLanguage,
               );
             }
             if (context.mounted) {

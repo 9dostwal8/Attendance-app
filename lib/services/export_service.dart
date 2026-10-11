@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:intl/intl.dart';
 import 'package:file_saver/file_saver.dart';
 import 'package:pdf/pdf.dart';
@@ -7,6 +8,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:syncfusion_flutter_xlsio/xlsio.dart' as xlsio;
 import '../providers/attendance_provider.dart';
 import '../models/hr_models.dart';
+import '../models/translation_keys.dart';
 
 class ExportService {
   static Future<void> exportPayrollToExcel(
@@ -828,26 +830,59 @@ class ExportService {
     );
   }
 
+  static Future<Map<String, pw.Font?>> _loadPdfFonts() async {
+    pw.Font? baseFont;
+    pw.Font? boldFont;
+    try {
+      final fontDataSpeda = await rootBundle.load('assets/fonts/Speda.ttf');
+      baseFont = pw.Font.ttf(fontDataSpeda);
+      final fontDataUni = await rootBundle.load('assets/fonts/UniQAIDAR_NewsHeadLine_025.ttf');
+      boldFont = pw.Font.ttf(fontDataUni);
+    } catch (e) {
+      debugPrint('Could not load custom fonts for PDF: $e');
+    }
+    return {'base': baseFont, 'bold': boldFont};
+  }
+
   static Future<void> exportSinglePayslipToPdf({
     required PayrollReport report,
     required DateTime month,
     required CompanyProfile? profile,
     String? structureName,
     String? groupName,
+    String? languageCode,
   }) async {
-    final pdf = pw.Document();
+    final lang = languageCode ?? 'en';
+    final bool isRtl = lang == 'ar' || lang == 'ku';
+    final fonts = await _loadPdfFonts();
+    final baseFont = fonts['base'];
+    final boldFont = fonts['bold'];
+
+    final pdfTheme = pw.ThemeData.withFont(
+      base: baseFont ?? pw.Font.helvetica(),
+      bold: boldFont ?? baseFont ?? pw.Font.helveticaBold(),
+    );
+    final pdf = pw.Document(theme: pdfTheme);
 
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(24),
+        textDirection: isRtl ? pw.TextDirection.rtl : pw.TextDirection.ltr,
+        theme: pdfTheme,
         build: (pw.Context context) {
-          return _buildPayslipPdfPage(
-            report: report,
-            month: month,
-            profile: profile,
-            structureName: structureName,
-            groupName: groupName,
+          return pw.Directionality(
+            textDirection: isRtl ? pw.TextDirection.rtl : pw.TextDirection.ltr,
+            child: _buildPayslipPdfPage(
+              report: report,
+              month: month,
+              profile: profile,
+              structureName: structureName,
+              groupName: groupName,
+              languageCode: lang,
+              baseFont: baseFont,
+              boldFont: boldFont,
+            ),
           );
         },
       ),
@@ -871,8 +906,19 @@ class ExportService {
     required CompanyProfile? profile,
     required List<OrgStructure> structures,
     required List<EmployeeGroup> groups,
+    String? languageCode,
   }) async {
-    final pdf = pw.Document();
+    final lang = languageCode ?? 'en';
+    final bool isRtl = lang == 'ar' || lang == 'ku';
+    final fonts = await _loadPdfFonts();
+    final baseFont = fonts['base'];
+    final boldFont = fonts['bold'];
+
+    final pdfTheme = pw.ThemeData.withFont(
+      base: baseFont ?? pw.Font.helvetica(),
+      bold: boldFont ?? baseFont ?? pw.Font.helveticaBold(),
+    );
+    final pdf = pw.Document(theme: pdfTheme);
 
     for (final report in reports) {
       final struct = structures.where((s) => s.id == report.employee.structureId).firstOrNull;
@@ -882,13 +928,21 @@ class ExportService {
         pw.Page(
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.all(24),
+          textDirection: isRtl ? pw.TextDirection.rtl : pw.TextDirection.ltr,
+          theme: pdfTheme,
           build: (pw.Context context) {
-            return _buildPayslipPdfPage(
-              report: report,
-              month: month,
-              profile: profile,
-              structureName: struct?.name,
-              groupName: group?.name,
+            return pw.Directionality(
+              textDirection: isRtl ? pw.TextDirection.rtl : pw.TextDirection.ltr,
+              child: _buildPayslipPdfPage(
+                report: report,
+                month: month,
+                profile: profile,
+                structureName: struct?.name,
+                groupName: group?.name,
+                languageCode: lang,
+                baseFont: baseFont,
+                boldFont: boldFont,
+              ),
             );
           },
         ),
@@ -912,7 +966,20 @@ class ExportService {
     required CompanyProfile? profile,
     String? structureName,
     String? groupName,
+    String? languageCode,
+    pw.Font? baseFont,
+    pw.Font? boldFont,
   }) {
+    final lang = languageCode ?? 'en';
+    final bool isRtl = lang == 'ar' || lang == 'ku';
+    final dict = TranslationKeys.translations[lang] ?? TranslationKeys.translations['en']!;
+    String t(String key, [String fallback = '']) {
+      return dict[key] ?? TranslationKeys.translations['en']?[key] ?? fallback;
+    }
+
+    final monthName = t('month_${month.month}', DateFormat('MMMM').format(month));
+    final monthStr = '$monthName ${month.year}';
+
     String formatPdfAmount(double amount, String currency) {
       if (currency == 'USD') {
         return '\$${NumberFormat('#,##0.00').format(amount)}';
@@ -974,10 +1041,10 @@ class ExportService {
                   pw.SizedBox(width: 10),
                 ],
                 pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  crossAxisAlignment: isRtl ? pw.CrossAxisAlignment.end : pw.CrossAxisAlignment.start,
                   children: [
                     pw.Text(
-                      profile?.name.isNotEmpty == true ? profile!.name : 'COMPANY NAME',
+                      profile?.name.isNotEmpty == true ? profile!.name : t('app_title', 'COMPANY NAME'),
                       style: pw.TextStyle(
                         fontSize: 14,
                         fontWeight: pw.FontWeight.bold,
@@ -991,7 +1058,7 @@ class ExportService {
                       ),
                     if (profile?.email != null && profile!.email!.isNotEmpty)
                       pw.Text(
-                        'Email: ${profile.email}',
+                        '${t('email', 'Email')}: ${profile.email}',
                         style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
                       ),
                     if (profile?.phone != null && profile!.phone!.isNotEmpty)
@@ -1011,19 +1078,19 @@ class ExportService {
                 border: pw.Border.all(color: PdfColor.fromHex('#CBD5E1'), width: 1),
               ),
               child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.end,
+                crossAxisAlignment: isRtl ? pw.CrossAxisAlignment.start : pw.CrossAxisAlignment.end,
                 children: [
                   pw.Text(
-                    'PAYSLIP',
+                    t('salary_payslip', 'PAYSLIP'),
                     style: pw.TextStyle(
-                      fontSize: 13,
+                      fontSize: 12,
                       fontWeight: pw.FontWeight.bold,
                       color: PdfColor.fromHex('#1E3A8A'),
                     ),
                   ),
                   pw.SizedBox(height: 2),
                   pw.Text(
-                    'Period: ${DateFormat('MMMM yyyy').format(month)}',
+                    '${t('pay_period', 'Period')}: $monthStr',
                     style: pw.TextStyle(
                       fontSize: 8.5,
                       fontWeight: pw.FontWeight.bold,
@@ -1031,7 +1098,7 @@ class ExportService {
                     ),
                   ),
                   pw.Text(
-                    'Date: ${DateFormat('yyyy-MM-dd').format(DateTime.now())}',
+                    '${t('payment_date', 'Date')}: ${DateFormat('yyyy-MM-dd').format(DateTime.now())}',
                     style: const pw.TextStyle(
                       fontSize: 7.5,
                       color: PdfColors.grey600,
@@ -1062,26 +1129,29 @@ class ExportService {
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    pw.Text('EMPLOYEE DETAILS', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex('#64748B'))),
+                    pw.Text(
+                      t('employee_details', 'EMPLOYEE DETAILS'),
+                      style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex('#64748B')),
+                    ),
                     pw.SizedBox(height: 4),
                     pw.Row(children: [
-                      pw.SizedBox(width: 75, child: pw.Text('Name:', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700))),
+                      pw.SizedBox(width: 80, child: pw.Text('${t('name_label', 'Name')}:', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700))),
                       pw.Expanded(child: pw.Text(report.employee.name, style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold))),
                     ]),
                     pw.SizedBox(height: 2),
                     pw.Row(children: [
-                      pw.SizedBox(width: 75, child: pw.Text('Employee ID:', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700))),
+                      pw.SizedBox(width: 80, child: pw.Text('${t('id_label', 'Employee ID')}:', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700))),
                       pw.Expanded(child: pw.Text(report.employee.id, style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold))),
                     ]),
                     pw.SizedBox(height: 2),
                     pw.Row(children: [
-                      pw.SizedBox(width: 75, child: pw.Text('Position:', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700))),
-                      pw.Expanded(child: pw.Text(report.employee.position.isNotEmpty ? report.employee.position : 'Team Member', style: const pw.TextStyle(fontSize: 8.5))),
+                      pw.SizedBox(width: 80, child: pw.Text('${t('position', 'Position')}:', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700))),
+                      pw.Expanded(child: pw.Text(report.employee.position.isNotEmpty ? report.employee.position : '-', style: const pw.TextStyle(fontSize: 8.5))),
                     ]),
                     pw.SizedBox(height: 2),
                     pw.Row(children: [
-                      pw.SizedBox(width: 75, child: pw.Text('Department:', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700))),
-                      pw.Expanded(child: pw.Text(structureName ?? 'General', style: const pw.TextStyle(fontSize: 8.5))),
+                      pw.SizedBox(width: 80, child: pw.Text('${t('department', 'Department')}:', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700))),
+                      pw.Expanded(child: pw.Text(structureName ?? '-', style: const pw.TextStyle(fontSize: 8.5))),
                     ]),
                   ],
                 ),
@@ -1091,26 +1161,29 @@ class ExportService {
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    pw.Text('ATTENDANCE & SUMMARY', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex('#64748B'))),
+                    pw.Text(
+                      t('attendance_summary', 'ATTENDANCE & SUMMARY'),
+                      style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex('#64748B')),
+                    ),
                     pw.SizedBox(height: 4),
                     pw.Row(children: [
-                      pw.SizedBox(width: 80, child: pw.Text('Group / Shift:', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700))),
-                      pw.Expanded(child: pw.Text(groupName ?? 'Standard', style: const pw.TextStyle(fontSize: 8.5))),
+                      pw.SizedBox(width: 85, child: pw.Text('${t('group', 'Group')}:', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700))),
+                      pw.Expanded(child: pw.Text(groupName ?? '-', style: const pw.TextStyle(fontSize: 8.5))),
                     ]),
                     pw.SizedBox(height: 2),
                     pw.Row(children: [
-                      pw.SizedBox(width: 80, child: pw.Text('Currency:', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700))),
+                      pw.SizedBox(width: 85, child: pw.Text('${t('currency_label', 'Currency')}:', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700))),
                       pw.Expanded(child: pw.Text(report.currency, style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold))),
                     ]),
                     pw.SizedBox(height: 2),
                     pw.Row(children: [
-                      pw.SizedBox(width: 80, child: pw.Text('Days Worked:', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700))),
-                      pw.Expanded(child: pw.Text('${report.daysWorked} days', style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold))),
+                      pw.SizedBox(width: 85, child: pw.Text('${t('days_worked', 'Days Worked')}:', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700))),
+                      pw.Expanded(child: pw.Text('${report.daysWorked} ${t('unit_days', 'days')}', style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold))),
                     ]),
                     pw.SizedBox(height: 2),
                     pw.Row(children: [
-                      pw.SizedBox(width: 80, child: pw.Text('Hours (OT / Def):', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700))),
-                      pw.Expanded(child: pw.Text('${report.workingHours.toStringAsFixed(1)}h (OT: ${report.overtimeHours.toStringAsFixed(1)}h | Def: ${report.attendanceDeficitHours.toStringAsFixed(1)}h)', style: const pw.TextStyle(fontSize: 8.5))),
+                      pw.SizedBox(width: 85, child: pw.Text('${t('working_hrs', 'Hours')}:', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700))),
+                      pw.Expanded(child: pw.Text('${report.workingHours.toStringAsFixed(1)} ${t('unit_hrs', 'h')} (${t('overtime', 'OT')}: ${report.overtimeHours.toStringAsFixed(1)} | ${t('deficit', 'Def')}: ${report.attendanceDeficitHours.toStringAsFixed(1)})', style: const pw.TextStyle(fontSize: 8.5))),
                     ]),
                   ],
                 ),
@@ -1125,7 +1198,7 @@ class ExportService {
         pw.Row(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            // Left: EARNINGS
+            // EARNINGS
             pw.Expanded(
               child: pw.Container(
                 decoration: pw.BoxDecoration(
@@ -1145,7 +1218,7 @@ class ExportService {
                         ),
                       ),
                       child: pw.Text(
-                        'EARNINGS & ADDITIONS',
+                        t('earnings', 'EARNINGS & ADDITIONS'),
                         style: pw.TextStyle(
                           fontSize: 9,
                           fontWeight: pw.FontWeight.bold,
@@ -1157,16 +1230,16 @@ class ExportService {
                       padding: const pw.EdgeInsets.all(10),
                       child: pw.Column(
                         children: [
-                          buildTableRow('Base Salary / Calc by Day', formatPdfAmount(report.salaryCalcByDay > 0 ? report.salaryCalcByDay : report.basicSalary, report.currency)),
-                          buildTableRow('Overtime Pay', report.overtimeValue > 0 ? formatPdfAmount(report.overtimeValue, report.currency) : '-'),
-                          buildTableRow('Food Allowance', report.foodAllowance > 0 ? formatPdfAmount(report.foodAllowance, report.currency) : '-'),
-                          buildTableRow('Transportation Allowance', report.transportationAllowance > 0 ? formatPdfAmount(report.transportationAllowance, report.currency) : '-'),
-                          buildTableRow('Other Allowance', report.otherAllowance > 0 ? formatPdfAmount(report.otherAllowance, report.currency) : '-'),
-                          buildTableRow('Monthly Additions / Bonuses', report.monthlyAdditions > 0 ? formatPdfAmount(report.monthlyAdditions, report.currency) : '-'),
+                          buildTableRow(t('base_salary_calc_by_day', 'Base Salary / Calc by Day'), formatPdfAmount(report.salaryCalcByDay > 0 ? report.salaryCalcByDay : report.basicSalary, report.currency)),
+                          buildTableRow(t('overtime_pay', 'Overtime Pay'), report.overtimeValue > 0 ? formatPdfAmount(report.overtimeValue, report.currency) : '-'),
+                          buildTableRow(t('food_allowance', 'Food Allowance'), report.foodAllowance > 0 ? formatPdfAmount(report.foodAllowance, report.currency) : '-'),
+                          buildTableRow(t('transportation_allowance', 'Transportation Allowance'), report.transportationAllowance > 0 ? formatPdfAmount(report.transportationAllowance, report.currency) : '-'),
+                          buildTableRow(t('other_allowance', 'Other Allowance'), report.otherAllowance > 0 ? formatPdfAmount(report.otherAllowance, report.currency) : '-'),
+                          buildTableRow(t('monthly_additions_bonuses', 'Monthly Additions / Bonuses'), report.monthlyAdditions > 0 ? formatPdfAmount(report.monthlyAdditions, report.currency) : '-'),
                           pw.SizedBox(height: 6),
                           pw.Divider(thickness: 0.8, color: PdfColor.fromHex('#E2E8F0')),
                           pw.SizedBox(height: 4),
-                          buildTableRow('TOTAL GROSS EARNINGS', formatPdfAmount(report.incrementalSalary, report.currency), isBold: true, color: PdfColor.fromHex('#059669')),
+                          buildTableRow(t('total_gross_earnings', 'TOTAL GROSS EARNINGS'), formatPdfAmount(report.incrementalSalary, report.currency), isBold: true, color: PdfColor.fromHex('#059669')),
                         ],
                       ),
                     ),
@@ -1177,7 +1250,7 @@ class ExportService {
 
             pw.SizedBox(width: 12),
 
-            // Right: DEDUCTIONS
+            // DEDUCTIONS
             pw.Expanded(
               child: pw.Container(
                 decoration: pw.BoxDecoration(
@@ -1197,7 +1270,7 @@ class ExportService {
                         ),
                       ),
                       child: pw.Text(
-                        'DEDUCTIONS',
+                        t('deductions_title', 'DEDUCTIONS'),
                         style: pw.TextStyle(
                           fontSize: 9,
                           fontWeight: pw.FontWeight.bold,
@@ -1209,18 +1282,18 @@ class ExportService {
                       padding: const pw.EdgeInsets.all(10),
                       child: pw.Column(
                         children: [
-                          buildTableRow('Attendance Deficit', report.attendanceDeficit > 0 ? '-${formatPdfAmount(report.attendanceDeficit, report.currency)}' : '-'),
-                          buildTableRow('Penalties (Delay/Early Exit)', report.monthlyPenalties > 0 ? '-${formatPdfAmount(report.monthlyPenalties, report.currency)}' : '-'),
-                          buildTableRow('Loans / Other Deductions', report.monthlyDeductions > 0 ? '-${formatPdfAmount(report.monthlyDeductions, report.currency)}' : '-'),
+                          buildTableRow(t('attendance_deficit_deduction', 'Attendance Deficit'), report.attendanceDeficit > 0 ? '-${formatPdfAmount(report.attendanceDeficit, report.currency)}' : '-'),
+                          buildTableRow(t('penalties_delay_early_exit', 'Penalties (Delay/Early Exit)'), report.monthlyPenalties > 0 ? '-${formatPdfAmount(report.monthlyPenalties, report.currency)}' : '-'),
+                          buildTableRow(t('loans_other_deductions', 'Loans / Other Deductions'), report.monthlyDeductions > 0 ? '-${formatPdfAmount(report.monthlyDeductions, report.currency)}' : '-'),
                           buildTableRow(
-                            'Social Insurance (5% Employee)',
+                            t('social_insurance_5_employee', 'Social Insurance (5% Employee)'),
                             report.hasInsurance ? '-${formatPdfAmount(report.insuranceEmployee, report.currency)}' : '-',
                             color: report.hasInsurance ? PdfColor.fromHex('#DC2626') : null,
                           ),
                           pw.SizedBox(height: 6),
                           pw.Divider(thickness: 0.8, color: PdfColor.fromHex('#E2E8F0')),
                           pw.SizedBox(height: 4),
-                          buildTableRow('TOTAL DEDUCTIONS', '-${formatPdfAmount(report.decrementalSalary, report.currency)}', isBold: true, color: PdfColor.fromHex('#DC2626')),
+                          buildTableRow(t('total_deductions', 'TOTAL DEDUCTIONS'), '-${formatPdfAmount(report.decrementalSalary, report.currency)}', isBold: true, color: PdfColor.fromHex('#DC2626')),
                         ],
                       ),
                     ),
@@ -1245,18 +1318,18 @@ class ExportService {
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
                     pw.Text(
-                      'SOCIAL INSURANCE (SOCIAL SECURITY)',
+                      t('social_insurance_box_title', 'SOCIAL INSURANCE (SOCIAL SECURITY)'),
                       style: pw.TextStyle(
                         fontSize: 8.5,
                         fontWeight: pw.FontWeight.bold,
                         color: PdfColor.fromHex('#0369A1'),
                       ),
                     ),
-                    pw.Spacer(),
                     pw.Text(
-                      'Ins. Base: ${formatPdfAmount(report.insuranceSalary, report.currency)}',
+                      '${t('ins_base_label', 'Ins. Base')}: ${formatPdfAmount(report.insuranceSalary, report.currency)}',
                       style: pw.TextStyle(
                         fontSize: 8.5,
                         fontWeight: pw.FontWeight.bold,
@@ -1270,11 +1343,11 @@ class ExportService {
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
                     pw.Text(
-                      '* Employee Contribution (5%): -${formatPdfAmount(report.insuranceEmployee, report.currency)} (Deducted from salary)',
+                      '• ${t('ins_emp_contrib_5_desc', 'Employee Contribution (5%): Deducted from salary')}: -${formatPdfAmount(report.insuranceEmployee, report.currency)}',
                       style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey800),
                     ),
                     pw.Text(
-                      '* Company Contribution (12%): ${formatPdfAmount(report.insuranceCompany, report.currency)} (Employer Paid - Informational)',
+                      '• ${t('ins_comp_contrib_12_desc', 'Company Contribution (12%): Employer Paid (Informational)')}: ${formatPdfAmount(report.insuranceCompany, report.currency)}',
                       style: pw.TextStyle(fontSize: 8, color: PdfColor.fromHex('#0284C7'), fontWeight: pw.FontWeight.bold),
                     ),
                   ],
@@ -1302,7 +1375,7 @@ class ExportService {
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
                   pw.Text(
-                    'NET PAYABLE SALARY',
+                    t('net_payable_salary', 'NET PAYABLE SALARY'),
                     style: pw.TextStyle(
                       fontSize: 11,
                       fontWeight: pw.FontWeight.bold,
@@ -1310,7 +1383,7 @@ class ExportService {
                     ),
                   ),
                   pw.Text(
-                    'Gross Earnings - Total Deductions',
+                    t('gross_minus_deductions_desc', 'Gross Earnings - Total Deductions'),
                     style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
                   ),
                 ],
@@ -1336,7 +1409,7 @@ class ExportService {
             pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Text('Employee Signature', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700)),
+                pw.Text(t('employee_signature', 'Employee Signature'), style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700)),
                 pw.SizedBox(height: 30),
                 pw.Container(width: 140, height: 1, color: PdfColors.grey400),
                 pw.SizedBox(height: 3),
@@ -1346,11 +1419,11 @@ class ExportService {
             pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.end,
               children: [
-                pw.Text('Authorized HR / Management Stamp', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700)),
+                pw.Text(t('official_stamp_title', 'Authorized HR / Management Stamp'), style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700)),
                 pw.SizedBox(height: 30),
                 pw.Container(width: 160, height: 1, color: PdfColors.grey400),
                 pw.SizedBox(height: 3),
-                pw.Text(profile?.name.isNotEmpty == true ? profile!.name : 'Administration', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
+                pw.Text(profile?.name.isNotEmpty == true ? profile!.name : t('administration_title', 'Administration'), style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
               ],
             ),
           ],
@@ -1361,7 +1434,7 @@ class ExportService {
         // Footer note
         pw.Center(
           child: pw.Text(
-            'This is an official computer-generated payslip. Generated on ${DateFormat('yyyy-MM-dd - hh:mm a').format(DateTime.now())}',
+            '${t('computer_generated_note', 'This is an official computer-generated payslip.')} - ${DateFormat('yyyy-MM-dd - hh:mm a').format(DateTime.now())}',
             style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey500),
           ),
         ),

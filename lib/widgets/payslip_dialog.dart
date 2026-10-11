@@ -77,6 +77,7 @@ class _PayslipDialogContentState extends State<PayslipDialogContent> {
         profile: provider.companyProfile,
         structureName: widget.structureName,
         groupName: widget.groupName,
+        languageCode: provider.currentLanguage,
       );
 
       if (mounted) {
@@ -223,14 +224,14 @@ class _PayslipDialogContentState extends State<PayslipDialogContent> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    '${provider.translate('pay_period')}: ${DateFormat('MMMM yyyy').format(widget.month)}',
+                                    '${provider.translate('pay_period')}: ${provider.translate('month_${widget.month.month}')} ${widget.month.year}',
                                     style: TextStyle(color: subtextColor, fontSize: 12),
                                   ),
                                 ],
                               ),
                             ),
                             IconButton(
-                              tooltip: 'Close',
+                              tooltip: provider.translate('close'),
                               icon: Icon(Icons.close_rounded, color: subtextColor),
                               onPressed: () => Navigator.of(context).pop(),
                             ),
@@ -261,7 +262,7 @@ class _PayslipDialogContentState extends State<PayslipDialogContent> {
                                         Text(
                                           profile?.name.isNotEmpty == true
                                               ? profile!.name
-                                              : 'COMPANY',
+                                              : provider.translate('app_title'),
                                           style: TextStyle(
                                             color: textColor,
                                             fontSize: 16,
@@ -621,7 +622,9 @@ class _PayslipDialogContentState extends State<PayslipDialogContent> {
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        profile?.name.isNotEmpty == true ? profile!.name : 'Administration',
+                                        profile?.name.isNotEmpty == true
+                                            ? profile!.name
+                                            : provider.translate('administration_title'),
                                         style: TextStyle(
                                           color: textColor,
                                           fontSize: 11,
