@@ -827,4 +827,545 @@ class ExportService {
       mimeType: MimeType.microsoftExcel,
     );
   }
+
+  static Future<void> exportSinglePayslipToPdf({
+    required PayrollReport report,
+    required DateTime month,
+    required CompanyProfile? profile,
+    String? structureName,
+    String? groupName,
+  }) async {
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(24),
+        build: (pw.Context context) {
+          return _buildPayslipPdfPage(
+            report: report,
+            month: month,
+            profile: profile,
+            structureName: structureName,
+            groupName: groupName,
+          );
+        },
+      ),
+    );
+
+    final bytes = await pdf.save();
+    final cleanName = report.employee.name.trim().replaceAll(RegExp(r'\s+'), '_');
+    final fileName = 'Payslip_${cleanName}_${DateFormat('MM_yyyy').format(month)}.pdf';
+
+    await FileSaver.instance.saveFile(
+      name: fileName,
+      bytes: bytes,
+      fileExtension: 'pdf',
+      mimeType: MimeType.pdf,
+    );
+  }
+
+  static Future<void> exportAllPayslipsToPdf({
+    required List<PayrollReport> reports,
+    required DateTime month,
+    required CompanyProfile? profile,
+    required List<OrgStructure> structures,
+    required List<EmployeeGroup> groups,
+  }) async {
+    final pdf = pw.Document();
+
+    for (final report in reports) {
+      final struct = structures.where((s) => s.id == report.employee.structureId).firstOrNull;
+      final group = groups.where((g) => g.id == report.employee.groupId).firstOrNull;
+
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(24),
+          build: (pw.Context context) {
+            return _buildPayslipPdfPage(
+              report: report,
+              month: month,
+              profile: profile,
+              structureName: struct?.name,
+              groupName: group?.name,
+            );
+          },
+        ),
+      );
+    }
+
+    final bytes = await pdf.save();
+    final fileName = 'All_Payslips_${DateFormat('MMM_yyyy').format(month)}.pdf';
+
+    await FileSaver.instance.saveFile(
+      name: fileName,
+      bytes: bytes,
+      fileExtension: 'pdf',
+      mimeType: MimeType.pdf,
+    );
+  }
+
+  static pw.Widget _buildPayslipPdfPage({
+    required PayrollReport report,
+    required DateTime month,
+    required CompanyProfile? profile,
+    String? structureName,
+    String? groupName,
+  }) {
+    String formatPdfAmount(double amount, String currency) {
+      if (currency == 'USD') {
+        return '\$${NumberFormat('#,##0.00').format(amount)}';
+      } else {
+        return '${NumberFormat('#,##0').format(amount)} $currency';
+      }
+    }
+
+    pw.Widget? logoWidget;
+    if (profile?.logoBase64 != null && profile!.logoBase64!.isNotEmpty) {
+      try {
+        final image = pw.MemoryImage(base64Decode(profile.logoBase64!));
+        logoWidget = pw.Image(image, width: 44, height: 44);
+      } catch (e) {
+        debugPrint('Could not decode pdf logo: $e');
+      }
+    }
+
+    pw.Widget buildTableRow(String label, String value, {bool isBold = false, PdfColor? color}) {
+      return pw.Padding(
+        padding: const pw.EdgeInsets.symmetric(vertical: 2.5),
+        child: pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text(
+              label,
+              style: pw.TextStyle(
+                fontSize: 8.5,
+                color: isBold ? PdfColors.black : PdfColors.grey800,
+                fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
+              ),
+            ),
+            pw.Text(
+              value,
+              style: pw.TextStyle(
+                fontSize: 8.5,
+                color: color ?? (isBold ? PdfColors.black : PdfColors.grey900),
+                fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+      children: [
+        // Company & Document Header
+        pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
+              children: [
+                if (logoWidget != null) ...[
+                  logoWidget,
+                  pw.SizedBox(width: 10),
+                ],
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      profile?.name.isNotEmpty == true ? profile!.name : 'COMPANY NAME',
+                      style: pw.TextStyle(
+                        fontSize: 14,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColor.fromHex('#0F172A'),
+                      ),
+                    ),
+                    if (profile?.address.isNotEmpty == true)
+                      pw.Text(
+                        profile!.address,
+                        style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+                      ),
+                    if (profile?.email != null && profile!.email!.isNotEmpty)
+                      pw.Text(
+                        'Email: ${profile.email}',
+                        style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+                      ),
+                    if (profile?.phone != null && profile!.phone!.isNotEmpty)
+                      pw.Text(
+                        'Phone: ${profile.phone}',
+                        style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+            pw.Container(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: pw.BoxDecoration(
+                color: PdfColor.fromHex('#F8FAFC'),
+                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+                border: pw.Border.all(color: PdfColor.fromHex('#CBD5E1'), width: 1),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.end,
+                children: [
+                  pw.Text(
+                    'PAYSLIP',
+                    style: pw.TextStyle(
+                      fontSize: 13,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColor.fromHex('#1E3A8A'),
+                    ),
+                  ),
+                  pw.SizedBox(height: 2),
+                  pw.Text(
+                    'Period: ${DateFormat('MMMM yyyy').format(month)}',
+                    style: pw.TextStyle(
+                      fontSize: 8.5,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.black,
+                    ),
+                  ),
+                  pw.Text(
+                    'Date: ${DateFormat('yyyy-MM-dd').format(DateTime.now())}',
+                    style: const pw.TextStyle(
+                      fontSize: 7.5,
+                      color: PdfColors.grey600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+
+        pw.SizedBox(height: 12),
+        pw.Divider(thickness: 1, color: PdfColor.fromHex('#E2E8F0')),
+        pw.SizedBox(height: 8),
+
+        // Employee Info Box
+        pw.Container(
+          padding: const pw.EdgeInsets.all(10),
+          decoration: pw.BoxDecoration(
+            color: PdfColor.fromHex('#F8FAFC'),
+            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+            border: pw.Border.all(color: PdfColor.fromHex('#E2E8F0'), width: 1),
+          ),
+          child: pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Expanded(
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('EMPLOYEE DETAILS', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex('#64748B'))),
+                    pw.SizedBox(height: 4),
+                    pw.Row(children: [
+                      pw.SizedBox(width: 75, child: pw.Text('Name:', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700))),
+                      pw.Expanded(child: pw.Text(report.employee.name, style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold))),
+                    ]),
+                    pw.SizedBox(height: 2),
+                    pw.Row(children: [
+                      pw.SizedBox(width: 75, child: pw.Text('Employee ID:', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700))),
+                      pw.Expanded(child: pw.Text(report.employee.id, style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold))),
+                    ]),
+                    pw.SizedBox(height: 2),
+                    pw.Row(children: [
+                      pw.SizedBox(width: 75, child: pw.Text('Position:', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700))),
+                      pw.Expanded(child: pw.Text(report.employee.position.isNotEmpty ? report.employee.position : 'Team Member', style: const pw.TextStyle(fontSize: 8.5))),
+                    ]),
+                    pw.SizedBox(height: 2),
+                    pw.Row(children: [
+                      pw.SizedBox(width: 75, child: pw.Text('Department:', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700))),
+                      pw.Expanded(child: pw.Text(structureName ?? 'General', style: const pw.TextStyle(fontSize: 8.5))),
+                    ]),
+                  ],
+                ),
+              ),
+              pw.SizedBox(width: 14),
+              pw.Expanded(
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('ATTENDANCE & SUMMARY', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex('#64748B'))),
+                    pw.SizedBox(height: 4),
+                    pw.Row(children: [
+                      pw.SizedBox(width: 80, child: pw.Text('Group / Shift:', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700))),
+                      pw.Expanded(child: pw.Text(groupName ?? 'Standard', style: const pw.TextStyle(fontSize: 8.5))),
+                    ]),
+                    pw.SizedBox(height: 2),
+                    pw.Row(children: [
+                      pw.SizedBox(width: 80, child: pw.Text('Currency:', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700))),
+                      pw.Expanded(child: pw.Text(report.currency, style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold))),
+                    ]),
+                    pw.SizedBox(height: 2),
+                    pw.Row(children: [
+                      pw.SizedBox(width: 80, child: pw.Text('Days Worked:', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700))),
+                      pw.Expanded(child: pw.Text('${report.daysWorked} days', style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold))),
+                    ]),
+                    pw.SizedBox(height: 2),
+                    pw.Row(children: [
+                      pw.SizedBox(width: 80, child: pw.Text('Hours (OT / Def):', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700))),
+                      pw.Expanded(child: pw.Text('${report.workingHours.toStringAsFixed(1)}h (OT: ${report.overtimeHours.toStringAsFixed(1)}h | Def: ${report.attendanceDeficitHours.toStringAsFixed(1)}h)', style: const pw.TextStyle(fontSize: 8.5))),
+                    ]),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        pw.SizedBox(height: 12),
+
+        // Earnings and Deductions Columns
+        pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            // Left: EARNINGS
+            pw.Expanded(
+              child: pw.Container(
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: PdfColor.fromHex('#CBD5E1')),
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+                ),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+                  children: [
+                    pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: pw.BoxDecoration(
+                        color: PdfColor.fromHex('#F1F5F9'),
+                        borderRadius: const pw.BorderRadius.only(
+                          topLeft: pw.Radius.circular(7),
+                          topRight: pw.Radius.circular(7),
+                        ),
+                      ),
+                      child: pw.Text(
+                        'EARNINGS & ADDITIONS',
+                        style: pw.TextStyle(
+                          fontSize: 9,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColor.fromHex('#0F172A'),
+                        ),
+                      ),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(10),
+                      child: pw.Column(
+                        children: [
+                          buildTableRow('Base Salary / Calc by Day', formatPdfAmount(report.salaryCalcByDay > 0 ? report.salaryCalcByDay : report.basicSalary, report.currency)),
+                          buildTableRow('Overtime Pay', report.overtimeValue > 0 ? formatPdfAmount(report.overtimeValue, report.currency) : '-'),
+                          buildTableRow('Food Allowance', report.foodAllowance > 0 ? formatPdfAmount(report.foodAllowance, report.currency) : '-'),
+                          buildTableRow('Transportation Allowance', report.transportationAllowance > 0 ? formatPdfAmount(report.transportationAllowance, report.currency) : '-'),
+                          buildTableRow('Other Allowance', report.otherAllowance > 0 ? formatPdfAmount(report.otherAllowance, report.currency) : '-'),
+                          buildTableRow('Monthly Additions / Bonuses', report.monthlyAdditions > 0 ? formatPdfAmount(report.monthlyAdditions, report.currency) : '-'),
+                          pw.SizedBox(height: 6),
+                          pw.Divider(thickness: 0.8, color: PdfColor.fromHex('#E2E8F0')),
+                          pw.SizedBox(height: 4),
+                          buildTableRow('TOTAL GROSS EARNINGS', formatPdfAmount(report.incrementalSalary, report.currency), isBold: true, color: PdfColor.fromHex('#059669')),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            pw.SizedBox(width: 12),
+
+            // Right: DEDUCTIONS
+            pw.Expanded(
+              child: pw.Container(
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: PdfColor.fromHex('#CBD5E1')),
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+                ),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+                  children: [
+                    pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: pw.BoxDecoration(
+                        color: PdfColor.fromHex('#F1F5F9'),
+                        borderRadius: const pw.BorderRadius.only(
+                          topLeft: pw.Radius.circular(7),
+                          topRight: pw.Radius.circular(7),
+                        ),
+                      ),
+                      child: pw.Text(
+                        'DEDUCTIONS',
+                        style: pw.TextStyle(
+                          fontSize: 9,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColor.fromHex('#0F172A'),
+                        ),
+                      ),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(10),
+                      child: pw.Column(
+                        children: [
+                          buildTableRow('Attendance Deficit', report.attendanceDeficit > 0 ? '-${formatPdfAmount(report.attendanceDeficit, report.currency)}' : '-'),
+                          buildTableRow('Penalties (Delay/Early Exit)', report.monthlyPenalties > 0 ? '-${formatPdfAmount(report.monthlyPenalties, report.currency)}' : '-'),
+                          buildTableRow('Loans / Other Deductions', report.monthlyDeductions > 0 ? '-${formatPdfAmount(report.monthlyDeductions, report.currency)}' : '-'),
+                          buildTableRow(
+                            'Social Insurance (5% Employee)',
+                            report.hasInsurance ? '-${formatPdfAmount(report.insuranceEmployee, report.currency)}' : '-',
+                            color: report.hasInsurance ? PdfColor.fromHex('#DC2626') : null,
+                          ),
+                          pw.SizedBox(height: 6),
+                          pw.Divider(thickness: 0.8, color: PdfColor.fromHex('#E2E8F0')),
+                          pw.SizedBox(height: 4),
+                          buildTableRow('TOTAL DEDUCTIONS', '-${formatPdfAmount(report.decrementalSalary, report.currency)}', isBold: true, color: PdfColor.fromHex('#DC2626')),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+
+        // Social Insurance Section (if active)
+        if (report.hasInsurance) ...[
+          pw.SizedBox(height: 10),
+          pw.Container(
+            padding: const pw.EdgeInsets.all(8),
+            decoration: pw.BoxDecoration(
+              color: PdfColor.fromHex('#F0F9FF'),
+              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+              border: pw.Border.all(color: PdfColor.fromHex('#BAE6FD'), width: 1),
+            ),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Row(
+                  children: [
+                    pw.Text(
+                      'SOCIAL INSURANCE (SOCIAL SECURITY)',
+                      style: pw.TextStyle(
+                        fontSize: 8.5,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColor.fromHex('#0369A1'),
+                      ),
+                    ),
+                    pw.Spacer(),
+                    pw.Text(
+                      'Ins. Base: ${formatPdfAmount(report.insuranceSalary, report.currency)}',
+                      style: pw.TextStyle(
+                        fontSize: 8.5,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColor.fromHex('#0369A1'),
+                      ),
+                    ),
+                  ],
+                ),
+                pw.SizedBox(height: 4),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text(
+                      '* Employee Contribution (5%): -${formatPdfAmount(report.insuranceEmployee, report.currency)} (Deducted from salary)',
+                      style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey800),
+                    ),
+                    pw.Text(
+                      '* Company Contribution (12%): ${formatPdfAmount(report.insuranceCompany, report.currency)} (Employer Paid - Informational)',
+                      style: pw.TextStyle(fontSize: 8, color: PdfColor.fromHex('#0284C7'), fontWeight: pw.FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+
+        pw.SizedBox(height: 12),
+
+        // Net Payable Banner
+        pw.Container(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: pw.BoxDecoration(
+            color: PdfColor.fromHex('#ECFDF5'),
+            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+            border: pw.Border.all(color: PdfColor.fromHex('#10B981'), width: 1.2),
+          ),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
+            children: [
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    'NET PAYABLE SALARY',
+                    style: pw.TextStyle(
+                      fontSize: 11,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColor.fromHex('#047857'),
+                    ),
+                  ),
+                  pw.Text(
+                    'Gross Earnings - Total Deductions',
+                    style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+                  ),
+                ],
+              ),
+              pw.Text(
+                formatPdfAmount(report.netEarnings, report.currency),
+                style: pw.TextStyle(
+                  fontSize: 18,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColor.fromHex('#065F46'),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        pw.SizedBox(height: 24),
+
+        // Signatures
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text('Employee Signature', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700)),
+                pw.SizedBox(height: 30),
+                pw.Container(width: 140, height: 1, color: PdfColors.grey400),
+                pw.SizedBox(height: 3),
+                pw.Text(report.employee.name, style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
+              ],
+            ),
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.end,
+              children: [
+                pw.Text('Authorized HR / Management Stamp', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700)),
+                pw.SizedBox(height: 30),
+                pw.Container(width: 160, height: 1, color: PdfColors.grey400),
+                pw.SizedBox(height: 3),
+                pw.Text(profile?.name.isNotEmpty == true ? profile!.name : 'Administration', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
+              ],
+            ),
+          ],
+        ),
+
+        pw.Spacer(),
+
+        // Footer note
+        pw.Center(
+          child: pw.Text(
+            'This is an official computer-generated payslip. Generated on ${DateFormat('yyyy-MM-dd - hh:mm a').format(DateTime.now())}',
+            style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey500),
+          ),
+        ),
+      ],
+    );
+  }
 }

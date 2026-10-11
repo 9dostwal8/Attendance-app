@@ -8,6 +8,7 @@ import '../models/hr_models.dart';
 import '../services/export_service.dart';
 import '../widgets/payroll_adjustment_dialog.dart';
 import '../widgets/neu_button.dart';
+import '../widgets/payslip_dialog.dart';
 
 class PayrollScreen extends StatefulWidget {
   const PayrollScreen({super.key});
@@ -613,6 +614,52 @@ class _PayrollScreenState extends State<PayrollScreen> {
                       ),
                     ),
 
+                    if (currentReport != null) ...[
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.receipt_long_rounded),
+                          label: Text(
+                            provider.translate('view_payslip'),
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            backgroundColor: const Color(0xFF102B94),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            elevation: 2,
+                          ),
+                          onPressed: () {
+                            final structName = provider.structures
+                                .cast<OrgStructure?>()
+                                .firstWhere(
+                                  (s) => s?.id == currentReport.employee.structureId,
+                                  orElse: () => null,
+                                )
+                                ?.name;
+                            final grpName = provider.groups
+                                .cast<EmployeeGroup?>()
+                                .firstWhere(
+                                  (g) => g?.id == currentReport.employee.groupId,
+                                  orElse: () => null,
+                                )
+                                ?.name;
+                            showPayslipDialog(
+                              context: context,
+                              report: currentReport,
+                              month: provider.selectedMonth,
+                              structureName: structName,
+                              groupName: grpName,
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+
                           // Extra padding for bottom bar
                           if (!kIsWeb) SizedBox(height: 120),
                         ],
@@ -793,8 +840,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
                   DataColumn(label: Text(provider.translate('gross_salary'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2EBD96)))),
                   DataColumn(label: Text(provider.translate('deductions'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFFF5C5C)))),
                   DataColumn(label: Text(provider.translate('net_earnings'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2EBD96)))),
-                  if (isHrOrAdmin)
-                    DataColumn(label: Text(provider.translate('actions'), style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13))),
+                  DataColumn(label: Text(provider.translate('actions'), style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13))),
                 ],
                 rows: [
                   ...reports.map((r) {
@@ -821,11 +867,11 @@ class _PayrollScreenState extends State<PayrollScreen> {
                         DataCell(Text(formatEmpAmount(r.incrementalSalary, r.currency), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFF2EBD96)))),
                         DataCell(Text(formatEmpAmount(r.decrementalSalary, r.currency), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFFFF5C5C)))),
                         DataCell(Text(formatEmpAmount(r.netEarnings, r.currency), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2EBD96)))),
-                        if (isHrOrAdmin)
-                          DataCell(
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
+                        DataCell(
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (isHrOrAdmin) ...[
                                 Tooltip(
                                   message: provider.translate('add_addition_for').replaceAll('{name}', r.employee.name),
                                   child: Material(
@@ -908,9 +954,49 @@ class _PayrollScreenState extends State<PayrollScreen> {
                                     ),
                                   ),
                                 ),
+                                const SizedBox(width: 6),
                               ],
-                            ),
+                              Tooltip(
+                                message: provider.translate('view_payslip'),
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(50),
+                                    onTap: () {
+                                      final structName = provider.structures
+                                          .cast<OrgStructure?>()
+                                          .firstWhere((s) => s?.id == r.employee.structureId, orElse: () => null)
+                                          ?.name;
+                                      final grpName = provider.groups
+                                          .cast<EmployeeGroup?>()
+                                          .firstWhere((g) => g?.id == r.employee.groupId, orElse: () => null)
+                                          ?.name;
+                                      showPayslipDialog(
+                                        context: context,
+                                        report: r,
+                                        month: provider.selectedMonth,
+                                        structureName: structName,
+                                        groupName: grpName,
+                                      );
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.all(5),
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: const Color(0xFF5B9BFF).withValues(alpha: isDark ? 0.18 : 0.12),
+                                        border: Border.all(
+                                          color: const Color(0xFF5B9BFF).withValues(alpha: 0.4),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: const Icon(Icons.badge_outlined, color: Color(0xFF5B9BFF), size: 16),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
+                        ),
                       ],
                     );
                   }),
@@ -1090,8 +1176,7 @@ class _PayrollScreenState extends State<PayrollScreen> {
                           color: Color(0xFF2EBD96),
                         ),
                       )),
-                      if (isHrOrAdmin)
-                        const DataCell(SizedBox.shrink()),
+                      const DataCell(SizedBox.shrink()),
                     ],
                   ),
                 ],
@@ -1262,10 +1347,25 @@ class _PayrollScreenState extends State<PayrollScreen> {
                 provider.selectedMonth,
                 provider.companyProfile,
               );
+            } else if (value == 'all_payslips') {
+              await ExportService.exportAllPayslipsToPdf(
+                reports: reports,
+                month: provider.selectedMonth,
+                profile: provider.companyProfile,
+                structures: provider.structures,
+                groups: provider.groups,
+              );
             }
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(provider.translate('export_success'))),
+                SnackBar(
+                  backgroundColor: const Color(0xFF10B981),
+                  content: Text(
+                    value == 'all_payslips'
+                        ? provider.translate('all_payslips_downloaded')
+                        : provider.translate('export_success'),
+                  ),
+                ),
               );
             }
           } catch (e) {
@@ -1310,6 +1410,27 @@ class _PayrollScreenState extends State<PayrollScreen> {
                 const SizedBox(width: 10),
                 Text(
                   provider.translate('export_to_pdf'),
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          PopupMenuItem<String>(
+            value: 'all_payslips',
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.receipt_long_outlined,
+                  size: 18,
+                  color: Color(0xFF5B9BFF),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  provider.translate('all_payslips'),
                   style: TextStyle(
                     color: textColor,
                     fontSize: 13,
