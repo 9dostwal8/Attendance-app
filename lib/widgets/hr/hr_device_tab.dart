@@ -60,15 +60,15 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('ZKTeco global settings saved!'),
-          backgroundColor: Color(0xFF10B981),
+        SnackBar(
+          content: Text(provider.translate('global_settings_saved')),
+          backgroundColor: const Color(0xFF10B981),
         ),
       );
     }
   }
 
-  Future<void> _handleTestAllDevices() async {
+  Future<void> _handleTestAllDevices(AttendanceProvider provider) async {
     setState(() => _isTestingAll = true);
     final results = await _zkService.testAllConnections();
     setState(() => _isTestingAll = false);
@@ -77,7 +77,10 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
     final onlineCount = results.values.where((info) => info.isConnected).length;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Connection check complete: $onlineCount / ${results.length} devices online.'),
+        content: Text(provider.translate('connection_check_result', params: {
+          'online': '$onlineCount',
+          'total': '${results.length}',
+        })),
         backgroundColor: onlineCount > 0 ? const Color(0xFF10B981) : const Color(0xFFEF4444),
       ),
     );
@@ -118,7 +121,7 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
     );
   }
 
-  Future<void> _handleTestSingleDevice(ZkDeviceConfig dev) async {
+  Future<void> _handleTestSingleDevice(ZkDeviceConfig dev, AttendanceProvider provider) async {
     setState(() => _testingDeviceId = dev.id);
     final info = await _zkService.testDeviceConnection(dev);
     setState(() => _testingDeviceId = null);
@@ -127,28 +130,38 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
     if (info.isConnected) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Connected to ${dev.name}: ${info.deviceName} (${info.serialNumber})'),
+          content: Text(provider.translate('device_connected_msg', params: {
+            'name': dev.name,
+            'devName': info.deviceName,
+            'sn': info.serialNumber,
+          })),
           backgroundColor: const Color(0xFF10B981),
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Connection failed to ${dev.name}: ${info.errorMessage ?? "Unreachable"}'),
+          content: Text(provider.translate('device_connect_failed_msg', params: {
+            'name': dev.name,
+            'error': info.errorMessage ?? 'Unreachable',
+          })),
           backgroundColor: const Color(0xFFEF4444),
         ),
       );
     }
   }
 
-  Future<void> _handleFetchUsers(ZkDeviceConfig? dev) async {
+  Future<void> _handleFetchUsers(ZkDeviceConfig? dev, AttendanceProvider provider) async {
     setState(() => _isFetchingUsers = true);
     try {
       final users = await _zkService.fetchUsers(device: dev);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Fetched ${users.length} users from ${dev?.name ?? "device"}'),
+            content: Text(provider.translate('fetched_users_success', params: {
+              'count': '${users.length}',
+              'name': dev?.name ?? 'device',
+            })),
             backgroundColor: const Color(0xFF10B981),
           ),
         );
@@ -157,7 +170,7 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to fetch users: $e'),
+            content: Text(provider.translate('failed_fetch_users', params: {'error': '$e'})),
             backgroundColor: const Color(0xFFEF4444),
           ),
         );
@@ -168,6 +181,7 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
   }
 
   void _showAddEditDeviceDialog(BuildContext context, {ZkDeviceConfig? device}) {
+    final provider = Provider.of<AttendanceProvider>(context, listen: false);
     final isEditing = device != null;
     final nameCtrl = TextEditingController(text: device?.name ?? 'Terminal ${_zkService.devices.length + 1}');
     final ipCtrl = TextEditingController(text: device?.ip ?? '192.168.1.${200 + _zkService.devices.length + 1}');
@@ -214,11 +228,11 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  isEditing ? 'Edit Biometric Device' : 'Add Biometric Device',
+                                  isEditing ? provider.translate('edit_device_dialog_title') : provider.translate('add_device_dialog_title'),
                                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor),
                                 ),
                                 Text(
-                                  'Configure ZKTeco IP, port, and security key',
+                                  provider.translate('zk_dialog_subtitle'),
                                   style: TextStyle(fontSize: 12, color: subtextColor),
                                 ),
                               ],
@@ -233,22 +247,22 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
                       const SizedBox(height: 20),
                       TextField(
                         controller: nameCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Device Name / Location *',
-                          hintText: 'e.g., Main Entrance, Workshop Gate',
-                          prefixIcon: Icon(Icons.badge_outlined, size: 20),
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          labelText: provider.translate('device_name_label'),
+                          hintText: provider.translate('device_name_hint'),
+                          prefixIcon: const Icon(Icons.badge_outlined, size: 20),
+                          border: const OutlineInputBorder(),
                           isDense: true,
                         ),
                       ),
                       const SizedBox(height: 12),
                       TextField(
                         controller: ipCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'IP Address *',
+                        decoration: InputDecoration(
+                          labelText: provider.translate('ip_address_label'),
                           hintText: '192.168.1.201',
-                          prefixIcon: Icon(Icons.router_outlined, size: 20),
-                          border: OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.router_outlined, size: 20),
+                          border: const OutlineInputBorder(),
                           isDense: true,
                         ),
                       ),
@@ -259,11 +273,11 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
                             child: TextField(
                               controller: portCtrl,
                               keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                labelText: 'Port (Default 4370)',
+                              decoration: InputDecoration(
+                                labelText: provider.translate('port_label'),
                                 hintText: '4370',
-                                prefixIcon: Icon(Icons.numbers, size: 20),
-                                border: OutlineInputBorder(),
+                                prefixIcon: const Icon(Icons.numbers, size: 20),
+                                border: const OutlineInputBorder(),
                                 isDense: true,
                               ),
                             ),
@@ -273,11 +287,11 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
                             child: TextField(
                               controller: pwdCtrl,
                               keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                labelText: 'Comm Key (Password)',
+                              decoration: InputDecoration(
+                                labelText: provider.translate('comm_key_label'),
                                 hintText: '0',
-                                prefixIcon: Icon(Icons.key_outlined, size: 20),
-                                border: OutlineInputBorder(),
+                                prefixIcon: const Icon(Icons.key_outlined, size: 20),
+                                border: const OutlineInputBorder(),
                                 isDense: true,
                               ),
                             ),
@@ -287,7 +301,7 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
                       const SizedBox(height: 12),
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: const Text('Enable device for auto-sync', style: TextStyle(fontSize: 14)),
+                        title: Text(provider.translate('enable_auto_sync_switch'), style: const TextStyle(fontSize: 14)),
                         value: isEnabled,
                         activeThumbColor: const Color(0xFF10B981),
                         onChanged: (val) => setDialogState(() => isEnabled = val),
@@ -318,8 +332,8 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
                               Expanded(
                                 child: Text(
                                   testResult!.isConnected
-                                      ? 'Online: ${testResult!.deviceName} (${testResult!.serialNumber})'
-                                      : 'Offline: ${testResult!.errorMessage ?? "Unreachable"}',
+                                      ? provider.translate('device_online_status', params: {'name': '${testResult!.deviceName} (${testResult!.serialNumber})'})
+                                      : provider.translate('device_offline_status', params: {'error': testResult!.errorMessage ?? 'Unreachable'}),
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
@@ -356,7 +370,7 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
                                   },
                             isLoading: isTestingModal,
                             icon: const Icon(Icons.cable, size: 16),
-                            label: 'Test Connection',
+                            label: provider.translate('test_connection_btn'),
                             variant: NeuButtonVariant.whitePill,
                             height: 38,
                             fontSize: 12,
@@ -366,7 +380,7 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
                             children: [
                               TextButton(
                                 onPressed: () => Navigator.pop(dialogCtx),
-                                child: const Text('Cancel'),
+                                child: Text(provider.translate('cancel')),
                               ),
                               const SizedBox(width: 8),
                               NeuButton(
@@ -378,7 +392,7 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
 
                                   if (name.isEmpty || ip.isEmpty) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Please enter both device name and IP address.')),
+                                      SnackBar(content: Text(provider.translate('device_name_ip_required'))),
                                     );
                                     return;
                                   }
@@ -410,7 +424,7 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
                                     Navigator.pop(dialogCtx);
                                   }
                                 },
-                                label: isEditing ? 'Save Changes' : 'Add Device',
+                                label: isEditing ? provider.translate('save_changes_btn') : provider.translate('add_device_btn'),
                                 variant: NeuButtonVariant.primary,
                                 height: 38,
                                 fontSize: 13,
@@ -431,19 +445,20 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
   }
 
   void _confirmDeleteDevice(BuildContext context, ZkDeviceConfig dev) {
+    final provider = Provider.of<AttendanceProvider>(context, listen: false);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Delete "${dev.name}"?'),
-        content: Text('Are you sure you want to remove ${dev.ip}:${dev.port} from the biometric devices list?'),
+        title: Text(provider.translate('delete_device_title', params: {'name': dev.name})),
+        content: Text(provider.translate('delete_device_confirm', params: {'ip': dev.ip, 'port': '${dev.port}'})),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(provider.translate('cancel'))),
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
               _zkService.deleteDevice(dev.id);
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: Text(provider.translate('delete'), style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -469,20 +484,27 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
           if (kIsWeb)
             Container(
               margin: const EdgeInsets.only(bottom: 16),
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
-                color: const Color(0xFF2E65FF).withValues(alpha: 0.12),
+                color: const Color(0xFF2E65FF).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFF2E65FF).withValues(alpha: 0.35)),
+                border: Border.all(color: const Color(0xFF2E65FF).withValues(alpha: 0.3)),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.hub_outlined, color: Color(0xFF2E65FF), size: 24),
-                  SizedBox(width: 12),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2E65FF).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.hub_outlined, color: Color(0xFF2E65FF), size: 22),
+                  ),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Text(
-                      'Web Browser Mode: To communicate with local ZKTeco devices from Chrome/Edge, start "start_zk_bridge.bat" (or run natively: flutter run -d windows). Multi-device routing is automatically handled.',
-                      style: TextStyle(fontSize: 13, height: 1.4),
+                      provider.translate('zk_web_bridge_hint'),
+                      style: TextStyle(fontSize: 12.5, height: 1.4, color: textColor),
                     ),
                   ),
                 ],
@@ -522,14 +544,14 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
     FirebaseService firebase,
   ) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final isMobile = screenWidth < 680;
+    final isMobile = screenWidth < 700;
 
     final headerInfo = Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
-          width: 44,
-          height: 44,
+          width: 46,
+          height: 46,
           decoration: BoxDecoration(
             color: const Color(0xFF2E65FF).withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(12),
@@ -548,7 +570,7 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Text(
-                    'ZKTeco Biometric Devices',
+                    provider.translate('zk_devices_title'),
                     style: TextStyle(
                       fontSize: isMobile ? 16 : 18,
                       fontWeight: FontWeight.bold,
@@ -556,14 +578,17 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
                     decoration: BoxDecoration(
                       color: const Color(0xFF10B981).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
                     ),
                     child: Text(
-                      '${devices.length} Configured • $onlineCount Online',
+                      provider.translate('zk_configured_online', params: {
+                        'total': '${devices.length}',
+                        'online': '$onlineCount',
+                      }),
                       style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
                     ),
                   ),
@@ -571,8 +596,8 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Multi-device synchronization with cross-terminal Smart Punch Pairing (Check In at Terminal A, Check Out at Terminal B)',
-                style: TextStyle(fontSize: 11.5, color: subtextColor),
+                provider.translate('zk_devices_subtitle'),
+                style: TextStyle(fontSize: 11.5, color: subtextColor, height: 1.3),
               ),
             ],
           ),
@@ -583,32 +608,36 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
     final actionButtons = Wrap(
       spacing: 8,
       runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         NeuButton(
           onPressed: () => _showAddEditDeviceDialog(context),
           icon: const Icon(Icons.add_rounded, size: 18),
-          label: 'Add Device',
+          label: provider.translate('add_device_btn'),
           variant: NeuButtonVariant.primary,
           height: 38,
           fontSize: 12.5,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
         ),
         NeuButton(
-          onPressed: _isTestingAll ? null : _handleTestAllDevices,
+          onPressed: _isTestingAll ? null : () => _handleTestAllDevices(provider),
           isLoading: _isTestingAll,
           icon: const Icon(Icons.cable_rounded, size: 18),
-          label: 'Test All',
+          label: provider.translate('test_all_btn'),
           variant: NeuButtonVariant.whitePill,
           height: 38,
           fontSize: 12.5,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
         ),
         NeuButton(
           onPressed: _isSyncingAll ? null : () => _handleSyncAllDevices(provider, firebase),
           isLoading: _isSyncingAll,
           icon: const Icon(Icons.sync_rounded, size: 18),
-          label: 'Sync All Devices',
+          label: provider.translate('sync_all_devices_btn'),
           variant: NeuButtonVariant.navy,
           height: 38,
           fontSize: 12.5,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
         ),
       ],
     );
@@ -650,14 +679,21 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
           children: [
             const Icon(Icons.devices_other_rounded, size: 48, color: Colors.grey),
             const SizedBox(height: 12),
-            Text('No ZKTeco biometric devices configured yet', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor)),
+            Text(
+              provider.translate('no_zk_devices_title'),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
+            ),
             const SizedBox(height: 6),
-            Text('Connect your biometric machines over local Wi-Fi or Ethernet LAN', style: TextStyle(fontSize: 12, color: subtextColor)),
+            Text(
+              provider.translate('no_zk_devices_subtitle'),
+              style: TextStyle(fontSize: 12, color: subtextColor),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 16),
             NeuButton(
               onPressed: () => _showAddEditDeviceDialog(context),
               icon: const Icon(Icons.add_rounded, size: 18),
-              label: 'Add First Device',
+              label: provider.translate('add_first_device_btn'),
               variant: NeuButtonVariant.primary,
               height: 38,
             ),
@@ -682,111 +718,254 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: isConnected
-                            ? const Color(0xFF10B981).withValues(alpha: 0.15)
-                            : (isDark ? Colors.white10 : Colors.grey.shade200),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: isConnected
-                              ? const Color(0xFF10B981).withValues(alpha: 0.4)
-                              : Colors.transparent,
-                        ),
-                      ),
-                      child: Icon(
-                        Icons.fingerprint,
-                        color: isConnected ? const Color(0xFF10B981) : Colors.grey,
-                        size: 22,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 4,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              Text(
-                                dev.name,
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: (isDark ? Colors.white12 : Colors.grey.shade200),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  '${dev.ip}:${dev.port}',
-                                  style: TextStyle(fontSize: 11, fontFamily: 'monospace', fontWeight: FontWeight.w600, color: subtextColor),
-                                ),
-                              ),
-                              if (dev.password > 0)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: Colors.amber.withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text('Key: ${dev.password}', style: const TextStyle(fontSize: 10, color: Colors.amber)),
-                                ),
-                            ],
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isRowLayout = constraints.maxWidth >= 760;
+
+                    final deviceIdentity = Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: isConnected
+                                ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                                : (isDark ? Colors.white10 : Colors.grey.shade200),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isConnected
+                                  ? const Color(0xFF10B981).withValues(alpha: 0.4)
+                                  : Colors.transparent,
+                            ),
                           ),
-                          const SizedBox(height: 4),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 2,
-                            crossAxisAlignment: WrapCrossAlignment.center,
+                          child: Icon(
+                            Icons.fingerprint,
+                            color: isConnected ? const Color(0xFF10B981) : Colors.grey,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Flexible(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                               Row(
-                                mainAxisSize: MainAxisSize.min,
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 4,
+                                crossAxisAlignment: WrapCrossAlignment.center,
                                 children: [
+                                  Text(
+                                    dev.name,
+                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
+                                  ),
                                   Container(
-                                    width: 7,
-                                    height: 7,
+                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: isConnected ? const Color(0xFF10B981) : (info != null ? const Color(0xFFEF4444) : Colors.grey),
-                                      shape: BoxShape.circle,
+                                      color: (isDark ? Colors.white12 : Colors.grey.shade200),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      '${dev.ip}:${dev.port}',
+                                      style: TextStyle(fontSize: 11, fontFamily: 'monospace', fontWeight: FontWeight.w600, color: subtextColor),
                                     ),
                                   ),
-                                  const SizedBox(width: 6),
-                                  Flexible(
-                                    child: Text(
-                                      isConnected
-                                          ? 'Online (${info!.deviceName.isNotEmpty ? info.deviceName : "ZKTeco Terminal"})'
-                                          : (info != null ? 'Offline: ${info.errorMessage ?? "Unreachable"}' : 'Ready to connect'),
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
-                                        color: isConnected ? const Color(0xFF10B981) : (info != null ? const Color(0xFFEF4444) : subtextColor),
+                                  if (dev.password > 0)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.amber.withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(6),
                                       ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
+                                      child: Text(
+                                        provider.translate('key_prefix', params: {'key': '${dev.password}'}),
+                                        style: const TextStyle(fontSize: 10, color: Colors.amber),
+                                      ),
                                     ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 2,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 7,
+                                        height: 7,
+                                        decoration: BoxDecoration(
+                                          color: isConnected
+                                              ? const Color(0xFF10B981)
+                                              : (info != null ? const Color(0xFFEF4444) : Colors.grey),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Flexible(
+                                        child: Text(
+                                          isConnected
+                                              ? provider.translate('device_online_status', params: {'name': info!.deviceName.isNotEmpty ? info.deviceName : 'ZKTeco Terminal'})
+                                              : (info != null
+                                                  ? provider.translate('device_offline_status', params: {'error': info.errorMessage ?? 'Unreachable'})
+                                                  : provider.translate('device_ready_connect')),
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w500,
+                                            color: isConnected
+                                                ? const Color(0xFF10B981)
+                                                : (info != null ? const Color(0xFFEF4444) : subtextColor),
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Text(
+                                    '• ${provider.translate('device_last_sync', params: {'status': dev.lastSyncStatus})}',
+                                    style: TextStyle(fontSize: 11, color: subtextColor),
                                   ),
                                 ],
                               ),
-                              Text('• Last Sync: ${dev.lastSyncStatus}', style: TextStyle(fontSize: 11, color: subtextColor)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+
+                    final deviceActions = Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        NeuButton(
+                          onPressed: isTestingThis ? null : () => _handleTestSingleDevice(dev, provider),
+                          isLoading: isTestingThis,
+                          icon: const Icon(Icons.cable, size: 14),
+                          label: provider.translate('test_connection_btn'),
+                          variant: NeuButtonVariant.whitePill,
+                          height: 32,
+                          fontSize: 11.5,
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                        ),
+                        const SizedBox(width: 6),
+                        NeuButton(
+                          onPressed: () => _handleFetchUsers(dev, provider),
+                          icon: const Icon(Icons.people_outline, size: 14),
+                          label: provider.translate('device_users_btn'),
+                          variant: NeuButtonVariant.whitePill,
+                          height: 32,
+                          fontSize: 11.5,
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                        ),
+                        const SizedBox(width: 6),
+                        NeuButton(
+                          onPressed: isSyncingThis ? null : () => _handleSyncSingleDevice(dev, provider, firebase),
+                          isLoading: isSyncingThis,
+                          icon: const Icon(Icons.sync, size: 14),
+                          label: provider.translate('sync_this_btn'),
+                          variant: NeuButtonVariant.primary,
+                          height: 32,
+                          fontSize: 11.5,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                        ),
+                        const SizedBox(width: 4),
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined, size: 18),
+                          tooltip: provider.translate('edit_device_tooltip'),
+                          onPressed: () => _showAddEditDeviceDialog(context, device: dev),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+                          tooltip: provider.translate('delete_device_tooltip'),
+                          onPressed: () => _confirmDeleteDevice(context, dev),
+                        ),
+                        const SizedBox(width: 4),
+                        Switch(
+                          value: dev.isEnabled,
+                          activeThumbColor: const Color(0xFF10B981),
+                          onChanged: (val) => _zkService.toggleDevice(dev.id, val),
+                        ),
+                      ],
+                    );
+
+                    if (isRowLayout) {
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(child: deviceIdentity),
+                          const SizedBox(width: 16),
+                          deviceActions,
+                        ],
+                      );
+                    } else {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(child: deviceIdentity),
+                              Switch(
+                                value: dev.isEnabled,
+                                activeThumbColor: const Color(0xFF10B981),
+                                onChanged: (val) => _zkService.toggleDevice(dev.id, val),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            alignment: WrapAlignment.start,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              NeuButton(
+                                onPressed: isTestingThis ? null : () => _handleTestSingleDevice(dev, provider),
+                                isLoading: isTestingThis,
+                                icon: const Icon(Icons.cable, size: 14),
+                                label: provider.translate('test_connection_btn'),
+                                variant: NeuButtonVariant.whitePill,
+                                height: 32,
+                                fontSize: 11.5,
+                                padding: const EdgeInsets.symmetric(horizontal: 10),
+                              ),
+                              NeuButton(
+                                onPressed: () => _handleFetchUsers(dev, provider),
+                                icon: const Icon(Icons.people_outline, size: 14),
+                                label: provider.translate('device_users_btn'),
+                                variant: NeuButtonVariant.whitePill,
+                                height: 32,
+                                fontSize: 11.5,
+                                padding: const EdgeInsets.symmetric(horizontal: 10),
+                              ),
+                              NeuButton(
+                                onPressed: isSyncingThis ? null : () => _handleSyncSingleDevice(dev, provider, firebase),
+                                isLoading: isSyncingThis,
+                                icon: const Icon(Icons.sync, size: 14),
+                                label: provider.translate('sync_this_btn'),
+                                variant: NeuButtonVariant.primary,
+                                height: 32,
+                                fontSize: 11.5,
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.edit_outlined, size: 18),
+                                tooltip: provider.translate('edit_device_tooltip'),
+                                onPressed: () => _showAddEditDeviceDialog(context, device: dev),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+                                tooltip: provider.translate('delete_device_tooltip'),
+                                onPressed: () => _confirmDeleteDevice(context, dev),
+                              ),
                             ],
                           ),
                         ],
-                      ),
-                    ),
-                    Switch(
-                      value: dev.isEnabled,
-                      activeThumbColor: const Color(0xFF10B981),
-                      onChanged: (val) => _zkService.toggleDevice(dev.id, val),
-                    ),
-                  ],
+                      );
+                    }
+                  },
                 ),
                 if (isConnected && info != null) ...[
                   const SizedBox(height: 12),
@@ -796,68 +975,15 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
                     spacing: 16,
                     runSpacing: 6,
                     children: [
-                      _buildMiniBadge('Serial', info.serialNumber.isNotEmpty ? info.serialNumber : 'N/A', textColor, subtextColor),
-                      _buildMiniBadge('Firmware', info.firmwareVersion.isNotEmpty ? info.firmwareVersion : 'N/A', textColor, subtextColor),
-                      _buildMiniBadge('Users', '${info.userCount}', textColor, subtextColor),
-                      _buildMiniBadge('Logs', '${info.logCount}', textColor, subtextColor),
+                      _buildMiniBadge(provider.translate('device_serial_badge'), info.serialNumber.isNotEmpty ? info.serialNumber : 'N/A', textColor, subtextColor),
+                      _buildMiniBadge(provider.translate('device_firmware_badge'), info.firmwareVersion.isNotEmpty ? info.firmwareVersion : 'N/A', textColor, subtextColor),
+                      _buildMiniBadge(provider.translate('device_users_badge'), '${info.userCount}', textColor, subtextColor),
+                      _buildMiniBadge(provider.translate('device_logs_badge'), '${info.logCount}', textColor, subtextColor),
                       if (info.deviceTime != null)
-                        _buildMiniBadge('Device Clock', info.deviceTime.toString().substring(0, 16), textColor, subtextColor),
+                        _buildMiniBadge(provider.translate('device_clock_badge'), info.deviceTime.toString().substring(0, 16), textColor, subtextColor),
                     ],
                   ),
                 ],
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  alignment: WrapAlignment.end,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    NeuButton(
-                      onPressed: isTestingThis ? null : () => _handleTestSingleDevice(dev),
-                      isLoading: isTestingThis,
-                      icon: const Icon(Icons.cable, size: 14),
-                      label: 'Test Connection',
-                      variant: NeuButtonVariant.whitePill,
-                      height: 32,
-                      fontSize: 11.5,
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                    ),
-                    NeuButton(
-                      onPressed: () => _handleFetchUsers(dev),
-                      icon: const Icon(Icons.people_outline, size: 14),
-                      label: 'Users',
-                      variant: NeuButtonVariant.whitePill,
-                      height: 32,
-                      fontSize: 11.5,
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                    ),
-                    NeuButton(
-                      onPressed: isSyncingThis ? null : () => _handleSyncSingleDevice(dev, provider, firebase),
-                      isLoading: isSyncingThis,
-                      icon: const Icon(Icons.sync, size: 14),
-                      label: 'Sync This',
-                      variant: NeuButtonVariant.primary,
-                      height: 32,
-                      fontSize: 11.5,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                    ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit_outlined, size: 18),
-                          tooltip: 'Edit Device Settings',
-                          onPressed: () => _showAddEditDeviceDialog(context, device: dev),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
-                          tooltip: 'Delete Device',
-                          onPressed: () => _confirmDeleteDevice(context, dev),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
               ],
             ),
           ),
@@ -889,18 +1015,18 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
     final syncIntervalField = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Auto-Sync Interval', style: TextStyle(fontSize: 12, color: subtextColor)),
+        Text(provider.translate('auto_sync_interval_label'), style: TextStyle(fontSize: 12, color: subtextColor)),
         const SizedBox(height: 4),
         DropdownButtonFormField<int>(
           initialValue: _syncInterval,
           isDense: true,
           decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
-          items: const [
-            DropdownMenuItem(value: 5, child: Text('Every 5 mins')),
-            DropdownMenuItem(value: 10, child: Text('Every 10 mins')),
-            DropdownMenuItem(value: 15, child: Text('Every 15 mins (Default)')),
-            DropdownMenuItem(value: 30, child: Text('Every 30 mins')),
-            DropdownMenuItem(value: 60, child: Text('Every 1 hour')),
+          items: [
+            DropdownMenuItem(value: 5, child: Text(provider.translate('every_mins', params: {'mins': '5'}))),
+            DropdownMenuItem(value: 10, child: Text(provider.translate('every_mins', params: {'mins': '10'}))),
+            DropdownMenuItem(value: 15, child: Text('${provider.translate('every_mins', params: {'mins': '15'})} ${provider.translate('default_suffix')}')),
+            DropdownMenuItem(value: 30, child: Text(provider.translate('every_mins', params: {'mins': '30'}))),
+            DropdownMenuItem(value: 60, child: Text(provider.translate('every_1_hour'))),
           ],
           onChanged: (val) {
             if (val != null) {
@@ -915,17 +1041,17 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
     final cooldownField = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Duplicate Punch Cooldown', style: TextStyle(fontSize: 12, color: subtextColor)),
+        Text(provider.translate('duplicate_cooldown_label'), style: TextStyle(fontSize: 12, color: subtextColor)),
         const SizedBox(height: 4),
         DropdownButtonFormField<int>(
           initialValue: _cooldown,
           isDense: true,
           decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
-          items: const [
-            DropdownMenuItem(value: 1, child: Text('1 minute')),
-            DropdownMenuItem(value: 2, child: Text('2 minutes')),
-            DropdownMenuItem(value: 3, child: Text('3 minutes (Default)')),
-            DropdownMenuItem(value: 5, child: Text('5 minutes')),
+          items: [
+            DropdownMenuItem(value: 1, child: Text(provider.translate('cooldown_1_min'))),
+            DropdownMenuItem(value: 2, child: Text(provider.translate('cooldown_mins', params: {'mins': '2'}))),
+            DropdownMenuItem(value: 3, child: Text('${provider.translate('cooldown_mins', params: {'mins': '3'})} ${provider.translate('default_suffix')}')),
+            DropdownMenuItem(value: 5, child: Text(provider.translate('cooldown_mins', params: {'mins': '5'}))),
           ],
           onChanged: (val) {
             if (val != null) {
@@ -949,7 +1075,7 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Multi-Device Smart Pairing & Background Sync',
+                  provider.translate('smart_pairing_title'),
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: textColor),
                 ),
               ),
@@ -959,11 +1085,11 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             title: Text(
-              'Background Auto-Sync (All Active Terminals)',
+              provider.translate('auto_sync_title'),
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: textColor),
             ),
             subtitle: Text(
-              'Polls all active biometric devices simultaneously in the background while the app is running',
+              provider.translate('auto_sync_subtitle'),
               style: TextStyle(fontSize: 12, color: subtextColor),
             ),
             value: _autoSync,
@@ -1002,7 +1128,7 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Cross-Terminal Pairing: When an employee clocks in at Terminal A (e.g. Main Entrance) and clocks out at Terminal B (e.g. Back Exit or Warehouse), the smart pairing engine automatically matches them into a single attendance session.',
+                    provider.translate('cross_terminal_pairing_desc'),
                     style: TextStyle(fontSize: 12, color: textColor, height: 1.3),
                   ),
                 ),
@@ -1033,7 +1159,7 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
         const Icon(Icons.badge_outlined, color: Color(0xFF8B5CF6), size: 20),
         const SizedBox(width: 8),
         Text(
-          'Device Users & Employee ID Mapping',
+          provider.translate('user_mapping_title'),
           style: TextStyle(fontSize: isMobile ? 15 : 16, fontWeight: FontWeight.bold, color: textColor),
         ),
       ],
@@ -1072,11 +1198,11 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
                         (d) => d != null && d.id == _selectedDeviceForUsers,
                         orElse: () => devices.isNotEmpty ? devices.first : null,
                       );
-                  _handleFetchUsers(dev);
+                  _handleFetchUsers(dev, provider);
                 },
           isLoading: _isFetchingUsers,
           icon: const Icon(Icons.download, size: 16),
-          label: 'Fetch Users',
+          label: provider.translate('fetch_users_btn'),
           variant: NeuButtonVariant.whitePill,
           height: 34,
           fontSize: 12,
@@ -1108,7 +1234,7 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
               padding: const EdgeInsets.symmetric(vertical: 24),
               alignment: Alignment.center,
               child: Text(
-                'Click "Fetch Users" to inspect enrolled fingerprints and match them with registered employees.',
+                provider.translate('fetch_users_hint'),
                 style: TextStyle(fontSize: 13, color: subtextColor),
               ),
             )
@@ -1176,7 +1302,10 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
                               const Icon(Icons.check, size: 14, color: Color(0xFF10B981)),
                               const SizedBox(width: 4),
                               Text(
-                                'Matched: ${matched.name} (${matched.position})',
+                                provider.translate('user_matched_badge', params: {
+                                  'name': matched.name,
+                                  'position': matched.position,
+                                }),
                                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
                               ),
                             ],
@@ -1190,14 +1319,14 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.3)),
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.warning_amber, size: 14, color: Color(0xFFF59E0B)),
-                              SizedBox(width: 4),
+                              const Icon(Icons.warning_amber, size: 14, color: Color(0xFFF59E0B)),
+                              const SizedBox(width: 4),
                               Text(
-                                'No matching employee in app',
-                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFF59E0B)),
+                                provider.translate('user_not_matched_badge'),
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFF59E0B)),
                               ),
                             ],
                           ),
@@ -1213,6 +1342,7 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
   }
 
   Widget _buildSyncLogsCard(BuildContext context, Color textColor, Color subtextColor) {
+    final provider = Provider.of<AttendanceProvider>(context, listen: false);
     final logs = _zkService.syncLogs;
 
     return GlassContainer(
@@ -1225,13 +1355,13 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
               const Icon(Icons.list_alt, color: Color(0xFF06B6D4), size: 20),
               const SizedBox(width: 8),
               Text(
-                'Live Multi-Device Activity Log',
+                provider.translate('activity_log_title'),
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
               ),
               const Spacer(),
               if (logs.isNotEmpty)
                 Text(
-                  '${logs.length} events',
+                  provider.translate('events_count', params: {'count': '${logs.length}'}),
                   style: TextStyle(fontSize: 12, color: subtextColor),
                 ),
             ],
@@ -1248,7 +1378,7 @@ class _HrDeviceTabState extends State<HrDeviceTab> {
             child: logs.isEmpty
                 ? Center(
                     child: Text(
-                      'No sync activity recorded yet. Click "Sync All Devices" to start.',
+                      provider.translate('no_activity_log'),
                       style: TextStyle(fontSize: 12, color: subtextColor),
                     ),
                   )
