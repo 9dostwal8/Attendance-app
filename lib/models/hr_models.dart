@@ -88,6 +88,8 @@ class SalaryHistoryEntry {
   final double foodAllowance;
   final double transportationAllowance;
   final double otherAllowance;
+  final bool hasInsurance;
+  final double insuranceSalary;
 
   SalaryHistoryEntry({
     required this.basicSalary,
@@ -98,7 +100,36 @@ class SalaryHistoryEntry {
     this.foodAllowance = 0.0,
     this.transportationAllowance = 0.0,
     this.otherAllowance = 0.0,
+    this.hasInsurance = false,
+    this.insuranceSalary = 0.0,
   });
+
+  SalaryHistoryEntry copyWith({
+    double? basicSalary,
+    double? workingHours,
+    String? currency,
+    String? startDate,
+    String? endDate,
+    bool overrideEndDate = false,
+    double? foodAllowance,
+    double? transportationAllowance,
+    double? otherAllowance,
+    bool? hasInsurance,
+    double? insuranceSalary,
+  }) {
+    return SalaryHistoryEntry(
+      basicSalary: basicSalary ?? this.basicSalary,
+      workingHours: workingHours ?? this.workingHours,
+      currency: currency ?? this.currency,
+      startDate: startDate ?? this.startDate,
+      endDate: overrideEndDate ? endDate : (endDate ?? this.endDate),
+      foodAllowance: foodAllowance ?? this.foodAllowance,
+      transportationAllowance: transportationAllowance ?? this.transportationAllowance,
+      otherAllowance: otherAllowance ?? this.otherAllowance,
+      hasInsurance: hasInsurance ?? this.hasInsurance,
+      insuranceSalary: insuranceSalary ?? this.insuranceSalary,
+    );
+  }
 
   Map<String, dynamic> toMap() {
     return {
@@ -110,6 +141,8 @@ class SalaryHistoryEntry {
       'foodAllowance': foodAllowance,
       'transportationAllowance': transportationAllowance,
       'otherAllowance': otherAllowance,
+      'hasInsurance': hasInsurance,
+      'insuranceSalary': insuranceSalary,
     };
   }
 
@@ -123,6 +156,8 @@ class SalaryHistoryEntry {
       foodAllowance: (map['foodAllowance'] as num?)?.toDouble() ?? 0.0,
       transportationAllowance: (map['transportationAllowance'] as num?)?.toDouble() ?? 0.0,
       otherAllowance: (map['otherAllowance'] as num?)?.toDouble() ?? 0.0,
+      hasInsurance: map['hasInsurance'] as bool? ?? false,
+      insuranceSalary: (map['insuranceSalary'] as num?)?.toDouble() ?? 0.0,
     );
   }
 }
@@ -806,6 +841,8 @@ class CompanyEmployee {
   final double foodAllowance;
   final double transportationAllowance;
   final double otherAllowance;
+  final bool hasInsurance;
+  final double insuranceSalary;
   
   final List<double>? faceEmbedding;
   final String themePreference; // 'dark' or 'light'
@@ -858,6 +895,8 @@ class CompanyEmployee {
     this.foodAllowance = 0.0,
     this.transportationAllowance = 0.0,
     this.otherAllowance = 0.0,
+    this.hasInsurance = false,
+    this.insuranceSalary = 0.0,
     this.faceEmbedding,
     this.themePreference = 'light',
     this.languagePreference = 'en',
@@ -910,6 +949,8 @@ class CompanyEmployee {
     double? foodAllowance,
     double? transportationAllowance,
     double? otherAllowance,
+    bool? hasInsurance,
+    double? insuranceSalary,
     List<double>? faceEmbedding,
     bool overrideFaceEmbedding = false,
     String? themePreference,
@@ -963,6 +1004,8 @@ class CompanyEmployee {
       foodAllowance: foodAllowance ?? this.foodAllowance,
       transportationAllowance: transportationAllowance ?? this.transportationAllowance,
       otherAllowance: otherAllowance ?? this.otherAllowance,
+      hasInsurance: hasInsurance ?? this.hasInsurance,
+      insuranceSalary: insuranceSalary ?? this.insuranceSalary,
       faceEmbedding: overrideFaceEmbedding ? faceEmbedding : (faceEmbedding ?? this.faceEmbedding),
       themePreference: themePreference ?? this.themePreference,
       languagePreference: languagePreference ?? this.languagePreference,
@@ -1019,6 +1062,8 @@ class CompanyEmployee {
       'foodAllowance': foodAllowance,
       'transportationAllowance': transportationAllowance,
       'otherAllowance': otherAllowance,
+      'hasInsurance': hasInsurance,
+      'insuranceSalary': insuranceSalary,
       'faceEmbedding': faceEmbedding,
       'themePreference': themePreference,
       'languagePreference': languagePreference,
@@ -1086,6 +1131,8 @@ class CompanyEmployee {
       foodAllowance: (map['foodAllowance'] as num?)?.toDouble() ?? 0.0,
       transportationAllowance: (map['transportationAllowance'] as num?)?.toDouble() ?? 0.0,
       otherAllowance: (map['otherAllowance'] as num?)?.toDouble() ?? 0.0,
+      hasInsurance: map['hasInsurance'] as bool? ?? false,
+      insuranceSalary: (map['insuranceSalary'] as num?)?.toDouble() ?? 0.0,
       faceEmbedding: map['faceEmbedding'] != null 
           ? List<double>.from((map['faceEmbedding'] as List).map((e) => (e as num).toDouble()))
           : null,

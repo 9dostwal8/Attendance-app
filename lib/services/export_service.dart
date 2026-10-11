@@ -71,6 +71,9 @@ class ExportService {
       'Food Allow.',
       'Trans. Allow.',
       'Other Allow.',
+      'Ins. Salary',
+      'Ins. 5% (Emp)',
+      'Ins. 12% (Comp)',
       'Additions',
       'Penalties',
       'Other Deduct.',
@@ -101,13 +104,16 @@ class ExportService {
       sheet.getRangeByIndex(row, 10).setNumber(r.foodAllowance);
       sheet.getRangeByIndex(row, 11).setNumber(r.transportationAllowance);
       sheet.getRangeByIndex(row, 12).setNumber(r.otherAllowance);
-      sheet.getRangeByIndex(row, 13).setNumber(r.monthlyAdditions);
-      sheet.getRangeByIndex(row, 14).setNumber(r.monthlyPenalties);
-      sheet.getRangeByIndex(row, 15).setNumber(r.monthlyDeductions);
-      sheet.getRangeByIndex(row, 16).setNumber(r.incrementalSalary);
-      sheet.getRangeByIndex(row, 17).setNumber(r.decrementalSalary);
-      sheet.getRangeByIndex(row, 18).setNumber(r.netEarnings);
-      sheet.getRangeByIndex(row, 19).setText(r.currency);
+      sheet.getRangeByIndex(row, 13).setNumber(r.hasInsurance ? r.insuranceSalary : 0.0);
+      sheet.getRangeByIndex(row, 14).setNumber(r.hasInsurance ? r.insuranceEmployee : 0.0);
+      sheet.getRangeByIndex(row, 15).setNumber(r.hasInsurance ? r.insuranceCompany : 0.0);
+      sheet.getRangeByIndex(row, 16).setNumber(r.monthlyAdditions);
+      sheet.getRangeByIndex(row, 17).setNumber(r.monthlyPenalties);
+      sheet.getRangeByIndex(row, 18).setNumber(r.monthlyDeductions);
+      sheet.getRangeByIndex(row, 19).setNumber(r.incrementalSalary);
+      sheet.getRangeByIndex(row, 20).setNumber(r.decrementalSalary);
+      sheet.getRangeByIndex(row, 21).setNumber(r.netEarnings);
+      sheet.getRangeByIndex(row, 22).setText(r.currency);
     }
 
     // Total row
@@ -126,6 +132,9 @@ class ExportService {
       final totalFoodAllowance = reports.fold(0.0, (sum, r) => sum + r.foodAllowance);
       final totalTransportationAllowance = reports.fold(0.0, (sum, r) => sum + r.transportationAllowance);
       final totalOtherAllowance = reports.fold(0.0, (sum, r) => sum + r.otherAllowance);
+      final totalInsuranceSalary = reports.where((r) => r.hasInsurance).fold(0.0, (sum, r) => sum + r.insuranceSalary);
+      final totalInsurance5 = reports.fold(0.0, (sum, r) => sum + r.insuranceEmployee);
+      final totalInsurance12 = reports.fold(0.0, (sum, r) => sum + r.insuranceCompany);
       final totalPenalties = reports.fold(0.0, (sum, r) => sum + r.monthlyPenalties);
       final totalGrossSalary = reports.fold(0.0, (sum, r) => sum + r.incrementalSalary);
       final totalDeductions = reports.fold(0.0, (sum, r) => sum + r.decrementalSalary);
@@ -143,15 +152,18 @@ class ExportService {
       sheet.getRangeByIndex(totalRow, 10).setNumber(totalFoodAllowance);
       sheet.getRangeByIndex(totalRow, 11).setNumber(totalTransportationAllowance);
       sheet.getRangeByIndex(totalRow, 12).setNumber(totalOtherAllowance);
-      sheet.getRangeByIndex(totalRow, 13).setNumber(totalMonthlyAdditions);
-      sheet.getRangeByIndex(totalRow, 14).setNumber(totalPenalties);
-      sheet.getRangeByIndex(totalRow, 15).setNumber(totalMonthlyDeductions);
-      sheet.getRangeByIndex(totalRow, 16).setNumber(totalGrossSalary);
-      sheet.getRangeByIndex(totalRow, 17).setNumber(totalDeductions);
-      sheet.getRangeByIndex(totalRow, 18).setNumber(totalNetEarnings);
-      sheet.getRangeByIndex(totalRow, 19).setText('');
+      sheet.getRangeByIndex(totalRow, 13).setNumber(totalInsuranceSalary);
+      sheet.getRangeByIndex(totalRow, 14).setNumber(totalInsurance5);
+      sheet.getRangeByIndex(totalRow, 15).setNumber(totalInsurance12);
+      sheet.getRangeByIndex(totalRow, 16).setNumber(totalMonthlyAdditions);
+      sheet.getRangeByIndex(totalRow, 17).setNumber(totalPenalties);
+      sheet.getRangeByIndex(totalRow, 18).setNumber(totalMonthlyDeductions);
+      sheet.getRangeByIndex(totalRow, 19).setNumber(totalGrossSalary);
+      sheet.getRangeByIndex(totalRow, 20).setNumber(totalDeductions);
+      sheet.getRangeByIndex(totalRow, 21).setNumber(totalNetEarnings);
+      sheet.getRangeByIndex(totalRow, 22).setText('');
 
-      for (int col = 1; col <= 19; col++) {
+      for (int col = 1; col <= 22; col++) {
         sheet.getRangeByIndex(totalRow, col).cellStyle.bold = true;
       }
     }
@@ -188,6 +200,9 @@ class ExportService {
       'Food',
       'Trans.',
       'Other',
+      'Ins.Sal',
+      'Ins.5%',
+      'Ins.12%',
       'Add.',
       'Penal.',
       'Other Ded.',
@@ -231,6 +246,9 @@ class ExportService {
                   r.foodAllowance.toStringAsFixed(0),
                   r.transportationAllowance.toStringAsFixed(0),
                   r.otherAllowance.toStringAsFixed(0),
+                  r.hasInsurance ? r.insuranceSalary.toStringAsFixed(0) : '-',
+                  r.hasInsurance ? r.insuranceEmployee.toStringAsFixed(0) : '-',
+                  r.hasInsurance ? r.insuranceCompany.toStringAsFixed(0) : '-',
                   r.monthlyAdditions.toStringAsFixed(0),
                   r.monthlyPenalties.toStringAsFixed(0),
                   r.monthlyDeductions.toStringAsFixed(0),
@@ -256,6 +274,9 @@ class ExportService {
             final totalFoodAllowance = reports.fold(0.0, (sum, r) => sum + r.foodAllowance);
             final totalTransportationAllowance = reports.fold(0.0, (sum, r) => sum + r.transportationAllowance);
             final totalOtherAllowance = reports.fold(0.0, (sum, r) => sum + r.otherAllowance);
+            final totalInsuranceSalary = reports.where((r) => r.hasInsurance).fold(0.0, (sum, r) => sum + r.insuranceSalary);
+            final totalInsurance5 = reports.fold(0.0, (sum, r) => sum + r.insuranceEmployee);
+            final totalInsurance12 = reports.fold(0.0, (sum, r) => sum + r.insuranceCompany);
             final totalPenalties = reports.fold(0.0, (sum, r) => sum + r.monthlyPenalties);
             final totalGrossSalary = reports.fold(0.0, (sum, r) => sum + r.incrementalSalary);
             final totalDeductions = reports.fold(0.0, (sum, r) => sum + r.decrementalSalary);
@@ -274,6 +295,9 @@ class ExportService {
               totalFoodAllowance.toStringAsFixed(0),
               totalTransportationAllowance.toStringAsFixed(0),
               totalOtherAllowance.toStringAsFixed(0),
+              totalInsuranceSalary.toStringAsFixed(0),
+              totalInsurance5.toStringAsFixed(0),
+              totalInsurance12.toStringAsFixed(0),
               totalMonthlyAdditions.toStringAsFixed(0),
               totalPenalties.toStringAsFixed(0),
               totalMonthlyDeductions.toStringAsFixed(0),

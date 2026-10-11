@@ -880,6 +880,32 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                           ),
                         ),
                       ),
+
+                    // Insurance Badge
+                    if (employee.hasInsurance)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2E65FF).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFF2E65FF).withValues(alpha: 0.3), width: 0.8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.shield_outlined, size: 11, color: Color(0xFF2E65FF)),
+                            const SizedBox(width: 4),
+                            Text(
+                              provider.translate('social_insurance_title'),
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2E65FF),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -1188,6 +1214,32 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                                         ],
                                       ),
                                     ),
+                                    if (employee.hasInsurance) ...[
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF2E65FF).withValues(alpha: 0.12),
+                                          borderRadius: BorderRadius.circular(4),
+                                          border: Border.all(color: const Color(0xFF2E65FF).withValues(alpha: 0.3), width: 0.8),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(Icons.shield_outlined, size: 10, color: Color(0xFF2E65FF)),
+                                            const SizedBox(width: 3),
+                                            Text(
+                                              provider.translate('social_insurance_title'),
+                                              style: const TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF2E65FF),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ],
@@ -1799,6 +1851,14 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                   _buildDetailRow('Annual Leave Balance', '${employee.annualLeaveBalance} hours', isDark),
                   _buildDetailRow('Account Status', employee.disabled ? 'SUSPENDED' : 'ACTIVE', isDark),
                   _buildDetailRow(
+                    'Social Insurance',
+                    employee.hasInsurance
+                        ? 'ACTIVE (${NumberFormat('#,##0').format(employee.insuranceSalary > 0 ? employee.insuranceSalary : employee.basicSalary)} ${employee.salaryCurrency.isNotEmpty ? employee.salaryCurrency : 'USD'})'
+                        : 'INACTIVE',
+                    isDark,
+                    valueColor: employee.hasInsurance ? const Color(0xFF2E65FF) : (isDark ? Colors.white60 : Colors.black54),
+                  ),
+                  _buildDetailRow(
                     'Face ID Biometrics',
                     employee.faceEmbedding != null ? 'ENROLLED & VERIFIED' : 'NOT ENROLLED',
                     isDark,
@@ -2001,6 +2061,14 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
     final passwordController = TextEditingController(text: employee?.password ?? '');
     final phoneController = TextEditingController(text: employee?.phoneNumber ?? '');
     final salaryController = TextEditingController(text: employee?.basicSalary.toString() ?? '0');
+    bool formHasInsurance = employee?.hasInsurance ?? false;
+    final insuranceSalaryController = TextEditingController(
+      text: (employee?.insuranceSalary != null && employee!.insuranceSalary > 0)
+          ? employee.insuranceSalary.toString()
+          : (employee?.basicSalary != null && employee!.basicSalary > 0
+              ? employee.basicSalary.toString()
+              : ''),
+    );
     final annualLeaveBalanceController = TextEditingController(
       text: employee != null ? employee.annualLeaveBalance.toString() : '24.0',
     );
@@ -2962,6 +3030,166 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                   ),
                   const SizedBox(height: 12),
 
+                  // Basic Salary
+                  TextField(
+                    controller: salaryController,
+                    style: TextStyle(color: textColor),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    onChanged: (_) {
+                      setDialogState(() {
+                        if (formHasInsurance && insuranceSalaryController.text.trim().isEmpty) {
+                          insuranceSalaryController.text = salaryController.text;
+                        }
+                      });
+                    },
+                    decoration: InputDecoration(
+                      labelText: '${provider.translate('basic_salary')} (${employee?.salaryCurrency.isNotEmpty == true ? employee!.salaryCurrency : 'USD'})',
+                      labelStyle: TextStyle(color: labelColor),
+                      prefixIcon: const Icon(Icons.monetization_on_outlined, size: 18, color: Color(0xFF10B981)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Social Insurance Section
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: cardBg,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: formHasInsurance
+                            ? const Color(0xFF2E65FF).withValues(alpha: 0.4)
+                            : borderColor,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.shield_outlined,
+                                  size: 18,
+                                  color: formHasInsurance ? const Color(0xFF2E65FF) : iconColor,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  provider.translate('social_insurance_title'),
+                                  style: TextStyle(
+                                    color: textColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Switch(
+                              value: formHasInsurance,
+                              activeThumbColor: const Color(0xFF2E65FF),
+                              onChanged: (val) {
+                                setDialogState(() {
+                                  formHasInsurance = val;
+                                  if (val && insuranceSalaryController.text.trim().isEmpty) {
+                                    insuranceSalaryController.text = salaryController.text;
+                                  }
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                        if (formHasInsurance) ...[
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: insuranceSalaryController,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            style: TextStyle(color: textColor),
+                            onChanged: (_) => setDialogState(() {}),
+                            decoration: InputDecoration(
+                              labelText: '${provider.translate('insurance_salary_label')} (${employee?.salaryCurrency.isNotEmpty == true ? employee!.salaryCurrency : 'USD'})',
+                              labelStyle: TextStyle(color: labelColor),
+                              helperText: provider.translate('optional_insurance_hint'),
+                              helperStyle: TextStyle(color: subtextColor, fontSize: 10),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Builder(
+                            builder: (context) {
+                              final insSal = double.tryParse(insuranceSalaryController.text) ?? (double.tryParse(salaryController.text) ?? 0.0);
+                              final ins5 = insSal * 0.05;
+                              final ins12 = insSal * 0.12;
+                              final curr = employee?.salaryCurrency.isNotEmpty == true ? employee!.salaryCurrency : 'USD';
+                              return Row(
+                                children: [
+                                  Expanded(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFF5C5C).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: const Color(0xFFFF5C5C).withValues(alpha: 0.25)),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            provider.translate('ins_5_short'),
+                                            style: const TextStyle(color: Color(0xFFFF5C5C), fontSize: 11, fontWeight: FontWeight.bold),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '-${NumberFormat('#,##0').format(ins5)} $curr',
+                                            style: const TextStyle(color: Color(0xFFFF5C5C), fontSize: 12, fontWeight: FontWeight.bold),
+                                          ),
+                                          Text(
+                                            provider.translate('insurance_5_desc'),
+                                            style: TextStyle(color: subtextColor, fontSize: 9.5),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF00E5CE).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: const Color(0xFF00E5CE).withValues(alpha: 0.25)),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            provider.translate('ins_12_short'),
+                                            style: const TextStyle(color: Color(0xFF00E5CE), fontSize: 11, fontWeight: FontWeight.bold),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '${NumberFormat('#,##0').format(ins12)} $curr',
+                                            style: const TextStyle(color: Color(0xFF00E5CE), fontSize: 12, fontWeight: FontWeight.bold),
+                                          ),
+                                          Text(
+                                            provider.translate('insurance_12_desc'),
+                                            style: TextStyle(color: subtextColor, fontSize: 9.5),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
                   // Face ID Biometrics Section
                   if (provider.isHRManager)
                     Container(
@@ -3292,6 +3520,12 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
             }
 
             final salaryVal = double.tryParse(salaryController.text) ?? 0.0;
+            final parsedInsSalary = double.tryParse(insuranceSalaryController.text);
+            final double finalInsSalary = formHasInsurance
+                ? (parsedInsSalary != null && parsedInsSalary > 0
+                    ? parsedInsSalary
+                    : salaryVal)
+                : 0.0;
             final leaveBalanceVal = double.tryParse(annualLeaveBalanceController.text.trim()) ?? (employee?.annualLeaveBalance ?? 24.0);
 
             List<GroupHistoryEntry> gHistory = List<GroupHistoryEntry>.from(tempGroupHistory);
@@ -3434,7 +3668,16 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                     foodAllowance: employee.foodAllowance,
                     transportationAllowance: employee.transportationAllowance,
                     otherAllowance: employee.otherAllowance,
+                    hasInsurance: formHasInsurance,
+                    insuranceSalary: finalInsSalary,
                   ),
+                );
+              } else if (sHistory.isNotEmpty) {
+                final lastIdx = sHistory.length - 1;
+                sHistory[lastIdx] = sHistory[lastIdx].copyWith(
+                  hasInsurance: formHasInsurance,
+                  insuranceSalary: finalInsSalary,
+                  basicSalary: salaryVal > 0 ? salaryVal : sHistory[lastIdx].basicSalary,
                 );
               }
               newOrUpdatedEmp = employee.copyWith(
@@ -3456,6 +3699,8 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                 basicSalary: salaryVal,
                 workingHours: employee.workingHours > 0 ? employee.workingHours : 160.0,
                 salaryHistory: sHistory,
+                hasInsurance: formHasInsurance,
+                insuranceSalary: finalInsSalary,
                 faceEmbedding: formFaceEmbedding,
                 overrideFaceEmbedding: true,
                 // General Info
@@ -3491,6 +3736,8 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                     currency: 'USD',
                     startDate: nowStr,
                     endDate: null,
+                    hasInsurance: formHasInsurance,
+                    insuranceSalary: finalInsSalary,
                   ),
                 );
               }
@@ -3511,6 +3758,8 @@ class _HrEmployeesTabState extends State<HrEmployeesTab> {
                 basicSalary: salaryVal,
                 workingHours: 160.0,
                 salaryHistory: initialHistory,
+                hasInsurance: formHasInsurance,
+                insuranceSalary: finalInsSalary,
                 annualLeaveBalance: leaveBalanceVal,
                 faceEmbedding: formFaceEmbedding,
                 // General Info

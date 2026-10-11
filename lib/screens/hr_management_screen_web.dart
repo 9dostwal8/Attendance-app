@@ -4441,7 +4441,7 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                       ),
                     ),
                     subtitle: Text(
-                      '${entry.startDate} - ${entry.endDate ?? provider.translate('present_label')}',
+                      '${entry.startDate} - ${entry.endDate ?? provider.translate('present_label')}${entry.hasInsurance ? ' • ${provider.translate('social_insurance_title')}' : ''}',
                       style: TextStyle(
                         color: subtextColor,
                       ),
@@ -4507,6 +4507,14 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
       text: isEditing
           ? existingEntry.otherAllowance.toString()
           : employee.otherAllowance.toString(),
+    );
+    bool hasInsurance = isEditing
+        ? existingEntry.hasInsurance
+        : employee.hasInsurance;
+    final insuranceSalaryController = TextEditingController(
+      text: (isEditing ? existingEntry.insuranceSalary : employee.insuranceSalary) > 0
+          ? (isEditing ? existingEntry.insuranceSalary : employee.insuranceSalary).toString()
+          : (salaryController.text.isNotEmpty && salaryController.text != '0' ? salaryController.text : ''),
     );
     String selectedCurrency = isEditing
         ? existingEntry.currency
@@ -4697,6 +4705,149 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                 ),
               ),
               const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.03),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: hasInsurance
+                        ? const Color(0xFF2E65FF).withValues(alpha: 0.4)
+                        : borderCol,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.shield_outlined,
+                              size: 18,
+                              color: hasInsurance ? const Color(0xFF2E65FF) : subtextColor,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              provider.translate('social_insurance_title'),
+                              style: TextStyle(
+                                color: textColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Switch(
+                          value: hasInsurance,
+                          activeThumbColor: const Color(0xFF2E65FF),
+                          onChanged: (val) {
+                            setState(() {
+                              hasInsurance = val;
+                              if (val && insuranceSalaryController.text.trim().isEmpty) {
+                                insuranceSalaryController.text = salaryController.text;
+                              }
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                    if (hasInsurance) ...[
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: insuranceSalaryController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        style: TextStyle(color: textColor),
+                        onChanged: (_) => setState(() {}),
+                        decoration: InputDecoration(
+                          labelText: '${provider.translate('insurance_salary_label')} ($selectedCurrency)',
+                          labelStyle: TextStyle(color: subtextColor),
+                          helperText: provider.translate('optional_insurance_hint'),
+                          helperStyle: TextStyle(color: subtextColor, fontSize: 10),
+                          enabledBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(color: borderCol),
+                          ),
+                          focusedBorder: const UnderlineInputBorder(
+                            borderSide: BorderSide(color: Color(0xFF2E65FF)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Builder(
+                        builder: (context) {
+                          final insSal = double.tryParse(insuranceSalaryController.text) ?? (double.tryParse(salaryController.text) ?? 0.0);
+                          final ins5 = insSal * 0.05;
+                          final ins12 = insSal * 0.12;
+                          return Row(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFF5C5C).withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: const Color(0xFFFF5C5C).withValues(alpha: 0.25)),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        provider.translate('ins_5_short'),
+                                        style: const TextStyle(color: Color(0xFFFF5C5C), fontSize: 11, fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '-${NumberFormat('#,##0').format(ins5)} $selectedCurrency',
+                                        style: const TextStyle(color: Color(0xFFFF5C5C), fontSize: 12, fontWeight: FontWeight.bold),
+                                      ),
+                                      Text(
+                                        provider.translate('insurance_5_desc'),
+                                        style: TextStyle(color: subtextColor, fontSize: 9.5),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF00E5CE).withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: const Color(0xFF00E5CE).withValues(alpha: 0.25)),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        provider.translate('ins_12_short'),
+                                        style: const TextStyle(color: Color(0xFF00E5CE), fontSize: 11, fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${NumberFormat('#,##0').format(ins12)} $selectedCurrency',
+                                        style: const TextStyle(color: Color(0xFF00E5CE), fontSize: 12, fontWeight: FontWeight.bold),
+                                      ),
+                                      Text(
+                                        provider.translate('insurance_12_desc'),
+                                        style: TextStyle(color: subtextColor, fontSize: 9.5),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
               InkWell(
                 onTap: () async {
                   final d = await showDatePicker(
@@ -4847,7 +4998,7 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                               e.basicSalary == existingEntry.basicSalary,
                         );
 
-                        final lastEntry = newHistory.isNotEmpty ? newHistory.last : null;
+                         final lastEntry = newHistory.isNotEmpty ? newHistory.last : null;
                         final updatedEmployee = employee.copyWith(
                           basicSalary: lastEntry?.basicSalary ?? 0.0,
                           workingHours: lastEntry?.workingHours ?? 0.0,
@@ -4855,6 +5006,8 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                           foodAllowance: lastEntry?.foodAllowance ?? 0.0,
                           transportationAllowance: lastEntry?.transportationAllowance ?? 0.0,
                           otherAllowance: lastEntry?.otherAllowance ?? 0.0,
+                          hasInsurance: lastEntry?.hasInsurance ?? false,
+                          insuranceSalary: lastEntry?.insuranceSalary ?? 0.0,
                           salaryHistory: newHistory,
                         );
                         provider.updateEmployee(updatedEmployee);
@@ -4897,6 +5050,14 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                       final double? newOtherAllowance = double.tryParse(
                         otherAllowanceController.text,
                       );
+                      final double? newInsuranceSalary = double.tryParse(
+                        insuranceSalaryController.text,
+                      );
+                      final double finalInsSalary = hasInsurance
+                          ? (newInsuranceSalary != null && newInsuranceSalary > 0
+                              ? newInsuranceSalary
+                              : (newSalary ?? 0.0))
+                          : 0.0;
 
                       if (newSalary != null && newHours != null) {
                         List<SalaryHistoryEntry> newHistory = List.from(
@@ -4928,6 +5089,8 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                             transportationAllowance:
                                 newTransportAllowance ?? 0.0,
                             otherAllowance: newOtherAllowance ?? 0.0,
+                            hasInsurance: hasInsurance,
+                            insuranceSalary: finalInsSalary,
                           ),
                         );
 
@@ -4955,6 +5118,10 @@ class _HrManagementScreenWebState extends State<HrManagementScreenWeb> {
                           otherAllowance:
                               lastEntry?.otherAllowance ??
                               employee.otherAllowance,
+                          hasInsurance:
+                              lastEntry?.hasInsurance ?? hasInsurance,
+                          insuranceSalary:
+                              lastEntry?.insuranceSalary ?? finalInsSalary,
                         );
 
                         provider.updateEmployee(updatedEmployee);

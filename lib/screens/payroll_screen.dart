@@ -335,6 +335,91 @@ class _PayrollScreenState extends State<PayrollScreen> {
                         ),
                       ],
                     ),
+                    if (provider.hasInsurance) ...[
+                      SizedBox(height: 16),
+                      GlassContainer(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF5B9BFF).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFF5B9BFF).withValues(alpha: 0.3)),
+                              ),
+                              child: const Icon(Icons.shield_outlined, color: Color(0xFF5B9BFF), size: 22),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(
+                                        provider.translate('social_insurance_title'),
+                                        style: TextStyle(
+                                          color: textColor,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(20),
+                                        ),
+                                        child: Text(
+                                          provider.translate('insurance_active_badge'),
+                                          style: const TextStyle(
+                                            color: Color(0xFF10B981),
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${provider.translate('insurance_salary_label')}: ${formatAmount(provider.insuranceSalary)}',
+                                    style: TextStyle(
+                                      color: textColor.withValues(alpha: 0.6),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  '5%: -${formatAmount(provider.insuranceEmployee)}',
+                                  style: const TextStyle(
+                                    color: Color(0xFFFF5C5C),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '12%: ${formatAmount(provider.insuranceCompany)}',
+                                  style: const TextStyle(
+                                    color: Color(0xFF00E5CE),
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     SizedBox(height: 16),
 
                     // Hours Summary Row (2 columns)
@@ -497,6 +582,22 @@ class _PayrollScreenState extends State<PayrollScreen> {
                               color: const Color(0xFFFF5C5C),
                             ),
                           ],
+                          if (provider.hasInsurance) ...[
+                            Divider(color: (Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.black12), height: 1),
+                            _buildBreakdownRow(context, 
+                              label: provider.translate('insurance_deduction_5'),
+                              details: '${provider.translate('insurance_salary_label')}: ${formatAmount(provider.insuranceSalary)} (${provider.translate('insurance_5_desc')})',
+                              amount: '-${formatAmount(provider.insuranceEmployee)}',
+                              color: const Color(0xFFFF5C5C),
+                            ),
+                            Divider(color: (Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.black12), height: 1),
+                            _buildBreakdownRow(context, 
+                              label: provider.translate('insurance_company_12'),
+                              details: provider.translate('insurance_company_note'),
+                              amount: formatAmount(provider.insuranceCompany),
+                              color: const Color(0xFF00E5CE),
+                            ),
+                          ],
                           Divider(color: (Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.black12), height: 1),
                           Container(
                             color: ((Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black).withValues(alpha: 0.04)),
@@ -641,6 +742,9 @@ class _PayrollScreenState extends State<PayrollScreen> {
     final double totalFoodAllowance = reports.fold(0.0, (sum, r) => sum + r.foodAllowance);
     final double totalTransportationAllowance = reports.fold(0.0, (sum, r) => sum + r.transportationAllowance);
     final double totalOtherAllowance = reports.fold(0.0, (sum, r) => sum + r.otherAllowance);
+    final double totalInsuranceSalary = reports.where((r) => r.hasInsurance).fold(0.0, (sum, r) => sum + r.insuranceSalary);
+    final double totalInsurance5 = reports.fold(0.0, (sum, r) => sum + r.insuranceEmployee);
+    final double totalInsurance12 = reports.fold(0.0, (sum, r) => sum + r.insuranceCompany);
     final double totalPenalties = reports.fold(0.0, (sum, r) => sum + r.monthlyPenalties);
     final double totalGrossSalary = reports.fold(0.0, (sum, r) => sum + r.incrementalSalary);
     final double totalDeductions = reports.fold(0.0, (sum, r) => sum + r.decrementalSalary);
@@ -680,6 +784,9 @@ class _PayrollScreenState extends State<PayrollScreen> {
                   DataColumn(label: Text(provider.translate('food_allow_short'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF5B9BFF)))),
                   DataColumn(label: Text(provider.translate('trans_allow_short'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF5B9BFF)))),
                   DataColumn(label: Text(provider.translate('other_allow_short'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF5B9BFF)))),
+                  DataColumn(label: Text(provider.translate('ins_salary_short'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF5B9BFF)))),
+                  DataColumn(label: Text(provider.translate('ins_5_short'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFFF5C5C)))),
+                  DataColumn(label: Text(provider.translate('ins_12_short'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF00E5CE)))),
                   DataColumn(label: Text(provider.translate('additions'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF10B981)))),
                   DataColumn(label: Text(provider.translate('penalties'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFFF5C5C)))),
                   DataColumn(label: Text(provider.translate('other_deduct'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFFF5C5C)))),
@@ -705,6 +812,9 @@ class _PayrollScreenState extends State<PayrollScreen> {
                         DataCell(Text(formatEmpAmount(r.foodAllowance, r.currency), style: TextStyle(color: textColor, fontSize: 12))),
                         DataCell(Text(formatEmpAmount(r.transportationAllowance, r.currency), style: TextStyle(color: textColor, fontSize: 12))),
                         DataCell(Text(formatEmpAmount(r.otherAllowance, r.currency), style: TextStyle(color: textColor, fontSize: 12))),
+                        DataCell(Text(r.hasInsurance ? formatEmpAmount(r.insuranceSalary, r.currency) : '-', style: TextStyle(color: r.hasInsurance ? const Color(0xFF5B9BFF) : textColor.withValues(alpha: 0.35), fontSize: 12, fontWeight: r.hasInsurance ? FontWeight.w600 : FontWeight.normal))),
+                        DataCell(Text(r.hasInsurance ? '-${formatEmpAmount(r.insuranceEmployee, r.currency)}' : '-', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: r.hasInsurance ? const Color(0xFFFF5C5C) : textColor.withValues(alpha: 0.35)))),
+                        DataCell(Text(r.hasInsurance ? formatEmpAmount(r.insuranceCompany, r.currency) : '-', style: TextStyle(fontSize: 12, color: r.hasInsurance ? const Color(0xFF00E5CE) : textColor.withValues(alpha: 0.35)))),
                         DataCell(Text(formatEmpAmount(r.monthlyAdditions, r.currency), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF10B981)))),
                         DataCell(Text(formatEmpAmount(r.monthlyPenalties, r.currency), style: const TextStyle(fontSize: 12, color: Color(0xFFFF5C5C)))),
                         DataCell(Text(formatEmpAmount(r.monthlyDeductions, r.currency), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFFF5C5C)))),
@@ -906,6 +1016,30 @@ class _PayrollScreenState extends State<PayrollScreen> {
                           color: textColor,
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
+                        ),
+                      )),
+                      DataCell(Text(
+                        formatEmpAmount(totalInsuranceSalary, defaultCurrency),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: Color(0xFF5B9BFF),
+                        ),
+                      )),
+                      DataCell(Text(
+                        '-${formatEmpAmount(totalInsurance5, defaultCurrency)}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: Color(0xFFFF5C5C),
+                        ),
+                      )),
+                      DataCell(Text(
+                        formatEmpAmount(totalInsurance12, defaultCurrency),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: Color(0xFF00E5CE),
                         ),
                       )),
                       DataCell(Text(

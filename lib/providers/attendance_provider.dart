@@ -418,6 +418,10 @@ class AttendanceProvider with ChangeNotifier {
   double _foodAllowance = 0.0;
   double _transportationAllowance = 0.0;
   double _otherAllowance = 0.0;
+  bool _hasInsurance = false;
+  double _insuranceSalary = 0.0;
+  double _insuranceEmployee = 0.0;
+  double _insuranceCompany = 0.0;
 
   // HR System Lists
   final List<OrgStructure> _structures = [];
@@ -480,6 +484,10 @@ class AttendanceProvider with ChangeNotifier {
   double get foodAllowance => _foodAllowance;
   double get transportationAllowance => _transportationAllowance;
   double get otherAllowance => _otherAllowance;
+  bool get hasInsurance => _hasInsurance;
+  double get insuranceSalary => _insuranceSalary;
+  double get insuranceEmployee => _insuranceEmployee;
+  double get insuranceCompany => _insuranceCompany;
 
   List<OrgStructure> get structures => _structures;
   List<WorkShift> get shifts => _shifts;
@@ -857,6 +865,8 @@ class AttendanceProvider with ChangeNotifier {
                 foodAllowance: emp.foodAllowance,
                 transportationAllowance: emp.transportationAllowance,
                 otherAllowance: emp.otherAllowance,
+                hasInsurance: emp.hasInsurance,
+                insuranceSalary: emp.insuranceSalary,
               );
               final healedEmp = emp.copyWith(
                 workingHours: emp.workingHours > 0 ? emp.workingHours : 160.0,
@@ -1248,6 +1258,8 @@ class AttendanceProvider with ChangeNotifier {
         foodAllowance: 0.0,
         transportationAllowance: 0.0,
         otherAllowance: 0.0,
+        hasInsurance: false,
+        insuranceSalary: 0.0,
       );
     }
 
@@ -1260,6 +1272,8 @@ class AttendanceProvider with ChangeNotifier {
       foodAllowance: emp.foodAllowance,
       transportationAllowance: emp.transportationAllowance,
       otherAllowance: emp.otherAllowance,
+      hasInsurance: emp.hasInsurance,
+      insuranceSalary: emp.insuranceSalary,
     );
   }
 
@@ -1817,12 +1831,23 @@ class AttendanceProvider with ChangeNotifier {
         .where((adj) => adj.type.toLowerCase() == 'deduction')
         .fold(0.0, (sum, adj) => sum + adj.amount);
 
+    final hasInsurance = config.hasInsurance;
+    final double insuranceSalary = hasInsurance
+        ? (config.insuranceSalary > 0 ? config.insuranceSalary : basicSalary)
+        : 0.0;
+    // 5% employee deduction, 12% employer contribution (only for show)
+    final double insuranceEmployee = hasInsurance ? (insuranceSalary * 0.05) : 0.0;
+    final double insuranceCompany = hasInsurance ? (insuranceSalary * 0.12) : 0.0;
+
     final double incrementalSalary =
         salaryCalcByDay +
         overtimeValue +
         (daysWorked > 0 ? totalAllowances : 0.0) +
         monthlyAdditions;
-    final double decrementalSalary = attendanceDeficit + totalPenalties + monthlyDeductions;
+
+    // 5% insurance deduction decreases final net salary
+    final double employeeInsuranceDeduction = (daysWorked > 0 || salaryCalcByDay > 0) ? insuranceEmployee : 0.0;
+    final double decrementalSalary = attendanceDeficit + totalPenalties + monthlyDeductions + employeeInsuranceDeduction;
     final double netEarnings = (incrementalSalary - decrementalSalary).clamp(
       0.0,
       double.infinity,
@@ -1844,6 +1869,10 @@ class AttendanceProvider with ChangeNotifier {
       otherAllowance: otherAllowance,
       monthlyAdditions: monthlyAdditions,
       monthlyDeductions: monthlyDeductions,
+      hasInsurance: hasInsurance,
+      insuranceSalary: insuranceSalary,
+      insuranceEmployee: insuranceEmployee,
+      insuranceCompany: insuranceCompany,
       adjustments: empAdjustments,
       incrementalSalary: incrementalSalary,
       decrementalSalary: decrementalSalary,
@@ -1902,6 +1931,10 @@ class AttendanceProvider with ChangeNotifier {
     _foodAllowance = report.foodAllowance;
     _transportationAllowance = report.transportationAllowance;
     _otherAllowance = report.otherAllowance;
+    _hasInsurance = report.hasInsurance;
+    _insuranceSalary = report.insuranceSalary;
+    _insuranceEmployee = report.insuranceEmployee;
+    _insuranceCompany = report.insuranceCompany;
     _incrementalSalary = report.incrementalSalary;
     _decrementalSalary = report.decrementalSalary;
     _monthlyEarnings = report.netEarnings;
@@ -3397,6 +3430,10 @@ class PayrollReport {
   final double otherAllowance;
   final double monthlyAdditions;
   final double monthlyDeductions;
+  final bool hasInsurance;
+  final double insuranceSalary;
+  final double insuranceEmployee;
+  final double insuranceCompany;
   final List<PayrollAdjustment> adjustments;
   final double netEarnings;
   final String currency;
@@ -3419,6 +3456,10 @@ class PayrollReport {
     required this.otherAllowance,
     this.monthlyAdditions = 0.0,
     this.monthlyDeductions = 0.0,
+    this.hasInsurance = false,
+    this.insuranceSalary = 0.0,
+    this.insuranceEmployee = 0.0,
+    this.insuranceCompany = 0.0,
     this.adjustments = const [],
     required this.netEarnings,
     required this.currency,
